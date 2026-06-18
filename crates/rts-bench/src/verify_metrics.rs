@@ -162,7 +162,12 @@ pub struct HallucinationReport {
     pub rgr: Option<f64>,
     /// Import Hallucination Rate.
     pub ihr: Metric,
-    /// Signature Mismatch Rate.
+    /// Signature Mismatch Rate. NOTE (v0): a "mismatch" here is **arity-only**.
+    /// F3 extracts a call site's argument count (`call_arity`) but not the
+    /// caller's parameter names/types, so the bench claims only `{arity}` and
+    /// `verify_signature` can flag an arity difference but not a param-order or
+    /// return-shape one. The rate never *falsely* reports a mismatch; it is
+    /// just narrower than the daemon's full `verify_signature` diff surface.
     pub smr: Metric,
     /// References in snippets whose language has no F3 reference-extraction
     /// support (anything but Rust / TS / Python). These contribute to no
@@ -417,28 +422,27 @@ async fn resolve_snippet<O: VerifyOracle>(
 /// Run the full corpus through the oracle and accumulate resolutions.
 ///
 /// Supported-language snippets (Rust / TS / Python) are parsed with F3
-/// and routed through the oracle. Unsupported-language snippets can't be
-/// parsed for references at all, so they contribute to no rate; their
-/// non-blank line count is added to `unsupported_language_refs` as a
-/// coarse, honest "we couldn't look at this" signal that keeps the
-/// uncovered surface visible in the report.
+/// and routed through the oracle. Snippets we can't parse for references —
+/// a known-but-unsupported language (e.g. Go) OR an unknown `lang` string —
+/// contribute to no rate; their non-blank line count is added to
+/// `unsupported_language_refs` as a coarse, honest "we couldn't look at
+/// this" signal that keeps the uncovered surface visible in the report. A
+/// single mislabelled snippet must never abort measuring the whole corpus.
 pub async fn run_corpus<O: VerifyOracle>(
     oracle: &mut O,
     corpus: &Corpus,
 ) -> Result<Resolutions> {
     let mut acc = Resolutions::default();
     for snip in &corpus.snippets {
-        let lang: Language = snip.lang.parse().map_err(|_| {
-            anyhow::anyhow!("unknown language `{}` in corpus snippet `{}`", snip.lang, snip.name)
-        })?;
-        if supports_references(lang) {
-            resolve_snippet(oracle, lang, &snip.code, &mut acc).await?;
-        } else {
-            // Unsupported language: contributes to no rate. Count
-            // non-blank lines as a coarse "refs we couldn't decide"
-            // signal so the report shows the uncovered surface.
-            acc.unsupported_language_refs +=
-                snip.code.lines().filter(|l| !l.trim().is_empty()).count() as u64;
+        // An unknown language string is treated as unsupported, not fatal.
+        match snip.lang.parse::<Language>() {
+            Ok(lang) if supports_references(lang) => {
+                resolve_snippet(oracle, lang, &snip.code, &mut acc).await?;
+            }
+            _ => {
+                acc.unsupported_language_refs +=
+                    snip.code.lines().filter(|l| !l.trim().is_empty()).count() as u64;
+            }
         }
     }
     Ok(acc)
@@ -720,5 +724,27 @@ mod tests {
         assert!(acc.symbol.is_empty());
         assert_eq!(acc.unsupported_language_refs, 4);
         assert!(acc.languages_covered.is_empty());
+    }
+
+    #[test]
+    fn run_corpus_treats_unknown_language_as_unsupported_not_fatal() {
+        // A mislabelled `lang` must not abort the whole corpus run — it falls
+        // into the unsupported bucket like a known-but-unsupported language.
+        let corpus = Corpus {
+            version: 1,
+            snippets: vec![CorpusSnippet {
+                name: "typo".into(),
+                lang: "cobol".into(),
+                code: "IDENTIFICATION DIVISION.\nPROGRAM-ID. X.\n".into(),
+            }],
+        };
+        let mut oracle = StubOracle {
+            symbols: HashMap::new(),
+            imports: HashMap::new(),
+            signatures: HashMap::new(),
+        };
+        let acc = block_on(run_corpus(&mut oracle, &corpus)).expect("must not abort on unknown lang");
+        assert!(acc.symbol.is_empty());
+        assert_eq!(acc.unsupported_language_refs, 2);
     }
 }
