@@ -172,9 +172,10 @@ class TestRtsArmFailFast:
     def test_present_binaries_wire_real_bridge_factory(
         self, tmp_path: Path, monkeypatch
     ) -> None:
-        # When the binaries are "present", the real bridge/daemon factories
-        # are wired (constructed) WITHOUT spawning anything: we stub the
-        # factory builders and the run loop so nothing real executes.
+        # When the binaries are "present", the real bridge factory is wired
+        # (constructed) WITHOUT spawning anything: we stub the factory
+        # builder and the run loop so nothing real executes. There is NO
+        # separate daemon factory anymore — the bridge owns the daemon.
         fake_mcp = tmp_path / "rts-mcp"
         fake_daemon = tmp_path / "rts-daemon"
         fake_mcp.write_text("")
@@ -183,28 +184,22 @@ class TestRtsArmFailFast:
             cli, "_discover_rts_binaries", lambda: (fake_mcp, fake_daemon)
         )
 
-        seen = {"bridge_built": False, "daemon_built": False}
+        seen = {"bridge_built": False}
 
         def fake_bridge_builder(mcp, daemon):
             seen["bridge_built"] = (mcp, daemon)
 
-            def make(arm, socket):
+            def make(arm, workspace):
                 if arm == "baseline":
                     return None
                 return _FakeBridge()  # rts arm: a fake (no real subprocess)
 
             return make
 
-        def fake_daemon_builder(daemon):
-            seen["daemon_built"] = daemon
-
-            def make(arm):
-                return None
-
-            return make
-
         monkeypatch.setattr(cli, "_real_bridge_factory", fake_bridge_builder)
-        monkeypatch.setattr(cli, "_real_daemon_factory", fake_daemon_builder)
+        # No _real_daemon_factory exists; assert that absence explicitly so
+        # this test fails if the redundant daemon path is ever reintroduced.
+        assert not hasattr(cli, "_real_daemon_factory")
 
         corpus = _write_corpus(tmp_path, n=1)
         out = tmp_path / "out"
@@ -216,6 +211,5 @@ class TestRtsArmFailFast:
             run_id="run-test",
         )
         assert rc == 0
-        # The real factories were wired from the discovered binaries.
+        # The real bridge factory was wired from the discovered binaries.
         assert seen["bridge_built"] == (fake_mcp, fake_daemon)
-        assert seen["daemon_built"] == fake_daemon
