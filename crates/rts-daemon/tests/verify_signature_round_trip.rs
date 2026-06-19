@@ -26,7 +26,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -63,8 +67,13 @@ async fn wait_for_symbol(
     let mut id: u64 = 100;
     loop {
         id += 1;
-        let resp = round_trip(stream, &id.to_string(), "Index.FindSymbol", json!({ "name": name }))
-            .await?;
+        let resp = round_trip(
+            stream,
+            &id.to_string(),
+            "Index.FindSymbol",
+            json!({ "name": name }),
+        )
+        .await?;
         if !resp["result"]["matches"]
             .as_array()
             .map(|a| a.is_empty())
@@ -97,7 +106,12 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -117,8 +131,13 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
     let mut stream = UnixStream::connect(&socket_path).await?;
 
-    let mount = round_trip(&mut stream, "1", "Workspace.Mount", json!({ "root": workspace.path() }))
-        .await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
     assert!(mount["error"].is_null(), "mount: {mount:?}");
 
     wait_for_symbol(&mut stream, "flush", Duration::from_secs(5)).await?;
@@ -153,7 +172,10 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     )
     .await?;
     let ar = &arity["result"];
-    assert_eq!(ar["match"], false, "arity mismatch should be match:false; got {ar:?}");
+    assert_eq!(
+        ar["match"], false,
+        "arity mismatch should be match:false; got {ar:?}"
+    );
     let diff = ar["diff"].as_array().cloned().unwrap_or_default();
     let has_arity = diff.iter().any(|d| d["issue"] == "arity");
     assert!(has_arity, "expected an arity diff; got {diff:?}");
@@ -173,7 +195,10 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     assert_eq!(ur["match"], false);
     let udiff = ur["diff"].as_array().cloned().unwrap_or_default();
     let unknown_entry = udiff.iter().find(|d| d["issue"] == "unknown_param");
-    assert!(unknown_entry.is_some(), "expected unknown_param diff; got {udiff:?}");
+    assert!(
+        unknown_entry.is_some(),
+        "expected unknown_param diff; got {udiff:?}"
+    );
     assert_eq!(unknown_entry.unwrap()["name"], "flush");
 
     // 4. Variadic callee → indeterminate, match omitted.
@@ -185,12 +210,18 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     )
     .await?;
     let vr = &variadic["result"];
-    assert_eq!(vr["resolution"], "indeterminate", "variadic should be indeterminate; got {vr:?}");
+    assert_eq!(
+        vr["resolution"], "indeterminate",
+        "variadic should be indeterminate; got {vr:?}"
+    );
     assert_eq!(
         vr["reason"], "undecidable_signature",
         "variadic shape is undecidable, not an FFI/unresolved reason; got {vr:?}"
     );
-    assert!(vr["match"].is_null(), "indeterminate must OMIT match; got {vr:?}");
+    assert!(
+        vr["match"].is_null(),
+        "indeterminate must OMIT match; got {vr:?}"
+    );
 
     // 5. Same param set, wrong order → match:false + {issue:"param_order"}.
     let reordered = round_trip(
@@ -201,7 +232,10 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     )
     .await?;
     let rr = &reordered["result"];
-    assert_eq!(rr["match"], false, "reordered params should be match:false; got {rr:?}");
+    assert_eq!(
+        rr["match"], false,
+        "reordered params should be match:false; got {rr:?}"
+    );
     let rdiff = rr["diff"].as_array().cloned().unwrap_or_default();
     assert!(
         rdiff.iter().any(|d| d["issue"] == "param_order"),
@@ -225,7 +259,10 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     assert_eq!(mr["resolution"], "not_found");
     assert_eq!(mr["exists"], false);
     let cands = mr["candidates"].as_array().cloned().unwrap_or_default();
-    assert!(!cands.is_empty(), "miss should carry candidates; got {mr:?}");
+    assert!(
+        !cands.is_empty(),
+        "miss should carry candidates; got {mr:?}"
+    );
 
     Ok(())
 }

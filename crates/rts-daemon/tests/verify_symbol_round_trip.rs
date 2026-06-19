@@ -187,7 +187,10 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
     );
     assert!(m0["pagerank"].is_number());
     assert!(
-        r["candidates"].as_array().map(|a| a.is_empty()).unwrap_or(false),
+        r["candidates"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(false),
         "candidates must be empty on an exact hit; got {r:?}"
     );
     assert!(r["content_version"].is_string());
@@ -206,11 +209,17 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
     assert_eq!(mr["exists"], false);
     assert_eq!(mr["resolution"], "not_found");
     assert!(
-        mr["matches"].as_array().map(|a| a.is_empty()).unwrap_or(false),
+        mr["matches"]
+            .as_array()
+            .map(|a| a.is_empty())
+            .unwrap_or(false),
         "matches must be empty on a miss; got {mr:?}"
     );
     let cands = mr["candidates"].as_array().cloned().unwrap_or_default();
-    assert!(!cands.is_empty(), "expected candidates on a miss; got {mr:?}");
+    assert!(
+        !cands.is_empty(),
+        "expected candidates on a miss; got {mr:?}"
+    );
     assert_eq!(
         cands[0]["qualified_name"], "commit_batch",
         "top candidate should be the real symbol; got {cands:?}"
@@ -230,7 +239,11 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
     assert_eq!(ar["resolution"], "indeterminate");
     assert_eq!(ar["reason"], "ambiguous_overload");
     let am = ar["matches"].as_array().cloned().unwrap_or_default();
-    assert_eq!(am.len(), 2, "ambiguous case should list both defs; got {am:?}");
+    assert_eq!(
+        am.len(),
+        2,
+        "ambiguous case should list both defs; got {am:?}"
+    );
 
     // 4. Same name + file filter selecting one → exact.
     let filtered = round_trip(
@@ -240,7 +253,10 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
         json!({ "name": "overloaded", "file": "dup_a.rs" }),
     )
     .await?;
-    assert!(filtered["error"].is_null(), "verify filtered errored: {filtered:?}");
+    assert!(
+        filtered["error"].is_null(),
+        "verify filtered errored: {filtered:?}"
+    );
     let fr = &filtered["result"];
     assert_eq!(fr["exists"], true);
     assert_eq!(fr["resolution"], "exact");

@@ -29,7 +29,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -66,8 +70,13 @@ async fn wait_for_symbol(
     let mut id: u64 = 100;
     loop {
         id += 1;
-        let resp = round_trip(stream, &id.to_string(), "Index.FindSymbol", json!({ "name": name }))
-            .await?;
+        let resp = round_trip(
+            stream,
+            &id.to_string(),
+            "Index.FindSymbol",
+            json!({ "name": name }),
+        )
+        .await?;
         if !resp["result"]["matches"]
             .as_array()
             .map(|a| a.is_empty())
@@ -99,7 +108,12 @@ async fn verify_import_round_trip() -> anyhow::Result<()> {
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -119,8 +133,13 @@ async fn verify_import_round_trip() -> anyhow::Result<()> {
     wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
     let mut stream = UnixStream::connect(&socket_path).await?;
 
-    let mount = round_trip(&mut stream, "1", "Workspace.Mount", json!({ "root": workspace.path() }))
-        .await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
     assert!(mount["error"].is_null(), "mount: {mount:?}");
 
     wait_for_symbol(&mut stream, "CommitOptions", Duration::from_secs(5)).await?;
@@ -152,7 +171,10 @@ async fn verify_import_round_trip() -> anyhow::Result<()> {
     assert_eq!(mr["resolution"], "not_found");
     let cands = mr["candidates"].as_array().cloned().unwrap_or_default();
     assert!(!cands.is_empty(), "expected candidates; got {mr:?}");
-    let names: Vec<&str> = cands.iter().filter_map(|c| c["qualified_name"].as_str()).collect();
+    let names: Vec<&str> = cands
+        .iter()
+        .filter_map(|c| c["qualified_name"].as_str())
+        .collect();
     assert!(
         names.iter().any(|n| n.contains("CommitOptions")),
         "expected the real sibling as a candidate; got {names:?}"
@@ -173,7 +195,10 @@ async fn verify_import_round_trip() -> anyhow::Result<()> {
         dr["resolution"], "indeterminate",
         "deep external path should be indeterminate; got {dr:?}"
     );
-    assert!(dr["reason"].is_string(), "indeterminate must carry a reason; got {dr:?}");
+    assert!(
+        dr["reason"].is_string(),
+        "indeterminate must carry a reason; got {dr:?}"
+    );
 
     Ok(())
 }

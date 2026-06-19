@@ -2278,17 +2278,13 @@ fn render_signature_for(
         return None;
     }
     let slice = &body_bytes[start..end];
-    state.signature_cache.get_or_compute(
-        &abs,
-        found.start_byte,
-        found.end_byte,
-        mtime_ns,
-        || {
+    state
+        .signature_cache
+        .get_or_compute(&abs, found.start_byte, found.end_byte, mtime_ns, || {
             crate::language::info_for_path(&found.file)
                 .and_then(|info| info.signature_renderer)
                 .and_then(|render| render(slice))
-        },
-    )
+        })
 }
 
 /// Build the `(qualified_name, pagerank)` name pool that
@@ -2939,11 +2935,7 @@ fn verify_import_inner(
     // crate / module we never indexed, so deciding `not_found` would
     // risk a confident false negative: report `indeterminate` instead
     // and defer real path resolution.
-    let segments: Vec<&str> = p
-        .path
-        .split([':', '.'])
-        .filter(|s| !s.is_empty())
-        .collect();
+    let segments: Vec<&str> = p.path.split([':', '.']).filter(|s| !s.is_empty()).collect();
 
     if segments.len() <= 1 {
         // Single segment, decidably absent → not_found + candidates.
@@ -3119,8 +3111,7 @@ pub async fn verify_claims(
                         lang: lang.clone(),
                     };
                     let v = verify_import_inner(&ip, &ctx, &token)?;
-                    let resolves =
-                        v.get("resolves").and_then(|r| r.as_bool()).unwrap_or(false);
+                    let resolves = v.get("resolves").and_then(|r| r.as_bool()).unwrap_or(false);
                     let verdict = verdict_from_resolution(&v, resolves);
                     (v, verdict)
                 }

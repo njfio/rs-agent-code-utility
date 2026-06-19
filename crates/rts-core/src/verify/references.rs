@@ -53,7 +53,10 @@ pub struct Reference {
 /// Whether [`extract_references`] has a real walk for `lang`. Languages
 /// outside this set always yield `[]`.
 pub fn supports_references(lang: Language) -> bool {
-    matches!(lang, Language::Rust | Language::TypeScript | Language::Python)
+    matches!(
+        lang,
+        Language::Rust | Language::TypeScript | Language::Python
+    )
 }
 
 /// Walk the parse tree of `content` for `language` and return the
@@ -255,9 +258,8 @@ fn collect_rust_use_tree(
             // `a::*` — index the prefix path as a glob import.
             if let Some(path) = node.child_by_field_name("path").or_else(|| {
                 let mut c = node.walk();
-                node.children(&mut c).find(|n| {
-                    matches!(n.kind(), "scoped_identifier" | "identifier")
-                })
+                node.children(&mut c)
+                    .find(|n| matches!(n.kind(), "scoped_identifier" | "identifier"))
             }) {
                 if let Some(p) = text(&path, src) {
                     let qualified = join_path(prefix, p);
@@ -347,7 +349,10 @@ fn collect_ts_import(node: &Node<'_>, src: &[u8], out: &mut Vec<Reference>) {
     let source = node
         .child_by_field_name("source")
         .and_then(|s| text(&s, src))
-        .map(|s| s.trim_matches(|c| c == '"' || c == '\'' || c == '`').to_string());
+        .map(|s| {
+            s.trim_matches(|c| c == '"' || c == '\'' || c == '`')
+                .to_string()
+        });
     let (line, column) = pos(node);
 
     let mut found_clause = false;
@@ -607,7 +612,8 @@ mod tests {
 
     #[test]
     fn rust_ignores_comments_and_strings() {
-        let snippet = b"fn f(){\n // commit_batch should be ignored\n let s = \"commit_batch\"; \n}";
+        let snippet =
+            b"fn f(){\n // commit_batch should be ignored\n let s = \"commit_batch\"; \n}";
         let refs = extract_references(snippet, Language::Rust);
         assert!(
             !refs.iter().any(|r| r.name == "commit_batch"),
@@ -642,8 +648,7 @@ mod tests {
 
     #[test]
     fn typescript_call_and_import() {
-        let snippet =
-            b"commitBatch(x);\nimport { CommitOptions } from \"./store\";\n";
+        let snippet = b"commitBatch(x);\nimport { CommitOptions } from \"./store\";\n";
         let refs = extract_references(snippet, Language::TypeScript);
 
         let call = refs
@@ -656,10 +661,7 @@ mod tests {
             .iter()
             .find(|r| r.kind == RefKind::Import && r.name == "CommitOptions")
             .expect("CommitOptions import");
-        assert_eq!(
-            import.qualified.as_deref(),
-            Some("./store::CommitOptions")
-        );
+        assert_eq!(import.qualified.as_deref(), Some("./store::CommitOptions"));
     }
 
     #[test]

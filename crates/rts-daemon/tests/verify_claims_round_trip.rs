@@ -29,7 +29,11 @@ async fn wait_for_socket(path: &std::path::Path, timeout: Duration) -> anyhow::R
             return Ok(());
         }
         if Instant::now() >= deadline {
-            anyhow::bail!("socket {} did not appear within {:?}", path.display(), timeout);
+            anyhow::bail!(
+                "socket {} did not appear within {:?}",
+                path.display(),
+                timeout
+            );
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
@@ -66,8 +70,13 @@ async fn wait_for_symbol(
     let mut id: u64 = 100;
     loop {
         id += 1;
-        let resp = round_trip(stream, &id.to_string(), "Index.FindSymbol", json!({ "name": name }))
-            .await?;
+        let resp = round_trip(
+            stream,
+            &id.to_string(),
+            "Index.FindSymbol",
+            json!({ "name": name }),
+        )
+        .await?;
         if !resp["result"]["matches"]
             .as_array()
             .map(|a| a.is_empty())
@@ -99,7 +108,12 @@ async fn verify_claims_round_trip() -> anyhow::Result<()> {
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
-        home_dir.path().join("Library").join("Caches").join("rts").join("default.sock")
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
     } else {
         runtime_dir.path().join("rts").join("default.sock")
     };
@@ -119,8 +133,13 @@ async fn verify_claims_round_trip() -> anyhow::Result<()> {
     wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
     let mut stream = UnixStream::connect(&socket_path).await?;
 
-    let mount = round_trip(&mut stream, "1", "Workspace.Mount", json!({ "root": workspace.path() }))
-        .await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
     assert!(mount["error"].is_null(), "mount: {mount:?}");
 
     wait_for_symbol(&mut stream, "flush", Duration::from_secs(5)).await?;
@@ -141,30 +160,55 @@ async fn verify_claims_round_trip() -> anyhow::Result<()> {
             { "type": "location", "symbol": "flush", "file": "lib.rs", "line": 1 },
             { "type": "symbol", "name": "nonexistent_xyz" },
             { "type": "signature", "name": "vararg", "claimed": { "arity": 1, "params": ["x"] } }
-        ]})
+        ]}),
     )
     .await?;
     assert!(batch["error"].is_null(), "batch errored: {batch:?}");
     let b = &batch["result"];
     assert_eq!(b["grounded"], 2, "expected grounded:2; got {b:?}");
-    assert_eq!(b["total"], 3, "indeterminate must be excluded from total; got {b:?}");
-    let rate = b["grounding_rate"].as_f64().expect("rate should be a number");
-    assert!((rate - 0.666_667).abs() < 1e-3, "expected rate ~0.667; got {rate}");
+    assert_eq!(
+        b["total"], 3,
+        "indeterminate must be excluded from total; got {b:?}"
+    );
+    let rate = b["grounding_rate"]
+        .as_f64()
+        .expect("rate should be a number");
+    assert!(
+        (rate - 0.666_667).abs() < 1e-3,
+        "expected rate ~0.667; got {rate}"
+    );
 
     let results = b["results"].as_array().cloned().unwrap_or_default();
-    assert_eq!(results.len(), 4, "results must carry one entry per claim; got {results:?}");
+    assert_eq!(
+        results.len(),
+        4,
+        "results must carry one entry per claim; got {results:?}"
+    );
     // The 4th claim (variadic signature) is indeterminate → ok:null.
-    assert!(results[3]["ok"].is_null(), "indeterminate claim must have ok:null; got {:?}", results[3]);
+    assert!(
+        results[3]["ok"].is_null(),
+        "indeterminate claim must have ok:null; got {:?}",
+        results[3]
+    );
     assert_eq!(results[0]["ok"], true);
     assert_eq!(results[1]["ok"], true);
     assert_eq!(results[2]["ok"], false);
 
     // Empty claims → grounding_rate: null (not NaN), total 0.
-    let empty = round_trip(&mut stream, "11", "Index.VerifyClaims", json!({ "claims": [] })).await?;
+    let empty = round_trip(
+        &mut stream,
+        "11",
+        "Index.VerifyClaims",
+        json!({ "claims": [] }),
+    )
+    .await?;
     let e = &empty["result"];
     assert_eq!(e["total"], 0);
     assert_eq!(e["grounded"], 0);
-    assert!(e["grounding_rate"].is_null(), "empty batch rate must be null; got {e:?}");
+    assert!(
+        e["grounding_rate"].is_null(),
+        "empty batch rate must be null; got {e:?}"
+    );
 
     Ok(())
 }

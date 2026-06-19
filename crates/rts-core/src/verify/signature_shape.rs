@@ -201,10 +201,7 @@ mod tests {
     use super::*;
 
     /// Parse `code` and return the first node of `kind` (depth-first).
-    fn first_node_of_kind<'t>(
-        tree: &'t tree_sitter::Tree,
-        kind: &str,
-    ) -> Option<Node<'t>> {
+    fn first_node_of_kind<'t>(tree: &'t tree_sitter::Tree, kind: &str) -> Option<Node<'t>> {
         fn walk<'t>(node: Node<'t>, kind: &str) -> Option<Node<'t>> {
             if node.kind() == kind {
                 return Some(node);
@@ -249,8 +246,8 @@ mod tests {
 
     #[test]
     fn rust_free_fn_no_return() {
-        let shape = shape_of("fn f(a: u32, b: u32) {}", Language::Rust, "function_item")
-            .expect("shape");
+        let shape =
+            shape_of("fn f(a: u32, b: u32) {}", Language::Rust, "function_item").expect("shape");
         assert_eq!(shape.arity, 2);
         assert_eq!(shape.params, vec!["a".to_string(), "b".to_string()]);
         assert_eq!(shape.returns, None);
@@ -258,15 +255,23 @@ mod tests {
 
     #[test]
     fn python_default_param_counts() {
-        let shape = shape_of("def f(a, b=2):\n    pass\n", Language::Python, "function_definition")
-            .expect("shape");
+        let shape = shape_of(
+            "def f(a, b=2):\n    pass\n",
+            Language::Python,
+            "function_definition",
+        )
+        .expect("shape");
         assert_eq!(shape.arity, 2);
         assert_eq!(shape.params, vec!["a".to_string(), "b".to_string()]);
     }
 
     #[test]
     fn python_varargs_is_none() {
-        let shape = shape_of("def g(*rest):\n    pass\n", Language::Python, "function_definition");
+        let shape = shape_of(
+            "def g(*rest):\n    pass\n",
+            Language::Python,
+            "function_definition",
+        );
         assert_eq!(shape, None);
     }
 
@@ -321,7 +326,10 @@ mod tests {
         // the node passed in.
         let tree = parse("func F(a int) {}", Language::Go);
         let node = first_node_of_kind(&tree, "function_declaration").expect("fn");
-        assert_eq!(signature_shape(node, b"func F(a int) {}", Language::Go), None);
+        assert_eq!(
+            signature_shape(node, b"func F(a int) {}", Language::Go),
+            None
+        );
     }
 
     #[test]

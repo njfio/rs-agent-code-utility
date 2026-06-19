@@ -96,13 +96,28 @@ mod tests {
 
     #[test]
     fn reason_serializes_to_frozen_wire_strings() {
-        assert_eq!(json(IndeterminateReason::DynamicDispatch), "\"dynamic_dispatch\"");
-        assert_eq!(json(IndeterminateReason::MacroGenerated), "\"macro_generated\"");
+        assert_eq!(
+            json(IndeterminateReason::DynamicDispatch),
+            "\"dynamic_dispatch\""
+        );
+        assert_eq!(
+            json(IndeterminateReason::MacroGenerated),
+            "\"macro_generated\""
+        );
         assert_eq!(json(IndeterminateReason::Ffi), "\"ffi\"");
-        assert_eq!(json(IndeterminateReason::UnresolvedRef), "\"unresolved_ref\"");
+        assert_eq!(
+            json(IndeterminateReason::UnresolvedRef),
+            "\"unresolved_ref\""
+        );
         assert_eq!(json(IndeterminateReason::Reflection), "\"reflection\"");
-        assert_eq!(json(IndeterminateReason::AmbiguousOverload), "\"ambiguous_overload\"");
-        assert_eq!(json(IndeterminateReason::UndecidableSignature), "\"undecidable_signature\"");
+        assert_eq!(
+            json(IndeterminateReason::AmbiguousOverload),
+            "\"ambiguous_overload\""
+        );
+        assert_eq!(
+            json(IndeterminateReason::UndecidableSignature),
+            "\"undecidable_signature\""
+        );
     }
 
     #[test]

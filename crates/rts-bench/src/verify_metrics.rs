@@ -390,7 +390,8 @@ async fn resolve_snippet<O: VerifyOracle>(
     }
     let refs: Vec<Reference> = extract_references(code.as_bytes(), lang);
     if !refs.is_empty() {
-        acc.languages_covered.insert(lang.to_string().to_lowercase());
+        acc.languages_covered
+            .insert(lang.to_string().to_lowercase());
     }
     for r in refs {
         match r.kind {
@@ -428,10 +429,7 @@ async fn resolve_snippet<O: VerifyOracle>(
 /// `unsupported_language_refs` as a coarse, honest "we couldn't look at
 /// this" signal that keeps the uncovered surface visible in the report. A
 /// single mislabelled snippet must never abort measuring the whole corpus.
-pub async fn run_corpus<O: VerifyOracle>(
-    oracle: &mut O,
-    corpus: &Corpus,
-) -> Result<Resolutions> {
+pub async fn run_corpus<O: VerifyOracle>(oracle: &mut O, corpus: &Corpus) -> Result<Resolutions> {
     let mut acc = Resolutions::default();
     for snip in &corpus.snippets {
         // An unknown language string is treated as unsupported, not fatal.
@@ -520,13 +518,19 @@ mod tests {
     #[test]
     fn resolution_from_wire_defaults_unknown_to_indeterminate() {
         assert_eq!(Resolution::from_wire(Some("exact")), Resolution::Exact);
-        assert_eq!(Resolution::from_wire(Some("not_found")), Resolution::NotFound);
+        assert_eq!(
+            Resolution::from_wire(Some("not_found")),
+            Resolution::NotFound
+        );
         assert_eq!(
             Resolution::from_wire(Some("indeterminate")),
             Resolution::Indeterminate
         );
         // Unknown / missing → indeterminate (never a false not_found).
-        assert_eq!(Resolution::from_wire(Some("wat")), Resolution::Indeterminate);
+        assert_eq!(
+            Resolution::from_wire(Some("wat")),
+            Resolution::Indeterminate
+        );
         assert_eq!(Resolution::from_wire(None), Resolution::Indeterminate);
     }
 
@@ -551,7 +555,11 @@ mod tests {
             // IHR: 1 exact + 1 not_found ⇒ 1/2.
             [Resolution::Exact, Resolution::NotFound],
             // SMR: 2 exact + 0 not_found + 1 indeterminate ⇒ 0/2.
-            [Resolution::Exact, Resolution::Exact, Resolution::Indeterminate],
+            [
+                Resolution::Exact,
+                Resolution::Exact,
+                Resolution::Indeterminate,
+            ],
             7,
             langs,
         );
@@ -684,9 +692,7 @@ mod tests {
     fn routing_import_goes_to_ihr() {
         let mut oracle = StubOracle {
             symbols: HashMap::new(),
-            imports: HashMap::from([
-                ("std::collections::HashMap".to_string(), Resolution::Exact),
-            ]),
+            imports: HashMap::from([("std::collections::HashMap".to_string(), Resolution::Exact)]),
             signatures: HashMap::new(),
         };
         let mut acc = Resolutions::default();
@@ -705,13 +711,11 @@ mod tests {
     fn run_corpus_counts_unsupported_language_refs() {
         let corpus = Corpus {
             version: 1,
-            snippets: vec![
-                CorpusSnippet {
-                    name: "go-snippet".into(),
-                    lang: "go".into(),
-                    code: "package main\nfunc main() {\n  foo()\n}\n".into(),
-                },
-            ],
+            snippets: vec![CorpusSnippet {
+                name: "go-snippet".into(),
+                lang: "go".into(),
+                code: "package main\nfunc main() {\n  foo()\n}\n".into(),
+            }],
         };
         let mut oracle = StubOracle {
             symbols: HashMap::new(),
@@ -743,7 +747,8 @@ mod tests {
             imports: HashMap::new(),
             signatures: HashMap::new(),
         };
-        let acc = block_on(run_corpus(&mut oracle, &corpus)).expect("must not abort on unknown lang");
+        let acc =
+            block_on(run_corpus(&mut oracle, &corpus)).expect("must not abort on unknown lang");
         assert!(acc.symbol.is_empty());
         assert_eq!(acc.unsupported_language_refs, 2);
     }
