@@ -1,0 +1,35 @@
+{
+  "_comment": "Cheap SMOKE subset for agent-bench (verify-v0 P4). NOT the full 30-task corpus. Instance ids below are real, well-known SWE-bench_Lite (princeton-nlp/SWE-bench_Lite) instances; problem_statement values here are short placeholders for smoke wiring only and are NOT the dataset's full statements. The live run loads the canonical statements + gold patches from HuggingFace. base_commit values are placeholders pending the dataset load.",
+  "schema": "agent-bench/corpus/v1",
+  "name": "swe-bench-lite-smoke",
+  "tasks": [
+    {
+      "instance_id": "django__django-11099",
+      "repo": "django/django",
+      "base_commit": "PLACEHOLDER_SMOKE",
+      "problem_statement": "SMOKE PLACEHOLDER: UsernameValidator allows trailing newline in usernames. Load the full statement from the dataset for a real run.",
+      "gold_patch": ""
+    },
+    {
+      "instance_id": "sympy__sympy-20212",
+      "repo": "sympy/sympy",
+      "base_commit": "PLACEHOLDER_SMOKE",
+      "problem_statement": "SMOKE PLACEHOLDER: 0**-oo produces zoo, but should produce oo. Load the full statement from the dataset for a real run.",
+      "gold_patch": ""
+    },
+    {
+      "instance_id": "scikit-learn__scikit-learn-13241",
+      "repo": "scikit-learn/scikit-learn",
+      "base_commit": "PLACEHOLDER_SMOKE",
+      "problem_statement": "SMOKE PLACEHOLDER: KernelPCA sign inconsistency across runs. Load the full statement from the dataset for a real run.",
+      "gold_patch": ""
+    },
+    {
+      "instance_id": "pytest-dev__pytest-5103",
+      "repo": "pytest-dev/pytest",
+      "base_commit": "PLACEHOLDER_SMOKE",
+      "problem_statement": "SMOKE PLACEHOLDER: Unroll the iterable for all/any calls to get better assertion messages. Load the full statement from the dataset for a real run.",
+      "gold_patch": ""
+    }
+  ]
+}
