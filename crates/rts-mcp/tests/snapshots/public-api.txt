@@ -6,6 +6,47 @@ pub const rts_mcp::cli::exit::NO_RESULTS: i32
 pub const rts_mcp::cli::exit::OK: i32
 pub const rts_mcp::cli::exit::TIMEOUT: i32
 pub const rts_mcp::cli::exit::WORKSPACE_ERROR: i32
+pub struct rts_mcp::cli::Hallucination
+pub rts_mcp::cli::Hallucination::did_you_mean: core::option::Option<alloc::string::String>
+pub rts_mcp::cli::Hallucination::line: usize
+pub rts_mcp::cli::Hallucination::name: alloc::string::String
+impl core::clone::Clone for rts_mcp::cli::Hallucination
+pub fn rts_mcp::cli::Hallucination::clone(&self) -> rts_mcp::cli::Hallucination
+impl core::cmp::PartialEq for rts_mcp::cli::Hallucination
+pub fn rts_mcp::cli::Hallucination::eq(&self, other: &rts_mcp::cli::Hallucination) -> bool
+impl core::fmt::Debug for rts_mcp::cli::Hallucination
+pub fn rts_mcp::cli::Hallucination::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rts_mcp::cli::Hallucination
+impl core::marker::Freeze for rts_mcp::cli::Hallucination
+impl core::marker::Send for rts_mcp::cli::Hallucination
+impl core::marker::Sync for rts_mcp::cli::Hallucination
+impl core::marker::Unpin for rts_mcp::cli::Hallucination
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::cli::Hallucination
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::cli::Hallucination
+impl<T, U> core::convert::Into<U> for rts_mcp::cli::Hallucination where U: core::convert::From<T>
+pub fn rts_mcp::cli::Hallucination::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::cli::Hallucination where U: core::convert::Into<T>
+pub type rts_mcp::cli::Hallucination::Error = core::convert::Infallible
+pub fn rts_mcp::cli::Hallucination::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::cli::Hallucination where U: core::convert::TryFrom<T>
+pub type rts_mcp::cli::Hallucination::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::cli::Hallucination::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::cli::Hallucination where T: core::clone::Clone
+pub type rts_mcp::cli::Hallucination::Owned = T
+pub fn rts_mcp::cli::Hallucination::clone_into(&self, target: &mut T)
+pub fn rts_mcp::cli::Hallucination::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::cli::Hallucination where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::cli::Hallucination::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::cli::Hallucination where T: ?core::marker::Sized
+pub fn rts_mcp::cli::Hallucination::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::cli::Hallucination where T: ?core::marker::Sized
+pub fn rts_mcp::cli::Hallucination::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::cli::Hallucination where T: core::clone::Clone
+pub unsafe fn rts_mcp::cli::Hallucination::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::cli::Hallucination
+pub fn rts_mcp::cli::Hallucination::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::cli::Hallucination
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::cli::Hallucination
 pub struct rts_mcp::cli::Style
 pub rts_mcp::cli::Style::enabled: bool
 impl rts_mcp::cli::Style
@@ -53,7 +94,10 @@ pub fn rts_mcp::cli::render_impact_verdict<W: std::io::Write>(body: &serde_json:
 pub fn rts_mcp::cli::render_outline<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_read<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_stats<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_verify<W: std::io::Write>(rel: &str, halls: &[rts_mcp::cli::Hallucination], w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::resolve_workspace(override_path: core::option::Option<&std::path::Path>) -> anyhow::Result<std::path::PathBuf>
+pub fn rts_mcp::cli::top_candidate(body: &serde_json::value::Value) -> core::option::Option<alloc::string::String>
+pub fn rts_mcp::cli::verify_route(r: &rust_tree_sitter::verify::references::Reference) -> (&'static str, serde_json::value::Value, alloc::string::String)
 pub mod rts_mcp::connection
 pub enum rts_mcp::connection::ConnectionError
 pub rts_mcp::connection::ConnectionError::Daemon(rts_mcp::daemon_client::DaemonError)

@@ -296,6 +296,33 @@ nags users without rts installed.
 Test the hook locally with `.claude/hooks/tests/run-tests.sh` (pure
 bash, no `bats` or other deps required; needs `jq` + `python3`).
 
+### Edit-verification nudge (verify-v0)
+
+This repo also ships a project-local Claude Code `PostToolUse` hook at
+`.claude/hooks/rts-verify.sh` (registered via `.claude/settings.json`,
+matcher `Write|Edit|MultiEdit`). After each `Write`/`Edit`/`MultiEdit`
+the hook runs `rts verify <file>` on the just-written file: it extracts
+the file's use-site references (calls, types, imports, qualified paths)
+and checks each one against the index. Any reference that **provably has
+no matching definition** (a hallucination) is fed back into the agent's
+next-turn context via `additionalContext`, as
+`FILE:LINE  NAME  (did you mean: …?)` plus a one-line "verify these
+symbols exist" nudge.
+
+It is **annotate-only**: it never edits and never blocks the write (a
+`PostToolUse` hook fires after the tool already ran, so blocking is not
+even possible — the blocking edit gate is a later phase). It is silent
+when the file is clean, when the file's language has no reference
+extraction (anything but Rust / TypeScript / Python), and when the rts
+daemon isn't running.
+
+Opt out for a session with the same `RTS_HOOK_DISABLED=1` env var that
+disables the nudge hook. The hook locates the `rts` binary via `$RTS_BIN`
+(if set) or `$PATH`.
+
+Test it locally with `.claude/hooks/tests/run-verify-tests.sh` (pure
+bash; needs `jq`; stubs the `rts` binary so it needs no daemon).
+
 ### Where shell `grep` / `rg` is still the right tool
 
 - Searching files outside the indexed workspace (vendored deps,

@@ -710,6 +710,84 @@ pub fn render_stats<W: Write>(body: &Value, w: &mut W, style: &Style) -> std::io
     Ok(pairs.len().max(1))
 }
 
+// ── verify (file-reference check) ─────────────────────────────────────
+
+/// One hallucinated reference discovered by `rts verify`: a decidable
+/// symbol/import reference whose `resolution == "not_found"`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Hallucination {
+    /// The referenced name (final segment for qualified refs / imports).
+    pub name: String,
+    /// 1-based line of the reference in the verified file.
+    pub line: usize,
+    /// The top "did you mean" candidate's qualified name, if any.
+    pub did_you_mean: Option<String>,
+}
+
+/// Route one reference to its verify method + params, mirroring the
+/// routing in `rts-bench`'s `verify_metrics.rs`:
+/// - `Import` → `Index.VerifyImport { path }`
+/// - `Call` / `Type` / `Path` → `Index.VerifySymbol { name }`
+///
+/// Returns `(method, params, name)` where `name` is the human-facing
+/// label for the reference. Kept a tight local helper (not shared with
+/// the bench crate) on purpose.
+pub fn verify_route(r: &rust_tree_sitter::Reference) -> (&'static str, Value, String) {
+    use rust_tree_sitter::RefKind;
+    match r.kind {
+        RefKind::Import => {
+            let path = r.qualified.as_deref().unwrap_or(&r.name).to_string();
+            (
+                "Index.VerifyImport",
+                serde_json::json!({ "path": path }),
+                r.name.clone(),
+            )
+        }
+        RefKind::Call | RefKind::Type | RefKind::Path => (
+            "Index.VerifySymbol",
+            serde_json::json!({ "name": r.name }),
+            r.name.clone(),
+        ),
+    }
+}
+
+/// Pull the top candidate's `qualified_name` from a verify response
+/// body's `candidates[0]`, when present.
+pub fn top_candidate(body: &Value) -> Option<String> {
+    body.get("candidates")
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|c| c.get("qualified_name"))
+        .and_then(|q| q.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Render the collected hallucinations as `<file>:<line>  <name>
+/// (did you mean: <top candidate>?)` lines. Returns the number of
+/// lines written (== hallucination count). `rel` is the file label
+/// (typically the path as the user passed it).
+pub fn render_verify<W: Write>(
+    rel: &str,
+    halls: &[Hallucination],
+    w: &mut W,
+    style: &Style,
+) -> std::io::Result<usize> {
+    for h in halls {
+        let loc = format!("{rel}:{}", h.line);
+        match &h.did_you_mean {
+            Some(cand) => writeln!(
+                w,
+                "{}  {}  {}",
+                style.magenta(&loc),
+                style.yellow(&h.name),
+                style.dim(&format!("(did you mean: {cand}?)")),
+            )?,
+            None => writeln!(w, "{}  {}", style.magenta(&loc), style.yellow(&h.name),)?,
+        }
+    }
+    Ok(halls.len())
+}
+
 /// Truncate a string to `max` characters, suffixing `…` when the
 /// original was longer. Operates on chars, not bytes, so multi-byte
 /// identifiers don't split mid-codepoint.

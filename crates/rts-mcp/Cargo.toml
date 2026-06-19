@@ -58,6 +58,11 @@ serde_json = "1"
 # Errors
 anyhow = "1"
 
+# Use-site reference extraction (F3) + language detection for the
+# `rts verify` subcommand. `rust_tree_sitter` is the rts-core lib name;
+# already in the workspace via rts-bench, so no new transitive deps.
+rust_tree_sitter = { path = "../rts-core" }
+
 # Logging — stderr-only per stdio MCP discipline.
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }

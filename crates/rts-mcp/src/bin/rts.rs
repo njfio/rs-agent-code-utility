@@ -153,6 +153,20 @@ enum Cmd {
         #[arg(long)]
         depth: Option<u32>,
     },
+    /// Verify a file's symbol/import references against the index.
+    ///
+    /// Extracts the use-site references from FILE (calls, types, imports,
+    /// qualified paths), checks each decidable one against the daemon, and
+    /// prints any reference that provably has no matching definition (a
+    /// hallucination) as `FILE:LINE  NAME  (did you mean: …?)`.
+    ///
+    /// Annotate-only — never edits, never blocks. Exit 0 = clean (or the
+    /// file's language has no reference extraction), 1 = ≥1 hallucinated
+    /// reference, 3 = daemon error.
+    Verify {
+        /// Path to the file to verify.
+        path: PathBuf,
+    },
     /// Print the workspace outline (token-budgeted tree).
     Outline {
         /// Optional glob to restrict the outline.
@@ -584,6 +598,7 @@ async fn run_command(
                 .unwrap_or(false);
             Ok(if resolved { exit::OK } else { exit::NO_RESULTS })
         }
+        Cmd::Verify { path } => run_verify(&client, workspace, cli.json, path, style).await,
         Cmd::Outline { glob, token_budget } => {
             let mut params = serde_json::Map::new();
             if let Some(g) = glob {
@@ -675,6 +690,99 @@ async fn run_command(
 
 fn io_to_anyhow(e: std::io::Error) -> CmdError {
     CmdError::Setup(anyhow::anyhow!("stdout write: {e}"))
+}
+
+/// `rts verify <FILE>` — check a file's symbol/import references against
+/// the index and report the hallucinated (`not_found`) ones.
+///
+/// Pipeline (mirrors `rts-bench`'s `verify_metrics` routing):
+///   1. Detect FILE's language from its extension. Unsupported / unknown
+///      language → print nothing, exit OK ("nothing checkable").
+///   2. `extract_references` (F3) → the use-site references.
+///   3. For each DECIDABLE ref, call the daemon: `Import` →
+///      `Index.VerifyImport`, `Call`/`Type`/`Path` → `Index.VerifySymbol`.
+///      Collect the ones whose `resolution == "not_found"`; skip `exact`
+///      and `indeterminate`.
+///   4. Print each hallucination + (optional) top candidate.
+///
+/// Exit codes: OK (clean / unsupported / nothing to check), NO_RESULTS
+/// (≥1 hallucination — repurposed as the hook's "found something" signal),
+/// DAEMON_ERROR (any daemon contact failure).
+async fn run_verify(
+    client: &rts_mcp::connection::ConnectionManager,
+    workspace: &std::path::Path,
+    json: bool,
+    path: &std::path::Path,
+    style: &Style,
+) -> Result<i32, CmdError> {
+    // 1. Read the file. A missing/unreadable file is a setup error
+    // (exit 3) — the hook only ever calls us on a path the tool just
+    // wrote, but a CLI user deserves a clear message.
+    let bytes = std::fs::read(path).map_err(|e| anyhow::anyhow!("read {}: {e}", path.display()))?;
+
+    // Detect language from the path's extension (same table the daemon
+    // and indexer use). Unsupported / unknown → nothing checkable.
+    let path_str = path.to_string_lossy();
+    let lang = match rust_tree_sitter::detect_language_from_path(&path_str) {
+        Some(l) if rust_tree_sitter::supports_references(l) => l,
+        _ => return Ok(cli::exit::OK),
+    };
+
+    // 2. Extract references (F3).
+    let refs = rust_tree_sitter::extract_references(&bytes, lang);
+
+    // 3. Check each decidable reference against the daemon.
+    let mut halls: Vec<cli::Hallucination> = Vec::new();
+    for r in &refs {
+        let (method, params, name) = cli::verify_route(r);
+        let body = match cli::call_method(client, workspace, method, params).await {
+            Ok(v) => v,
+            Err(e) => return Ok(cli::render_connection_error(&e, style)),
+        };
+        let resolution = body
+            .get("resolution")
+            .and_then(|v| v.as_str())
+            .unwrap_or("indeterminate");
+        // Only `not_found` is a hallucination. `exact` and
+        // `indeterminate` are not surfaced (annotate-only, honest:
+        // never flag an undecidable reference).
+        if resolution == "not_found" {
+            halls.push(cli::Hallucination {
+                name,
+                line: r.line,
+                did_you_mean: cli::top_candidate(&body),
+            });
+        }
+    }
+
+    // 4. Emit.
+    if json {
+        let body = serde_json::json!({
+            "file": path_str,
+            "hallucinations": halls
+                .iter()
+                .map(|h| serde_json::json!({
+                    "name": h.name,
+                    "line": h.line,
+                    "did_you_mean": h.did_you_mean,
+                }))
+                .collect::<Vec<_>>(),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+    } else {
+        let mut stdout = std::io::stdout().lock();
+        cli::render_verify(&path_str, &halls, &mut stdout, style).map_err(io_to_anyhow)?;
+        stdout.flush().map_err(io_to_anyhow)?;
+    }
+
+    Ok(if halls.is_empty() {
+        cli::exit::OK
+    } else {
+        cli::exit::NO_RESULTS
+    })
 }
 
 /// `rts telemetry {status,preview,enable,disable,flush}` dispatch.
