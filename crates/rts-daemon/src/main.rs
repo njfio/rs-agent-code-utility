@@ -31,6 +31,7 @@ mod store;
 mod symbol_pagerank;
 #[cfg(feature = "telemetry")]
 mod telemetry_ticker;
+mod verify_edit;
 mod watcher;
 mod workspace;
 mod writer;

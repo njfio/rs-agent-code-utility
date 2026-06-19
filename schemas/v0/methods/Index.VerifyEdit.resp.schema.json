@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyEdit.resp.schema.json",
+  "title": "Index.VerifyEdit result",
+  "description": "verify-v0 P3. `verdict` is the rolled-up gate: any `critical` finding -> `fail`; else any `warning` -> `warn`; else `pass`. A non-empty `files_skipped` (unsupported language, or over the file cap) forces the verdict to at least `warn` so a partial analysis never reads as a clean pass. `summary` counts findings by severity. Each finding names the edited `symbol`, an optional call-site `site` (resolved to its enclosing def), and a human-readable `detail`. `content_version_base` is a stable hash over the live index generation so a caller can detect the index moving between the verify and the write.",
+  "type": "object",
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail"]
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "critical": { "type": "integer", "minimum": 0 },
+        "warning":  { "type": "integer", "minimum": 0 },
+        "info":     { "type": "integer", "minimum": 0 }
+      },
+      "required": ["critical", "warning", "info"],
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "warning", "info"]
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["broken_caller", "dangling_ref", "signature_break", "new_symbol"]
+          },
+          "symbol": { "type": "string" },
+          "site": {
+            "description": "The call site, resolved to its enclosing def. Null for findings not tied to a specific site (e.g. dangling_ref / new_symbol).",
+            "type": ["object", "null"],
+            "properties": {
+              "file":      { "type": "string" },
+              "line":      { "type": "integer", "minimum": 0 },
+              "enclosing": { "type": "string" }
+            },
+            "required": ["file", "line", "enclosing"]
+          },
+          "detail": { "type": "string" }
+        },
+        "required": ["severity", "kind", "symbol", "site", "detail"]
+      }
+    },
+    "files_analyzed": { "type": "integer", "minimum": 0 },
+    "files_skipped": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "content_version_base": { "type": "string" }
+  },
+  "required": ["verdict", "summary", "findings", "files_analyzed", "files_skipped", "content_version_base"]
+}

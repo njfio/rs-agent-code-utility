@@ -206,6 +206,12 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // pass/fail `verdict` (would_break | safe) so an edit can be gated.
     // A verification-framed wrapper over `impact_of`. Additive.
     "verify_impact",
+    // verify-v0 P3 — `Index.VerifyEdit`: validate a PROPOSED multi-file
+    // patch against the live index *before* it's written, returning a
+    // pass/warn/fail `verdict` with structured findings (broken_caller /
+    // dangling_ref / signature_break / new_symbol). The flagship verify
+    // verb; a scoped in-memory delta, strictly read-only. Additive.
+    "verify_edit",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).

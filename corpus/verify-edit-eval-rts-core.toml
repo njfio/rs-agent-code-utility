@@ -1,0 +1,66 @@
+# Edit-quality corpus for `crates/rts-core`
+# (`rts-bench verify-edit`, verify-v0 P3.U2).
+#
+# Each `[[edit_set]]` is a whole PROPOSED patch — a list of
+# `{file, content}` entries where `content` is the COMPLETE new content of
+# `file` after the edit. The harness forwards each edit-set to the daemon's
+# `Index.VerifyEdit` (read-only, never written to disk) and aggregates:
+#
+#   EVR  = Edit Validity Rate           = `pass` verdicts / all edit-sets
+#   BCIR = Broken-Caller Introduction   = edit-sets with a
+#          Rate                           `broken_caller`/`signature_break`
+#                                         finding / all edit-sets
+#
+# `warn`/`fail` count against EVR; every edit-set always yields a verdict,
+# so there is no excluded bucket. No LLM in the loop — the metric is fully
+# deterministic.
+#
+# Run: `rts-bench verify-edit \
+#         --corpus corpus/verify-edit-eval-rts-core.toml \
+#         --workspace crates/rts-core`
+#
+# Grading methodology:
+# - The `expected_verdict` field is advisory: the measured EVR/BCIR come
+#   from the LIVE index, which can shift as rts-core evolves. The PINNED
+#   expected values live in the self-validation fixture
+#   (`corpus/verify-edit-eval-selftest.toml`), which the integration test
+#   asserts on.
+# - "Breaking" edit-sets deliberately remove or change a called public fn
+#   so the metric has a non-zero BCIR to detect (a metric that can only
+#   ever report 0 is untrustworthy).
+# - "Safe" edit-sets add brand-new files / arity-preserving content so
+#   they resolve to a clean `pass`.
+
+version = 1
+
+# --- BREAKING: stub out a file that defines a called public fn ---
+# `signature_shape` is called from `crate::verify::mod` and re-exported in
+# `lib.rs`; rewriting its defining file to a stub drops the def while live
+# callers remain → fail + broken_caller (callers are outside the patch).
+[[edit_set]]
+name = "breaking: drop signature_shape() (called by verify::mod)"
+expected_verdict = "fail"
+edits = [
+  { file = "src/verify/signature_shape.rs", content = "//! stubbed out\n" },
+]
+
+# --- SAFE: add a brand-new standalone file ---
+# A new file with a self-contained fn references nothing existing and is
+# referenced by nothing → pass + new_symbol.
+[[edit_set]]
+name = "safe: add a brand-new standalone helper file"
+expected_verdict = "pass"
+edits = [
+  { file = "src/scratch_new_helper.rs", content = "pub fn scratch_new_helper(x: u32) -> u32 {\n    x.wrapping_add(1)\n}\n" },
+]
+
+# --- SAFE: add two new mutually-consistent files in one patch ---
+# Both files are new; the caller and callee are edited together, so there
+# is no stale-index caller to break → pass.
+[[edit_set]]
+name = "safe: add a new callee + its new caller in one patch"
+expected_verdict = "pass"
+edits = [
+  { file = "src/scratch_callee.rs", content = "pub fn scratch_callee(a: u32, b: u32) -> u32 {\n    a + b\n}\n" },
+  { file = "src/scratch_caller.rs", content = "use crate::scratch_callee;\npub fn scratch_caller() -> u32 {\n    scratch_callee(1, 2)\n}\n" },
+]

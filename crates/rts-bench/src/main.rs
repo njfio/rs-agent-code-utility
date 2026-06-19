@@ -246,6 +246,36 @@ enum Cmd {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Edit-quality metric harness (verify-v0 P3.U2). Runs a corpus of
+    /// proposed edit-sets (`[[edit_set]]`, each a list of `{file, content}`
+    /// full post-edit contents) through `Index.VerifyEdit` and reports two
+    /// deterministic rates:
+    ///
+    ///   EVR  = Edit Validity Rate          = `pass` verdicts / all edit-sets
+    ///   BCIR = Broken-Caller Introduction  = edit-sets with a
+    ///          Rate                          `broken_caller`/`signature_break`
+    ///                                        finding / all edit-sets
+    ///
+    /// `warn`/`fail` count against EVR; every edit-set always yields a
+    /// verdict, so there is no excluded bucket. No LLM in the loop.
+    ///
+    /// Corpus format: see `corpus/verify-edit-eval-rts-core.toml` and the
+    /// pinned self-validation fixture `corpus/verify-edit-eval-selftest.toml`.
+    VerifyEdit {
+        /// Path to a TOML verify-edit-eval corpus file.
+        #[arg(long)]
+        corpus: PathBuf,
+        /// Workspace to validate the edits against. Mounted + indexed via
+        /// the same rts-mcp + daemon path the other benches use.
+        #[arg(long)]
+        workspace: PathBuf,
+        /// Where to write the JSON `EditQualityReport`.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Skip writing the report to disk (it's still printed to stdout).
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Self-dogfood telemetry harness. Ingests a Claude Code session
     /// JSONL transcript and reports how often the agent reached for
     /// `Bash(grep|rg|find|cat|ls)` when an `mcp__rts__*` tool would
@@ -683,6 +713,12 @@ async fn main() -> Result<()> {
             out,
             dry_run,
         } => run_verify(corpus, workspace, out, dry_run).await,
+        Cmd::VerifyEdit {
+            corpus,
+            workspace,
+            out,
+            dry_run,
+        } => run_verify_edit(corpus, workspace, out, dry_run).await,
         Cmd::RealRepos { sub } => run_real_repos(sub).await,
         Cmd::Dogfood {
             session,
@@ -935,6 +971,101 @@ async fn run_verify(
             std::env::current_dir()
                 .unwrap_or_else(|_| PathBuf::from("."))
                 .join(format!("bench-verify-{}.json", git_short_sha()))
+        });
+        std::fs::write(&out_path, &json)
+            .with_context(|| format!("write {}", out_path.display()))?;
+        println!("wrote {}", out_path.display());
+    }
+    Ok(())
+}
+
+/// `rts-bench verify-edit` — edit-quality metric harness (verify-v0
+/// P3.U2).
+///
+/// Mounts the workspace via the same rts-mcp + daemon path the other
+/// benches use, runs each corpus edit-set through the `verify_edit` MCP
+/// tool, and prints the JSON `EditQualityReport` (EVR / BCIR).
+async fn run_verify_edit(
+    corpus_path: PathBuf,
+    workspace: PathBuf,
+    out: Option<PathBuf>,
+    dry_run: bool,
+) -> Result<()> {
+    let workspace = workspace
+        .canonicalize()
+        .with_context(|| format!("canonicalize {}", workspace.display()))?;
+    let corpus = verify_metrics::load_edit_corpus(&corpus_path)
+        .with_context(|| format!("load corpus {}", corpus_path.display()))?;
+    println!(
+        "verify-edit: workspace={} corpus={} edit_sets={}",
+        workspace.display(),
+        corpus_path.display(),
+        corpus.edit_sets.len(),
+    );
+
+    let rts_mcp_bin = resolve_bin("rts-mcp")?;
+    let rts_daemon_bin = resolve_bin("rts-daemon")?;
+    let mut session =
+        mcp_runner::McpSession::spawn(&rts_mcp_bin, &rts_daemon_bin, &workspace, &[]).await?;
+
+    // Warm the index before validating edits so cold-mount churn doesn't
+    // masquerade as a caller-breaking finding.
+    let _ = session
+        .tools_call("find_symbol", json!({ "pattern": "*" }), 30)
+        .await?;
+
+    let verdicts = {
+        let mut oracle = verify_metrics::SessionOracle::new(&mut session);
+        verify_metrics::run_edit_corpus(&mut oracle, &corpus).await?
+    };
+    session.close().await?;
+
+    // Per-edit-set line for quick scan: name, measured verdict, and the
+    // advisory expected verdict (flagged with `!=` when they disagree so a
+    // corpus drift is visible at a glance).
+    for (set, v) in corpus.edit_sets.iter().zip(verdicts.iter()) {
+        let expect = set.expected_verdict.as_deref().unwrap_or("?");
+        let mark = if expect == "?" || expect == v.verdict {
+            ""
+        } else {
+            " (!= expected)"
+        };
+        let bc = if v.introduces_broken_caller() {
+            " [broken-caller]"
+        } else {
+            ""
+        };
+        println!(
+            "  [{:>4}{mark}{bc}] {} (expected {expect})",
+            v.verdict, set.name
+        );
+    }
+
+    let report = verify_metrics::build_edit_report(
+        env!("CARGO_PKG_VERSION"),
+        &workspace.display().to_string(),
+        &corpus_path.display().to_string(),
+        verdicts,
+    );
+
+    let fmt_rate = |m: &verify_metrics::EditRate| match m.rate {
+        Some(r) => format!("{:.3} ({}/{})", r, m.numerator, m.denominator),
+        None => "null (0/0)".to_string(),
+    };
+    println!(
+        "verify-edit: EVR={} BCIR={}",
+        fmt_rate(&report.evr),
+        fmt_rate(&report.bcir),
+    );
+
+    let json = serde_json::to_string_pretty(&report).context("encode edit-quality report")?;
+    println!("{json}");
+
+    if !dry_run {
+        let out_path = out.unwrap_or_else(|| {
+            std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join(format!("bench-verify-edit-{}.json", git_short_sha()))
         });
         std::fs::write(&out_path, &json)
             .with_context(|| format!("write {}", out_path.display()))?;

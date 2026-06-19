@@ -382,6 +382,7 @@ pub struct CallCounters {
     pub index_verify_claims: AtomicU64,
     pub index_impact_of: AtomicU64,
     pub index_verify_impact: AtomicU64,
+    pub index_verify_edit: AtomicU64,
     pub index_read_range: AtomicU64,
     pub index_read_symbol: AtomicU64,
     pub index_read_symbol_at: AtomicU64,
@@ -432,6 +433,7 @@ impl CallCounters {
             "Index.VerifyClaims":  self.index_verify_claims.load(Relaxed),
             "Index.ImpactOf":      self.index_impact_of.load(Relaxed),
             "Index.VerifyImpact":  self.index_verify_impact.load(Relaxed),
+            "Index.VerifyEdit":    self.index_verify_edit.load(Relaxed),
             "Index.ReadRange":     self.index_read_range.load(Relaxed),
             "Index.ReadSymbol":    self.index_read_symbol.load(Relaxed),
             "Index.ReadSymbolAt":  self.index_read_symbol_at.load(Relaxed),
@@ -468,6 +470,7 @@ impl CallCounters {
             + self.index_verify_claims.load(Relaxed)
             + self.index_impact_of.load(Relaxed)
             + self.index_verify_impact.load(Relaxed)
+            + self.index_verify_edit.load(Relaxed)
             + self.index_read_range.load(Relaxed)
             + self.index_read_symbol.load(Relaxed)
             + self.index_read_symbol_at.load(Relaxed)

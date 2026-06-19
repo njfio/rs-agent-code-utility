@@ -1,0 +1,18 @@
+[package]
+name = "p1-1-verify-edit-delta"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+# Spike: measure the per-file cost of the "scoped delta" approach to
+# verify_edit (parse the patched file → defs + use-site references), to decide
+# whether it fits the sub-second budget WITHOUT a copy-on-write shadow index.
+# The caller-query half of the approach is the already-merged `verify_impact`
+# (impact::compute), whose single-query latency is independently measured <10ms.
+
+[dependencies]
+rust_tree_sitter = { path = "../../crates/rts-core" }
+
+[profile.release]
+debug = "line-tables-only"

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyEdit.req.schema.json",
+  "title": "Index.VerifyEdit request params",
+  "description": "verify-v0 P3, capability `verify_edit`. Validates a PROPOSED patch against the live index *before* it is written and returns a pass/warn/fail verdict. `edits` is the full post-edit content of each patched file (not a diff hunk). `checks` optionally filters which finding kinds are reported; when absent, all four run. Unknown check names are accepted-and-ignored. `edits` must be non-empty; each `file` is 1..=1024 chars; total content is bounded (<= 2 MiB). Read-only — never mutates the index.",
+  "type": "object",
+  "properties": {
+    "edits": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "file":    { "type": "string", "minLength": 1, "maxLength": 1024 },
+          "content": { "type": "string" }
+        },
+        "required": ["file", "content"],
+        "additionalProperties": false
+      }
+    },
+    "checks": {
+      "description": "Optional filter over reported finding kinds. When omitted, all four checks run.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["broken_caller", "dangling_ref", "signature_break", "new_symbol"]
+      }
+    }
+  },
+  "required": ["edits"],
+  "additionalProperties": false
+}

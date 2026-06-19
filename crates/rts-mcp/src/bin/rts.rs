@@ -19,7 +19,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use serde_json::{Value, json};
 
@@ -167,6 +167,33 @@ enum Cmd {
         /// Path to the file to verify.
         path: PathBuf,
     },
+    /// Gate a proposed multi-file PATCH before it's written — the
+    /// enterprise/CI pre-merge gate.
+    ///
+    /// Reads an edits JSON (`[{ "file": "...", "content": "..." }]`, where
+    /// `content` is the FULL post-edit content of each file) from a file
+    /// or stdin (`-`), calls the daemon's `Index.VerifyEdit`, prints the
+    /// pass/warn/fail verdict + findings, and maps the verdict to an exit
+    /// code via `--fail-on`.
+    ///
+    /// Exit codes:
+    ///   --fail-on critical (default): pass/warn → 0, fail → 2
+    ///   --fail-on warn:               pass → 0,      warn/fail → 2
+    ///   --fail-on none:               always 0 (report-only)
+    ///   daemon error / bad input:     3
+    ///
+    /// CI usage:
+    ///   `rts verify-edit --edits pr-edits.json --fail-on critical`
+    /// fails the build on a caller-breaking patch.
+    VerifyEdit {
+        /// Path to the edits JSON, or `-` to read from stdin.
+        #[arg(long)]
+        edits: String,
+        /// Verdict threshold that fails the gate (nonzero exit). One of
+        /// `none`, `warn`, `critical`. Default `critical`.
+        #[arg(long, value_enum, default_value_t = FailOn::Critical)]
+        fail_on: FailOn,
+    },
     /// Print the workspace outline (token-budgeted tree).
     Outline {
         /// Optional glob to restrict the outline.
@@ -212,6 +239,37 @@ enum Cmd {
         #[command(subcommand)]
         action: TelemetryCmd,
     },
+}
+
+/// The verdict severity at (or above) which `rts verify-edit` fails the
+/// gate with a nonzero exit. Ordered least→most strict.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum FailOn {
+    /// Never fail the gate — always exit 0. Report-only.
+    None,
+    /// Fail on `warn` or `fail` (i.e. anything that isn't a clean pass).
+    Warn,
+    /// Fail only on `fail` (a critical finding). The default — a plain
+    /// `pass`/`warn` exits 0.
+    Critical,
+}
+
+impl FailOn {
+    /// Map a daemon verdict string to a gate exit code under this policy.
+    /// `pass`/`warn`/`fail` are the frozen `Index.VerifyEdit` verdicts; an
+    /// unknown verdict is treated as `fail` (never a silent pass). Returns
+    /// `exit::OK` (0) when below threshold, `2` when at/above it.
+    fn exit_for(self, verdict: &str) -> i32 {
+        let at_or_above = match self {
+            FailOn::None => false,
+            // `warn` fails on warn+fail (and any non-pass verdict).
+            FailOn::Warn => verdict != "pass",
+            // `critical` fails only on `fail` (or an unknown verdict,
+            // which we treat as fail).
+            FailOn::Critical => verdict == "fail" || (verdict != "pass" && verdict != "warn"),
+        };
+        if at_or_above { 2 } else { exit::OK }
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -599,6 +657,9 @@ async fn run_command(
             Ok(if resolved { exit::OK } else { exit::NO_RESULTS })
         }
         Cmd::Verify { path } => run_verify(&client, workspace, cli.json, path, style).await,
+        Cmd::VerifyEdit { edits, fail_on } => {
+            run_verify_edit(&client, workspace, cli.json, edits, *fail_on, style).await
+        }
         Cmd::Outline { glob, token_budget } => {
             let mut params = serde_json::Map::new();
             if let Some(g) = glob {
@@ -784,6 +845,107 @@ async fn run_verify(
     } else {
         cli::exit::NO_RESULTS
     })
+}
+
+/// `rts verify-edit --edits <path|-> [--fail-on <none|warn|critical>]` —
+/// gate a proposed multi-file patch before it's written.
+///
+/// Reads the edits JSON (`[{file, content}]`, full post-edit content) from
+/// a file or stdin (`-`), calls `Index.VerifyEdit`, renders the verdict +
+/// findings (or passes the raw daemon response through with `--json`), and
+/// maps the verdict to a gate exit code via [`FailOn::exit_for`].
+///
+/// Exit codes:
+///   pass/warn/fail mapped through `--fail-on` → 0 or 2 (see [`FailOn`]).
+///   malformed / missing edits, daemon contact failure → 3 (DAEMON_ERROR).
+async fn run_verify_edit(
+    client: &rts_mcp::connection::ConnectionManager,
+    workspace: &std::path::Path,
+    json: bool,
+    edits_src: &str,
+    fail_on: FailOn,
+    style: &Style,
+) -> Result<i32, CmdError> {
+    // 1. Read the edits source (file or `-` for stdin) and parse it as a
+    //    JSON array of `{file, content}` objects. A malformed payload is a
+    //    setup error (exit 3) — never a panic.
+    let raw = if edits_src == "-" {
+        let mut buf = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf)
+            .map_err(|e| anyhow::anyhow!("read edits from stdin: {e}"))?;
+        buf
+    } else {
+        std::fs::read_to_string(edits_src)
+            .map_err(|e| anyhow::anyhow!("read edits {edits_src}: {e}"))?
+    };
+    let edits: Value =
+        serde_json::from_str(&raw).map_err(|e| anyhow::anyhow!("parse edits JSON: {e}"))?;
+    let arr = edits.as_array().ok_or_else(|| {
+        anyhow::anyhow!(
+            "edits must be a JSON array of {{file, content}} objects, got {}",
+            kind_of(&edits)
+        )
+    })?;
+    if arr.is_empty() {
+        return Err(CmdError::Setup(anyhow::anyhow!(
+            "edits array is empty — nothing to verify"
+        )));
+    }
+    // Shape-check each entry so a typo'd key fails clean instead of
+    // surfacing as an opaque daemon validation error.
+    for (i, e) in arr.iter().enumerate() {
+        let ok = e.get("file").and_then(|f| f.as_str()).is_some()
+            && e.get("content").and_then(|c| c.as_str()).is_some();
+        if !ok {
+            return Err(CmdError::Setup(anyhow::anyhow!(
+                "edits[{i}] must have string `file` and `content` fields"
+            )));
+        }
+    }
+
+    // 2. Call the daemon.
+    let body = match cli::call_method(
+        client,
+        workspace,
+        "Index.VerifyEdit",
+        json!({ "edits": edits }),
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => return Ok(cli::render_connection_error(&e, style)),
+    };
+
+    // 3. Emit. `--json` passes the daemon response through verbatim.
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+    } else {
+        let mut stdout = std::io::stdout().lock();
+        cli::render_edit_verdict(&body, &mut stdout, style).map_err(io_to_anyhow)?;
+        stdout.flush().map_err(io_to_anyhow)?;
+    }
+
+    // 4. Gate on the verdict.
+    let verdict = body
+        .get("verdict")
+        .and_then(|v| v.as_str())
+        .unwrap_or("fail");
+    Ok(fail_on.exit_for(verdict))
+}
+
+/// A short human label for a JSON value's type — used in error messages.
+fn kind_of(v: &Value) -> &'static str {
+    match v {
+        Value::Null => "null",
+        Value::Bool(_) => "a boolean",
+        Value::Number(_) => "a number",
+        Value::String(_) => "a string",
+        Value::Array(_) => "an array",
+        Value::Object(_) => "an object",
+    }
 }
 
 /// `rts telemetry {status,preview,enable,disable,flush}` dispatch.
@@ -1175,5 +1337,36 @@ fn run_doctor(output: Option<&str>) -> ExitCode {
             );
             ExitCode::from(exit::DAEMON_ERROR as u8)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fail_on_critical_gates_only_on_fail() {
+        // Default policy: pass/warn → 0, fail → 2.
+        assert_eq!(FailOn::Critical.exit_for("pass"), exit::OK);
+        assert_eq!(FailOn::Critical.exit_for("warn"), exit::OK);
+        assert_eq!(FailOn::Critical.exit_for("fail"), 2);
+        // Unknown verdict is treated as fail (never a silent pass).
+        assert_eq!(FailOn::Critical.exit_for("wat"), 2);
+    }
+
+    #[test]
+    fn fail_on_warn_gates_on_warn_and_fail() {
+        assert_eq!(FailOn::Warn.exit_for("pass"), exit::OK);
+        assert_eq!(FailOn::Warn.exit_for("warn"), 2);
+        assert_eq!(FailOn::Warn.exit_for("fail"), 2);
+        assert_eq!(FailOn::Warn.exit_for("wat"), 2);
+    }
+
+    #[test]
+    fn fail_on_none_is_always_report_only() {
+        assert_eq!(FailOn::None.exit_for("pass"), exit::OK);
+        assert_eq!(FailOn::None.exit_for("warn"), exit::OK);
+        assert_eq!(FailOn::None.exit_for("fail"), exit::OK);
+        assert_eq!(FailOn::None.exit_for("wat"), exit::OK);
     }
 }

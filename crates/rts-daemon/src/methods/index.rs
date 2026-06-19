@@ -463,6 +463,34 @@ impl VerifyImpactChange {
     }
 }
 
+/// `Index.VerifyEdit` params (verify-v0 P3). Validates a PROPOSED patch
+/// against the live index *before* it is written, returning a structured
+/// pass/warn/fail verdict. The flagship verify verb.
+#[derive(Debug, Deserialize)]
+struct VerifyEditParams {
+    /// The proposed post-edit file states. Each `content` is the FULL new
+    /// content of `file` (not a diff hunk). Non-empty; each `file` is
+    /// 1..=1024 chars; total content is bounded (≤ 2 MiB).
+    #[serde(default)]
+    edits: Vec<ProposedEditParams>,
+    /// Optional check filter. When present, only the named checks run;
+    /// when absent, all four run. Accepted values: `broken_caller`,
+    /// `dangling_ref`, `signature_break`, `new_symbol`. Unknown names are
+    /// accepted-and-ignored (forward-compat). Currently the engine always
+    /// computes every check and this field post-filters the findings.
+    #[serde(default)]
+    checks: Option<Vec<String>>,
+}
+
+/// One proposed edit in a `Index.VerifyEdit` request.
+#[derive(Debug, Deserialize)]
+struct ProposedEditParams {
+    /// Workspace-relative path of the file being edited.
+    file: String,
+    /// Full post-edit content of the file.
+    content: String,
+}
+
 /// One claim in a `Index.VerifyClaims` batch. Tagged by `type`.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -3815,6 +3843,211 @@ pub async fn verify_impact(
         out["reason"] = serde_json::json!(r);
     }
     Ok(out)
+}
+
+/// `Index.VerifyEdit(edits[], checks?)` — verify-v0 P3, capability
+/// `verify_edit`. The flagship verify verb.
+///
+/// Validates a PROPOSED patch against the live index *before it is
+/// written* and returns a structured pass/warn/fail verdict so an agent
+/// can gate a multi-file edit before committing it to disk.
+///
+/// Approach (a spike settled this): a **scoped in-memory delta** — re-parse
+/// the patched files, diff their defs/refs against the on-disk version, and
+/// query the LIVE index for the callers of any def the edit removes or
+/// whose arity it changes. Strictly **read-only**: never opens a write txn,
+/// never mutates the live index.
+///
+/// Wire shape (FROZEN field names):
+/// ```jsonc
+/// { "verdict": "fail",                       // pass | warn | fail
+///   "summary": { "critical": 1, "warning": 2, "info": 3 },
+///   "findings": [ { "severity": "critical",  // critical | warning | info
+///                   "kind": "broken_caller", // broken_caller | dangling_ref
+///                                            //  | signature_break | new_symbol
+///                   "symbol": "…",
+///                   "site": { "file": "…", "line": 1588, "enclosing": "…" },
+///                   "detail": "…" } ],
+///   "files_analyzed": 3,
+///   "files_skipped": [],
+///   "content_version_base": "…" }
+/// ```
+///
+/// Verdict: any `critical` → `fail`; else any `warning` → `warn`; else
+/// `pass`. A non-empty `files_skipped` (unsupported language, or over the
+/// `max_files` cap) forces the verdict to at least `warn` so a partial
+/// analysis is never mistaken for a clean pass.
+///
+/// `content_version_base` is a stable hash over the live index generation
+/// (`@<generation>`) so a caller can detect that the index moved under it
+/// between the verify and the write. Callers INSIDE the patched fileset are
+/// excluded from every cross-file check (those files are themselves being
+/// edited; flagging them against the stale index is a false positive).
+///
+/// `INVALID_PARAMS` on an empty `edits` list, a `file` outside 1..=1024
+/// chars, or total content over 2 MiB. Re-parses each patched file →
+/// cancellable.
+pub async fn verify_edit(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Max files analyzed in one call (the engine default). Edits beyond
+    /// this land in `files_skipped`.
+    const MAX_FILES: usize = crate::verify_edit::DEFAULT_MAX_FILES;
+    /// Max combined post-edit content across all edits. Bounds the parse
+    /// work and matches the spirit of the 16 MiB wire cap (§3.3).
+    const MAX_TOTAL_CONTENT: usize = 2 * 1024 * 1024;
+
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifyEditParams = parse_params(params)?;
+    if p.edits.is_empty() {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`edits` must be a non-empty array",
+        ));
+    }
+    let mut total_content = 0usize;
+    for e in &p.edits {
+        if e.file.is_empty() || e.file.len() > 1024 {
+            return Err(ProtocolError::new(
+                ErrorCode::InvalidParams,
+                "each `edits[].file` must be 1..=1024 characters",
+            ));
+        }
+        total_content = total_content.saturating_add(e.content.len());
+    }
+    if total_content > MAX_TOTAL_CONTENT {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("total edit content exceeds {MAX_TOTAL_CONTENT} bytes"),
+        ));
+    }
+
+    let (root, store_arc) = snapshot(state)?;
+    // Read generation BEFORE any read txn (Deepening §C cache invariant).
+    // It is also the basis for `content_version_base`.
+    let generation = state.index_generation.load(Ordering::Relaxed);
+
+    let edits: Vec<crate::verify_edit::ProposedEdit> = p
+        .edits
+        .iter()
+        .map(|e| crate::verify_edit::ProposedEdit {
+            file: e.file.clone(),
+            content: e.content.clone(),
+        })
+        .collect();
+
+    // The engine re-parses each patched file + walks the reverse-reference
+    // graph for removed/sig-changed defs; CPU-bound, so run it on a
+    // blocking thread like the impact BFS.
+    let store_clone = store_arc.clone();
+    let root_clone = root.clone();
+    let verdict = tokio::task::spawn_blocking(move || {
+        crate::verify_edit::evaluate(&store_clone, &root_clone, &edits, MAX_FILES)
+    })
+    .await
+    .map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("verify_edit join error: {e}"),
+        )
+    })?;
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+
+    // `checks` controls ONLY which finding kinds appear in `findings[]`. It
+    // NEVER lowers the `verdict` or changes `summary` — those always reflect the
+    // FULL analysis, so a caller can't get a false `pass` by narrowing `checks`
+    // (e.g. `[]` or `["new_symbol"]` on an edit that removes a called symbol).
+    let check_filter: Option<std::collections::HashSet<String>> = p.checks.as_ref().map(|cs| {
+        cs.iter()
+            .map(|c| c.trim().to_ascii_lowercase())
+            .collect::<std::collections::HashSet<String>>()
+    });
+
+    // Summary counts the FULL finding set (unfiltered).
+    let mut critical = 0u64;
+    let mut warning = 0u64;
+    let mut info = 0u64;
+    for f in &verdict.findings {
+        match f.severity {
+            crate::verify_edit::Severity::Critical => critical += 1,
+            crate::verify_edit::Severity::Warning => warning += 1,
+            crate::verify_edit::Severity::Info => info += 1,
+        }
+    }
+
+    // Findings for display: filtered by `checks`, then sorted into a stable,
+    // reproducible order (severity, then symbol, site, kind) so the wire output
+    // is deterministic across runs.
+    let sev_rank = |s: &crate::verify_edit::Severity| match s {
+        crate::verify_edit::Severity::Critical => 0u8,
+        crate::verify_edit::Severity::Warning => 1,
+        crate::verify_edit::Severity::Info => 2,
+    };
+    let mut shown: Vec<&crate::verify_edit::Finding> = verdict
+        .findings
+        .iter()
+        .filter(|f| {
+            check_filter
+                .as_ref()
+                .is_none_or(|filter| filter.contains(f.kind.as_wire_str()))
+        })
+        .collect();
+    shown.sort_by(|a, b| {
+        sev_rank(&a.severity)
+            .cmp(&sev_rank(&b.severity))
+            .then_with(|| a.symbol.cmp(&b.symbol))
+            .then_with(|| {
+                let ak = a.site.as_ref().map(|s| (s.file.as_str(), s.line));
+                let bk = b.site.as_ref().map(|s| (s.file.as_str(), s.line));
+                ak.cmp(&bk)
+            })
+            .then_with(|| a.kind.as_wire_str().cmp(b.kind.as_wire_str()))
+    });
+    let findings_json: Vec<serde_json::Value> = shown
+        .iter()
+        .map(|f| {
+            let site = match &f.site {
+                Some(s) => serde_json::json!({
+                    "file":      s.file,
+                    "line":      s.line,
+                    "enclosing": s.enclosing,
+                }),
+                None => serde_json::Value::Null,
+            };
+            serde_json::json!({
+                "severity": f.severity.as_wire_str(),
+                "kind":     f.kind.as_wire_str(),
+                "symbol":   f.symbol,
+                "site":     site,
+                "detail":   f.detail,
+            })
+        })
+        .collect();
+
+    Ok(serde_json::json!({
+        // Verdict is ALWAYS the engine roll-up (full findings + the
+        // skipped-files at-least-warn rule); `checks` never lowers it.
+        "verdict": verdict.verdict.as_wire_str(),
+        "summary": {
+            "critical": critical,
+            "warning":  warning,
+            "info":     info,
+        },
+        "findings":             findings_json,
+        "files_analyzed":       verdict.files_analyzed,
+        "files_skipped":        verdict.files_skipped,
+        // Stable hash over the live index generation. Kept simple: the
+        // generation is the writer's monotonically-increasing commit
+        // counter, so `@<generation>` is a stable base a caller can compare
+        // against the value it saw before the write.
+        "content_version_base": format!("@{generation}"),
+    }))
 }
 
 /// Internal struct used by `find_callers` (and U2's `read_symbol`

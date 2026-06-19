@@ -606,6 +606,126 @@ pub fn render_impact_verdict<W: Write>(
     Ok(callers.len())
 }
 
+/// Render an `Index.VerifyEdit` response: a one-line verdict headline
+/// (`PASS` / `WARN` / `FAIL`) with the critical/warning/info summary, then
+/// one line per finding in `SEVERITY  kind  symbol  site  — detail` shape,
+/// sorted most-severe first. Returns the number of findings rendered.
+///
+/// The `site` is `file:enclosing` when both are present (the broken
+/// caller's location). `files_skipped` (over-cap partial results) is noted
+/// so a CI reader knows the analysis was incomplete.
+pub fn render_edit_verdict<W: Write>(
+    body: &Value,
+    w: &mut W,
+    style: &Style,
+) -> std::io::Result<usize> {
+    let verdict = body.get("verdict").and_then(|v| v.as_str()).unwrap_or("?");
+    let summary = body.get("summary");
+    let crit = summary
+        .and_then(|s| s.get("critical"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let warn = summary
+        .and_then(|s| s.get("warning"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let info = summary
+        .and_then(|s| s.get("info"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    let headline = match verdict {
+        "pass" => style.green("PASS"),
+        "warn" => style.yellow("WARN"),
+        _ => style.red("FAIL"),
+    };
+    writeln!(
+        w,
+        "{headline} {}",
+        style.dim(&format!("({crit} critical, {warn} warning, {info} info)"))
+    )?;
+
+    // Partial-result note: over-cap edits leave some files unanalyzed.
+    let skipped = body
+        .get("files_skipped")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    if skipped > 0 {
+        writeln!(
+            w,
+            "{}",
+            style.yellow(&format!(
+                "  {skipped} file(s) skipped (over the analysis cap — partial result)"
+            ))
+        )?;
+    }
+
+    let findings = body
+        .get("findings")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    // Sort most-severe first (critical → warning → info), then by kind for
+    // a stable order.
+    let sev_rank = |s: &str| match s {
+        "critical" => 0,
+        "warning" => 1,
+        "info" => 2,
+        _ => 3,
+    };
+    let mut ordered: Vec<&Value> = findings.iter().collect();
+    ordered.sort_by(|a, b| {
+        let sa = a.get("severity").and_then(|v| v.as_str()).unwrap_or("");
+        let sb = b.get("severity").and_then(|v| v.as_str()).unwrap_or("");
+        sev_rank(sa).cmp(&sev_rank(sb)).then_with(|| {
+            let ka = a.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+            let kb = b.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+            ka.cmp(kb)
+        })
+    });
+
+    for f in &ordered {
+        let severity = f.get("severity").and_then(|v| v.as_str()).unwrap_or("?");
+        let kind = f.get("kind").and_then(|v| v.as_str()).unwrap_or("?");
+        let symbol = f.get("symbol").and_then(|v| v.as_str()).unwrap_or("");
+        let detail = f.get("detail").and_then(|v| v.as_str()).unwrap_or("");
+        let site = f.get("site");
+        let site_str = site
+            .map(|s| {
+                let file = s.get("file").and_then(|v| v.as_str()).unwrap_or("");
+                let enclosing = s.get("enclosing").and_then(|v| v.as_str());
+                match enclosing {
+                    Some(e) if !e.is_empty() => format!("{file}:{e}"),
+                    _ => file.to_string(),
+                }
+            })
+            .filter(|s| !s.is_empty())
+            .unwrap_or_default();
+
+        let sev_colored = match severity {
+            "critical" => style.red("CRITICAL"),
+            "warning" => style.yellow("WARNING"),
+            "info" => style.dim("INFO"),
+            other => other.to_string(),
+        };
+        let mut line = format!(
+            "  {sev_colored}  {}  {}",
+            style.cyan(kind),
+            style.bold(symbol)
+        );
+        if !site_str.is_empty() {
+            line.push_str(&format!("  {}", style.magenta(&site_str)));
+        }
+        if !detail.is_empty() {
+            line.push_str(&format!("  {} {detail}", style.dim("—")));
+        }
+        writeln!(w, "{line}")?;
+    }
+    Ok(ordered.len())
+}
+
 /// Render the daemon's `outline_text` directly. The daemon already
 /// produces a dotted-indent tree-style hierarchy (protocol-v0 §7.5);
 /// we just pass it through (with a header) so the CLI shape stays
@@ -896,6 +1016,51 @@ mod tests {
             !s.contains('\x1b'),
             "no_color must suppress ANSI; got {s:?}"
         );
+    }
+
+    #[test]
+    fn edit_verdict_renders_headline_and_findings_sorted() {
+        let body = json!({
+            "verdict": "fail",
+            "summary": { "critical": 1, "warning": 0, "info": 1 },
+            "findings": [
+                { "severity": "info", "kind": "new_symbol", "symbol": "brand_new",
+                  "site": { "file": "hub.rs" }, "detail": "added" },
+                { "severity": "critical", "kind": "broken_caller", "symbol": "target",
+                  "site": { "file": "caller_a.rs", "enclosing": "caller_a" },
+                  "detail": "callee removed" },
+            ],
+        });
+        let mut buf = Vec::new();
+        let n = render_edit_verdict(&body, &mut buf, &Style::new(false)).unwrap();
+        assert_eq!(n, 2);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(s.contains("FAIL"), "headline missing: {s:?}");
+        assert!(s.contains("1 critical"), "summary missing: {s:?}");
+        // Critical sorts before info.
+        let crit_idx = s.find("CRITICAL").expect("critical line");
+        let info_idx = s.find("INFO").expect("info line");
+        assert!(crit_idx < info_idx, "critical must sort first: {s:?}");
+        // The broken caller names symbol + site.
+        assert!(s.contains("broken_caller"), "{s:?}");
+        assert!(s.contains("target"), "{s:?}");
+        assert!(s.contains("caller_a.rs:caller_a"), "site: {s:?}");
+        assert!(s.contains("callee removed"), "detail: {s:?}");
+    }
+
+    #[test]
+    fn edit_verdict_pass_has_no_findings_and_green_headline() {
+        let body = json!({
+            "verdict": "pass",
+            "summary": { "critical": 0, "warning": 0, "info": 0 },
+            "findings": [],
+        });
+        let mut buf = Vec::new();
+        let n = render_edit_verdict(&body, &mut buf, &Style::new(false)).unwrap();
+        assert_eq!(n, 0);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(s.contains("PASS"), "{s:?}");
+        assert!(!s.contains('\x1b'), "no_color must suppress ANSI: {s:?}");
     }
 
     #[test]

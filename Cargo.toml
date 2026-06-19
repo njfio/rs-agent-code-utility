@@ -13,6 +13,7 @@ exclude = [
     "spikes/p0-1-rmcp-hello",
     "spikes/p0-2-redb-smoke",
     "spikes/p0-3-notify-smoke",
+    "spikes/p1-1-verify-edit-delta",
     # cargo-fuzz crate: nightly-only (libfuzzer-sys requires sancov
     # passes that aren't available on stable). Built via
     # `cd crates/rts-daemon && cargo +nightly fuzz run <target>` per
