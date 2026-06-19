@@ -641,6 +641,54 @@ async fn out_of_range_deadline_is_invalid_params() -> anyhow::Result<()> {
 /// fn with a few thousand single-leaf-per-file dependencies so the
 /// render loop runs comfortably longer than the 5ms budget, then assert
 /// the response is `DEADLINE_EXCEEDED`.
+/// Wait until the hub's dependency CLOSURE is actually resolved — not merely
+/// the file count (`wait_for_index_warm`). Polls an UNDEADLINED closure read
+/// until it resolves `min_deps` dependencies, or the token budget truncates an
+/// already-large closure. Until the hub→leaf ref edges settle, the closure is
+/// small and renders fast, which would let the 5ms-deadline query complete
+/// instead of being interrupted (the CI flake this guards against).
+async fn wait_for_closure_ready(
+    stream: &mut UnixStream,
+    hub_name: &str,
+    min_deps: usize,
+    timeout: Duration,
+) -> anyhow::Result<()> {
+    let deadline = Instant::now() + timeout;
+    let mut probe_id: u64 = 8000;
+    loop {
+        probe_id += 1;
+        let resp = round_trip(
+            stream,
+            &probe_id.to_string(),
+            "Index.ReadSymbol",
+            json!({
+                "name": hub_name,
+                "include_dependencies": true,
+                "token_budget": 200_000,
+            }),
+            None, // no deadline — this is the readiness barrier, let it finish
+        )
+        .await?;
+        let deps = resp["result"]["dependencies"]
+            .as_array()
+            .map(|a| a.len())
+            .unwrap_or(0);
+        let truncated = resp["result"]["closure_truncated"]
+            .as_bool()
+            .unwrap_or(false);
+        if deps >= min_deps || truncated {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "hub closure never resolved {min_deps} deps within {:?} (saw deps={deps}, truncated={truncated})",
+                timeout
+            );
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn deadline_interrupts_read_symbol_dependency_closure() -> anyhow::Result<()> {
     let runtime_dir = tempfile::tempdir()?;
@@ -669,6 +717,12 @@ async fn deadline_interrupts_read_symbol_dependency_closure() -> anyhow::Result<
     .await?;
     assert!(mount["error"].is_null(), "mount failed: {mount:?}");
     wait_for_index_warm(&mut stream, file_count, Duration::from_secs(120)).await?;
+    // `wait_for_index_warm` only gates on files INDEXED. The closure walker
+    // needs the hub→leaf REF edges RESOLVED (a later reconciliation pass), so
+    // we also wait for the closure itself to be built — otherwise a query
+    // firing against a partial closure renders fast and completes *before* the
+    // 5ms deadline fires (a CI-only flake).
+    wait_for_closure_ready(&mut stream, &hub_name, leaf_count, Duration::from_secs(120)).await?;
 
     let resp = round_trip(
         &mut stream,
