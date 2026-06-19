@@ -8,7 +8,7 @@
     "symbol":        { "type": "string", "minLength": 1, "maxLength": 256 },
     "change":        { "type": "string", "enum": ["signature", "remove", "rename"] },
     "new_signature": { "type": "string" },
-    "depth":         { "type": "integer", "minimum": 1, "maximum": 4 }
+    "depth":         { "type": "integer" }
   },
   "required": ["symbol", "change"],
   "additionalProperties": false

@@ -159,7 +159,9 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
     std::fs::write(
         workspace.path().join("hub.rs"),
         "pub fn target(x: u32) -> u32 { x + 1 }\n\
-         pub fn orphan(y: u32) -> u32 { y + 2 }\n",
+         pub fn orphan(y: u32) -> u32 { y + 2 }\n\
+         pub struct Hub;\n\
+         impl Hub { pub fn ping(&self) -> u32 { 0 } }\n",
     )?;
     std::fs::write(
         workspace.path().join("caller_a.rs"),
@@ -205,6 +207,7 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
     wait_for_symbol(&mut stream, "target", Duration::from_secs(5)).await?;
     wait_for_symbol(&mut stream, "orphan", Duration::from_secs(5)).await?;
     wait_for_symbol(&mut stream, "caller_a", Duration::from_secs(5)).await?;
+    wait_for_symbol(&mut stream, "ping", Duration::from_secs(5)).await?;
     wait_for_refs(&mut stream, "target", &["caller_a"], Duration::from_secs(5)).await?;
 
     // 1. remove of a called fn → would_break + caller listed.
@@ -317,6 +320,40 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
     assert!(
         !cands.is_empty(),
         "expected candidates on a miss; got {mr:?}"
+    );
+
+    // 6. Qualified name whose container matches → resolves (verdict present,
+    //    not not_found). `Hub::ping` is a method of `Hub`.
+    let q_ok = round_trip(
+        &mut stream,
+        "15",
+        "Index.VerifyImpact",
+        json!({ "symbol": "Hub::ping", "change": "remove" }),
+    )
+    .await?;
+    let qok = &q_ok["result"];
+    assert_ne!(
+        qok["resolution"], "not_found",
+        "Hub::ping should resolve to the method; got {qok:?}"
+    );
+    assert!(
+        qok["verdict"].is_string(),
+        "a resolved verify_impact must carry a verdict; got {qok:?}"
+    );
+
+    // 7. Qualified name whose container does NOT match → not_found, even
+    //    though a bare `ping` exists under `Hub` (the false-positive fix).
+    let q_bad = round_trip(
+        &mut stream,
+        "16",
+        "Index.VerifyImpact",
+        json!({ "symbol": "Other::ping", "change": "remove" }),
+    )
+    .await?;
+    let qbad = &q_bad["result"];
+    assert_eq!(
+        qbad["resolution"], "not_found",
+        "Other::ping must NOT match the bare `ping` under Hub; got {qbad:?}"
     );
 
     Ok(())

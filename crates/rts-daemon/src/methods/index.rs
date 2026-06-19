@@ -3525,29 +3525,6 @@ fn new_signature_shape(
     rust_tree_sitter::signature_shape(def_node, wrapped.as_bytes(), lang)
 }
 
-/// Resolve the `FoundSymbol` (file + byte range) for a name whose `sid`
-/// we already know. Uses the same bare/qualified batch lookup
-/// `verify_signature` uses, then picks the def row whose `sid` matches
-/// `anchor_sid`. Returns `None` on a storage error or when no def row
-/// carries that sid (torn read). Best-effort: the caller treats `None` as
-/// an undecidable signature shape.
-fn resolve_found_for_sid(store: &Arc<Store>, name: &str, anchor_sid: u32) -> Option<FoundSymbol> {
-    let bare = name.rsplit("::").next().unwrap_or(name).to_string();
-    let mut lookup_names: Vec<String> = vec![name.to_string()];
-    if bare != name {
-        lookup_names.push(bare);
-    }
-    let mut batched = store.find_symbols_batch_with_sids(&lookup_names).ok()?;
-    for n in &lookup_names {
-        if let Some((_sid, hits)) = batched.remove(n) {
-            if let Some(found) = hits.into_iter().find(|h| h.sid == anchor_sid) {
-                return Some(found);
-            }
-        }
-    }
-    None
-}
-
 /// `Index.VerifyImpact(symbol, change, new_signature?, depth?)` —
 /// verify-v0 P2.U1, capability `verify_impact`.
 ///
@@ -3603,25 +3580,62 @@ pub async fn verify_impact(
     let generation = state.index_generation.load(Ordering::Relaxed);
     let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
 
-    // Resolve the def's sid. A miss is a RESULT (not an error): return
-    // not_found + a ranked candidate shortlist so the agent self-corrects.
-    let anchor_sid = match store_arc.sid_for_name(&p.symbol).map_err(|e| {
-        ProtocolError::new(
-            ErrorCode::InternalError,
-            format!("sid_for_name storage error: {e:#}"),
-        )
-    })? {
-        Some(s) => s,
+    // Resolve the anchor def. Honor a QUALIFIED input (`Foo::method`) the
+    // way `verify_symbol` does: resolve the bare final segment, then narrow
+    // to the def whose immediate container matches the qualifier — so a
+    // qualified claim never resolves to a same-named method on another type.
+    // A miss is a RESULT (not an error): return not_found + ranked candidates.
+    let bare = p
+        .symbol
+        .rsplit("::")
+        .next()
+        .unwrap_or(&p.symbol)
+        .to_string();
+    let qualifier: Option<String> = if p.symbol.contains("::") {
+        let mut segs: Vec<&str> = p.symbol.split("::").collect();
+        segs.pop(); // drop the final (bare) segment
+        segs.into_iter()
+            .rev()
+            .find(|s| !s.is_empty())
+            .map(str::to_string)
+    } else {
+        None
+    };
+    let mut lookup_names: Vec<String> = vec![p.symbol.clone()];
+    if bare != p.symbol {
+        lookup_names.push(bare.clone());
+    }
+    let mut batched = store_arc
+        .find_symbols_batch_with_sids(&lookup_names)
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("find_symbols_batch_with_sids storage error: {e:#}"),
+            )
+        })?;
+    let mut hits: Vec<FoundSymbol> = Vec::new();
+    for n in &lookup_names {
+        if let Some((_sid, found)) = batched.remove(n) {
+            if !found.is_empty() {
+                hits = found;
+                break;
+            }
+        }
+    }
+    if let Some(q) = &qualifier {
+        hits.retain(|h| h.parent.as_deref() == Some(q.as_str()));
+    }
+    let anchor = match hits.into_iter().next() {
+        Some(a) => a,
         None => {
             if token.is_cancelled() {
                 return Err(cancelled());
             }
             /// Near-miss candidate count surfaced on a `not_found`.
             const CANDIDATE_LIMIT: usize = 5;
-            let bare = p.symbol.rsplit("::").next().unwrap_or(&p.symbol);
             let pool = verify_candidate_pool(&store_arc, ranks.as_ref())?;
             let candidates =
-                rust_tree_sitter::rank_candidates(bare, pool.into_iter(), CANDIDATE_LIMIT);
+                rust_tree_sitter::rank_candidates(&bare, pool.into_iter(), CANDIDATE_LIMIT);
             let candidates_json: Vec<serde_json::Value> = candidates
                 .into_iter()
                 .map(|c| {
@@ -3641,6 +3655,7 @@ pub async fn verify_impact(
             }));
         }
     };
+    let anchor_sid = anchor.sid;
 
     // Run the impact BFS — direct callers by default (depth 1). Reuse
     // ImpactBounds; CPU-bound BFS runs on a blocking thread like impact_of.
@@ -3703,22 +3718,14 @@ pub async fn verify_impact(
             "references old name".to_string(),
         ),
         VerifyImpactChange::Signature => {
-            // Resolve the def's FoundSymbol (file + byte range) so we can
-            // read its ACTUAL shape and pick the right language for the
-            // proposed new_signature. Reuse the same bare/qualified name
-            // lookup verify_signature uses, then pick the def whose sid
-            // matches the anchor we already resolved.
-            let def = resolve_found_for_sid(&store_arc, &p.symbol, anchor_sid);
-            // OLD shape: from the indexed def (reuse verify_signature's helper).
-            let old_shape = def
-                .as_ref()
-                .and_then(|found| actual_signature_shape(&root, found));
-            // NEW shape: from the proposed new_signature string, parsed for
-            // the def's language.
-            let new_shape = match (&def, p.new_signature.as_deref()) {
-                (Some(found), Some(sig)) => new_signature_shape(&found.file, sig),
-                _ => None,
-            };
+            // OLD shape: from the resolved anchor def (reuse verify_signature's
+            // helper). NEW shape: from the proposed new_signature string,
+            // parsed for the anchor's language.
+            let old_shape = actual_signature_shape(&root, &anchor);
+            let new_shape = p
+                .new_signature
+                .as_deref()
+                .and_then(|sig| new_signature_shape(&anchor.file, sig));
             match (old_shape, new_shape) {
                 (Some(old), Some(new)) if old.arity != new.arity => (
                     rust_tree_sitter::Resolution::Exact,

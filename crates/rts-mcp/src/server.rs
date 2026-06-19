@@ -709,7 +709,7 @@ impl RtsServer {
     }
 
     #[tool(
-        description = "Gate an edit before you make it: declare a change to a symbol (`signature`, `remove`, `rename`) and get the blast radius as a pass/fail `verdict` (would_break | safe). Prefer this over a manual `impact_of` plus eyeballing, or `Bash(grep 'name(')` to guess callers, before you rename or change the arity of a function: it resolves the def, walks the indexed reverse-reference graph for direct callers, and for `signature` compares the new arity to the real one (pass `new_signature`). Use when the task includes 'is it safe to change', 'will this break callers', or you're about to edit a public symbol. `would_break` lists `affected_callers[]` with a per-caller `reason`; `safe` means no arity break; `not_found` returns ranked `candidates[]`."
+        description = "Gate an edit before you make it: declare a change to a symbol (`signature`, `remove`, `rename`) and get the blast radius as a pass/fail `verdict` (would_break | safe). Prefer this over a manual `impact_of` plus eyeballing, or `Bash(grep 'name(')`, before you rename or change a function's arity: it resolves the def, walks the reverse-reference graph for direct callers, and for `signature` compares the new arity to the real one (pass `new_signature`). Use when the task says 'is it safe to change' or 'will this break callers'. `would_break` lists `affected_callers[]` with a per-caller `reason`; `safe` means no *arity* break only — a same-arity param-type change isn't detected, so still skim the callers; `not_found` returns ranked `candidates[]`."
     )]
     async fn verify_impact(
         &self,
