@@ -3959,63 +3959,81 @@ pub async fn verify_edit(
         return Err(cancelled());
     }
 
-    // Optional check filter: when `checks` is present, keep only findings
-    // whose kind is named. Unknown names are ignored (forward-compat).
+    // `checks` controls ONLY which finding kinds appear in `findings[]`. It
+    // NEVER lowers the `verdict` or changes `summary` — those always reflect the
+    // FULL analysis, so a caller can't get a false `pass` by narrowing `checks`
+    // (e.g. `[]` or `["new_symbol"]` on an edit that removes a called symbol).
     let check_filter: Option<std::collections::HashSet<String>> = p.checks.as_ref().map(|cs| {
         cs.iter()
             .map(|c| c.trim().to_ascii_lowercase())
             .collect::<std::collections::HashSet<String>>()
     });
 
+    // Summary counts the FULL finding set (unfiltered).
     let mut critical = 0u64;
     let mut warning = 0u64;
     let mut info = 0u64;
-    let mut findings_json: Vec<serde_json::Value> = Vec::with_capacity(verdict.findings.len());
     for f in &verdict.findings {
-        if let Some(filter) = &check_filter {
-            if !filter.contains(f.kind.as_wire_str()) {
-                continue;
-            }
-        }
         match f.severity {
             crate::verify_edit::Severity::Critical => critical += 1,
             crate::verify_edit::Severity::Warning => warning += 1,
             crate::verify_edit::Severity::Info => info += 1,
         }
-        let site = match &f.site {
-            Some(s) => serde_json::json!({
-                "file":      s.file,
-                "line":      s.line,
-                "enclosing": s.enclosing,
-            }),
-            None => serde_json::Value::Null,
-        };
-        findings_json.push(serde_json::json!({
-            "severity": f.severity.as_wire_str(),
-            "kind":     f.kind.as_wire_str(),
-            "symbol":   f.symbol,
-            "site":     site,
-            "detail":   f.detail,
-        }));
     }
 
-    // Verdict. With no `checks` filter, use the engine's roll-up verbatim
-    // (it already applies the skipped-files → at-least-warn rule). When a
-    // filter is active, recompute over the FILTERED findings so a filter
-    // that drops every critical finding doesn't leave a stale `fail`; the
-    // skipped-files → at-least-warn rule still holds.
-    let filtered_verdict = if check_filter.is_none() {
-        verdict.verdict
-    } else if critical > 0 {
-        crate::verify_edit::Verdict::Fail
-    } else if warning > 0 || !verdict.files_skipped.is_empty() {
-        crate::verify_edit::Verdict::Warn
-    } else {
-        crate::verify_edit::Verdict::Pass
+    // Findings for display: filtered by `checks`, then sorted into a stable,
+    // reproducible order (severity, then symbol, site, kind) so the wire output
+    // is deterministic across runs.
+    let sev_rank = |s: &crate::verify_edit::Severity| match s {
+        crate::verify_edit::Severity::Critical => 0u8,
+        crate::verify_edit::Severity::Warning => 1,
+        crate::verify_edit::Severity::Info => 2,
     };
+    let mut shown: Vec<&crate::verify_edit::Finding> = verdict
+        .findings
+        .iter()
+        .filter(|f| {
+            check_filter
+                .as_ref()
+                .is_none_or(|filter| filter.contains(f.kind.as_wire_str()))
+        })
+        .collect();
+    shown.sort_by(|a, b| {
+        sev_rank(&a.severity)
+            .cmp(&sev_rank(&b.severity))
+            .then_with(|| a.symbol.cmp(&b.symbol))
+            .then_with(|| {
+                let ak = a.site.as_ref().map(|s| (s.file.as_str(), s.line));
+                let bk = b.site.as_ref().map(|s| (s.file.as_str(), s.line));
+                ak.cmp(&bk)
+            })
+            .then_with(|| a.kind.as_wire_str().cmp(b.kind.as_wire_str()))
+    });
+    let findings_json: Vec<serde_json::Value> = shown
+        .iter()
+        .map(|f| {
+            let site = match &f.site {
+                Some(s) => serde_json::json!({
+                    "file":      s.file,
+                    "line":      s.line,
+                    "enclosing": s.enclosing,
+                }),
+                None => serde_json::Value::Null,
+            };
+            serde_json::json!({
+                "severity": f.severity.as_wire_str(),
+                "kind":     f.kind.as_wire_str(),
+                "symbol":   f.symbol,
+                "site":     site,
+                "detail":   f.detail,
+            })
+        })
+        .collect();
 
     Ok(serde_json::json!({
-        "verdict": filtered_verdict.as_wire_str(),
+        // Verdict is ALWAYS the engine roll-up (full findings + the
+        // skipped-files at-least-warn rule); `checks` never lowers it.
+        "verdict": verdict.verdict.as_wire_str(),
         "summary": {
             "critical": critical,
             "warning":  warning,

@@ -367,6 +367,54 @@ async fn verify_edit_round_trip() -> anyhow::Result<()> {
         "content_version_base must be present: {cap:?}"
     );
 
+    // 7. `checks` is a DISPLAY filter, not a verdict lever. Removing a called
+    //    fn while asking to see only `new_symbol` must STILL verdict `fail`
+    //    (the broken_caller is suppressed from `findings[]` but the verdict and
+    //    summary reflect the full analysis) — otherwise a caller could buy a
+    //    false `pass` with `checks: []`.
+    let filtered = round_trip(
+        &mut stream,
+        "16",
+        "Index.VerifyEdit",
+        json!({
+            "edits": [{ "file": "hub.rs", "content": "pub fn unrelated() -> u32 { 0 }\n" }],
+            "checks": ["new_symbol"]
+        }),
+    )
+    .await?;
+    let fl = &filtered["result"];
+    assert_eq!(
+        fl["verdict"], "fail",
+        "`checks` must NOT lower the verdict — a real break still fails: {fl:?}"
+    );
+    assert!(
+        fl["summary"]["critical"].as_u64().unwrap_or(0) >= 1,
+        "summary must reflect the full analysis regardless of `checks`: {fl:?}"
+    );
+    // The display filter DID hide the broken_caller (checks=["new_symbol"]),
+    // even though it still drives the verdict + summary.
+    let shown = fl["findings"].as_array().cloned().unwrap_or_default();
+    assert!(
+        !shown.iter().any(|f| f["kind"] == "broken_caller"),
+        "checks=[new_symbol] must hide broken_caller from findings[]; got {shown:?}"
+    );
+
+    // And an empty `checks` must not buy a false pass either.
+    let empty_checks = round_trip(
+        &mut stream,
+        "17",
+        "Index.VerifyEdit",
+        json!({
+            "edits": [{ "file": "hub.rs", "content": "pub fn unrelated() -> u32 { 0 }\n" }],
+            "checks": []
+        }),
+    )
+    .await?;
+    assert_eq!(
+        empty_checks["result"]["verdict"], "fail",
+        "`checks: []` must not yield a false pass: {empty_checks:?}"
+    );
+
     Ok(())
 }
 
