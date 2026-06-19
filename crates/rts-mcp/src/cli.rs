@@ -500,6 +500,112 @@ pub fn render_callers_tree<W: Write>(
     Ok(callers.len())
 }
 
+/// Render an `Index.VerifyImpact` verdict: a one-line headline
+/// (`would_break` / `safe` / `not_found`) followed by the affected
+/// callers grouped by file (mirrors `render_callers_tree`). Returns the
+/// number of affected callers so the binary can pick an exit code.
+pub fn render_impact_verdict<W: Write>(
+    body: &Value,
+    w: &mut W,
+    style: &Style,
+) -> std::io::Result<usize> {
+    let resolution = body
+        .get("resolution")
+        .and_then(|v| v.as_str())
+        .unwrap_or("?");
+    let symbol = body.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
+    let change = body.get("change").and_then(|v| v.as_str()).unwrap_or("?");
+
+    // Miss: not_found + did-you-mean candidates, no verdict.
+    if resolution == "not_found" {
+        writeln!(
+            w,
+            "{} {} ({})",
+            style.red("not found"),
+            style.bold(symbol),
+            change
+        )?;
+        let cands = body
+            .get("candidates")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        if !cands.is_empty() {
+            writeln!(w, "{}", style.dim("did you mean:"))?;
+            for c in &cands {
+                let qn = c
+                    .get("qualified_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("?");
+                writeln!(w, "  {}", style.cyan(qn))?;
+            }
+        }
+        return Ok(0);
+    }
+
+    let verdict = body.get("verdict").and_then(|v| v.as_str()).unwrap_or("?");
+    let count = body
+        .get("affected_count")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let headline = if verdict == "would_break" {
+        style.red("WOULD BREAK")
+    } else {
+        style.green("SAFE")
+    };
+    let mut line = format!("{headline} {} ({change})", style.bold(symbol));
+    if resolution == "indeterminate" {
+        let reason = body.get("reason").and_then(|v| v.as_str()).unwrap_or("");
+        line.push_str(&format!(
+            " {}",
+            style.dim(&format!("[indeterminate: {reason}]"))
+        ));
+    }
+    writeln!(w, "{line}")?;
+    let truncated = body
+        .get("truncated")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let count_note = if truncated {
+        format!("{count}+ affected caller(s) (truncated — lower bound)")
+    } else {
+        format!("{count} affected caller(s)")
+    };
+    writeln!(w, "{}", style.dim(&count_note))?;
+
+    let callers = body
+        .get("affected_callers")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let mut grouped: std::collections::BTreeMap<&str, Vec<&Value>> =
+        std::collections::BTreeMap::new();
+    for c in &callers {
+        let file = c.get("file").and_then(|v| v.as_str()).unwrap_or("?");
+        grouped.entry(file).or_default().push(c);
+    }
+    for (file, entries) in grouped {
+        writeln!(w, "{}", style.magenta(file))?;
+        for c in entries {
+            let cline = c.get("line").and_then(|v| v.as_u64()).unwrap_or(0);
+            let enclosing = c
+                .get("enclosing")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<file-scope>");
+            let reason = c.get("reason").and_then(|v| v.as_str()).unwrap_or("");
+            writeln!(
+                w,
+                "  {}:{}  {} {}",
+                style.dim("L"),
+                style.green(&cline.to_string()),
+                style.bold(enclosing),
+                style.cyan(&format!("({reason})")),
+            )?;
+        }
+    }
+    Ok(callers.len())
+}
+
 /// Render the daemon's `outline_text` directly. The daemon already
 /// produces a dotted-indent tree-style hierarchy (protocol-v0 §7.5);
 /// we just pass it through (with a header) so the CLI shape stays
@@ -602,6 +708,84 @@ pub fn render_stats<W: Write>(body: &Value, w: &mut W, style: &Style) -> std::io
     // (no-results) — stats with all-zero counters is still a successful
     // query, not an empty result set.
     Ok(pairs.len().max(1))
+}
+
+// ── verify (file-reference check) ─────────────────────────────────────
+
+/// One hallucinated reference discovered by `rts verify`: a decidable
+/// symbol/import reference whose `resolution == "not_found"`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Hallucination {
+    /// The referenced name (final segment for qualified refs / imports).
+    pub name: String,
+    /// 1-based line of the reference in the verified file.
+    pub line: usize,
+    /// The top "did you mean" candidate's qualified name, if any.
+    pub did_you_mean: Option<String>,
+}
+
+/// Route one reference to its verify method + params, mirroring the
+/// routing in `rts-bench`'s `verify_metrics.rs`:
+/// - `Import` → `Index.VerifyImport { path }`
+/// - `Call` / `Type` / `Path` → `Index.VerifySymbol { name }`
+///
+/// Returns `(method, params, name)` where `name` is the human-facing
+/// label for the reference. Kept a tight local helper (not shared with
+/// the bench crate) on purpose.
+pub fn verify_route(r: &rust_tree_sitter::Reference) -> (&'static str, Value, String) {
+    use rust_tree_sitter::RefKind;
+    match r.kind {
+        RefKind::Import => {
+            let path = r.qualified.as_deref().unwrap_or(&r.name).to_string();
+            (
+                "Index.VerifyImport",
+                serde_json::json!({ "path": path }),
+                r.name.clone(),
+            )
+        }
+        RefKind::Call | RefKind::Type | RefKind::Path => (
+            "Index.VerifySymbol",
+            serde_json::json!({ "name": r.name }),
+            r.name.clone(),
+        ),
+    }
+}
+
+/// Pull the top candidate's `qualified_name` from a verify response
+/// body's `candidates[0]`, when present.
+pub fn top_candidate(body: &Value) -> Option<String> {
+    body.get("candidates")
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|c| c.get("qualified_name"))
+        .and_then(|q| q.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Render the collected hallucinations as `<file>:<line>  <name>
+/// (did you mean: <top candidate>?)` lines. Returns the number of
+/// lines written (== hallucination count). `rel` is the file label
+/// (typically the path as the user passed it).
+pub fn render_verify<W: Write>(
+    rel: &str,
+    halls: &[Hallucination],
+    w: &mut W,
+    style: &Style,
+) -> std::io::Result<usize> {
+    for h in halls {
+        let loc = format!("{rel}:{}", h.line);
+        match &h.did_you_mean {
+            Some(cand) => writeln!(
+                w,
+                "{}  {}  {}",
+                style.magenta(&loc),
+                style.yellow(&h.name),
+                style.dim(&format!("(did you mean: {cand}?)")),
+            )?,
+            None => writeln!(w, "{}  {}", style.magenta(&loc), style.yellow(&h.name),)?,
+        }
+    }
+    Ok(halls.len())
 }
 
 /// Truncate a string to `max` characters, suffixing `…` when the

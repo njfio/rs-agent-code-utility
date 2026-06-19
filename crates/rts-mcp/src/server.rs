@@ -254,6 +254,26 @@ pub struct ImpactOfArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifyImpactArgs {
+    /// Symbol whose change you want to gate — bare (`commit_batch`) or
+    /// qualified (`Store::commit_batch`). 1..=256 chars.
+    pub symbol: String,
+    /// The kind of change you intend: `signature`, `remove`, or `rename`.
+    pub change: String,
+    /// For `change: signature` — the proposed new signature header, e.g.
+    /// `commit_batch(entries: &[Entry], flush: bool) -> Result<()>`. When
+    /// present and parseable, the arity is compared against the indexed
+    /// def; absent or undecidable → conservative `would_break` if there
+    /// are any callers, with `resolution: indeterminate`.
+    #[serde(default)]
+    pub new_signature: Option<String>,
+    /// Blast-radius depth. Default 1 (direct callers only) — a gate wants
+    /// immediate breakage. Hard cap 4.
+    #[serde(default)]
+    pub depth: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReadSymbolAtArgs {
     /// Workspace-relative file path.
     pub file: String,
@@ -681,6 +701,31 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.ImpactOf", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Gate an edit before you make it: declare a change to a symbol (`signature`, `remove`, `rename`) and get the blast radius as a pass/fail `verdict` (would_break | safe). Prefer this over a manual `impact_of` plus eyeballing, or `Bash(grep 'name(')`, before you rename or change a function's arity: it resolves the def, walks the reverse-reference graph for direct callers, and for `signature` compares the new arity to the real one (pass `new_signature`). Use when the task says 'is it safe to change' or 'will this break callers'. `would_break` lists `affected_callers[]` with a per-caller `reason`; `safe` means no *arity* break only — a same-arity param-type change isn't detected, so still skim the callers; `not_found` returns ranked `candidates[]`."
+    )]
+    async fn verify_impact(
+        &self,
+        Parameters(args): Parameters<VerifyImpactArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("symbol".into(), Value::String(args.symbol));
+        params.insert("change".into(), Value::String(args.change));
+        if let Some(s) = args.new_signature {
+            params.insert("new_signature".into(), Value::String(s));
+        }
+        if let Some(d) = args.depth {
+            params.insert("depth".into(), Value::Number(d.into()));
+        }
+        match self
+            .call_daemon("Index.VerifyImpact", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),
