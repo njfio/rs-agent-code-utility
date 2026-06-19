@@ -447,6 +447,8 @@ def multi_arm_comparison_json(
     aggregates: list[ArmAggregate],
     paired_success: dict[str, tuple[list[bool], list[bool]]],
     verify_metrics: dict[str, dict[str, Any]],
+    *,
+    success_proxy: bool = False,
 ) -> dict[str, Any]:
     """Schema-versioned A/B/C comparison payload.
 
@@ -456,6 +458,9 @@ def multi_arm_comparison_json(
       per-task booleans (the McNemar inputs).
     - `verify_metrics`: maps arm name → that arm's verify-metric block
       (from `eval_verify.evaluate_arm`); attached per arm.
+    - `success_proxy`: True when the success vectors are the
+      `halt_reason=="submit"` PROXY (no Docker patch eval). Surfaced so a
+      reader never mistakes proxy success for real Docker-resolved success.
     """
     arms_payload: list[dict[str, Any]] = []
     arms_by_name: dict[str, dict[str, Any]] = {}
@@ -502,6 +507,7 @@ def multi_arm_comparison_json(
 
     return {
         "schema": MULTI_ARM_SCHEMA,
+        "success_proxy": success_proxy,
         "arms": arms_payload,
         "arms_by_name": arms_by_name,
         "mcnemar": mcnemar_block,
@@ -512,15 +518,29 @@ def multi_arm_comparison_markdown(
     aggregates: list[ArmAggregate],
     paired_success: dict[str, tuple[list[bool], list[bool]]],
     verify_metrics: dict[str, dict[str, Any]],
+    *,
+    success_proxy: bool = False,
 ) -> str:
     """Human-readable A/B/C comparison."""
-    payload = multi_arm_comparison_json(aggregates, paired_success, verify_metrics)
+    payload = multi_arm_comparison_json(
+        aggregates, paired_success, verify_metrics, success_proxy=success_proxy
+    )
+    success_label = "Success (PROXY: submit_patch)" if success_proxy else "Success"
     lines = [
         "# agent-bench A/B/C comparison",
         "",
+    ]
+    if success_proxy:
+        lines += [
+            "> ⚠️ **Success is a PROXY** (`halt_reason == \"submit\"`), NOT real "
+            "Docker patch evaluation. Treat success-rate and the McNemar deltas "
+            "as directional until a real eval (FAIL_TO_PASS) is wired in.",
+            "",
+        ]
+    lines += [
         "## Per-arm summary (Wilson 95% CI)",
         "",
-        "| Arm | Success | Tool-use ratio | Verify calls | Tokens (in/out) | Wall median/p95 |",
+        f"| Arm | {success_label} | Tool-use ratio | Verify calls | Tokens (in/out) | Wall median/p95 |",
         "|-----|---------|----------------|--------------|-----------------|-----------------|",
     ]
     for arm in payload["arms"]:

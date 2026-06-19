@@ -84,46 +84,69 @@ uv run agent-bench estimate --tasks 30 --seeds 1 --arms 3 \
 # Opus pricing:
 uv run agent-bench estimate --tasks 30 --arms 3 --in-price 15 --out-price 75
 
-# Run a dry-run against a 3-task smoke subset (no API key needed
-# if --mock is passed; otherwise uses ANTHROPIC_API_KEY)
-uv run agent-bench --mock --tasks smoke
-
-# Full bench, Sonnet default, $100 budget cap:
-ANTHROPIC_API_KEY=sk-ant-... uv run agent-bench \
-    --tasks corpus/swe-bench-lite-v1.json \
+# Run the A/B/C bench. The PRE-FLIGHT budget gate computes the projected
+# spend and ABORTS (nonzero exit) BEFORE constructing any client or
+# making any API call if it exceeds --max-usd. A real run needs:
+#   - ANTHROPIC_API_KEY in the environment
+#   - git on PATH (to clone + checkout each task at base_commit)
+#   - the rts-mcp / rts-daemon binaries (for the retrieval / verify arms)
+ANTHROPIC_API_KEY=sk-ant-... uv run agent-bench run \
+    --corpus corpus/swe-bench-lite-smoke.json \
+    --arms baseline,retrieval,retrieval_verify \
+    --seeds 1 \
     --model claude-sonnet-4-7-20260315 \
-    --budget-usd 100
+    --max-usd 100 \
+    --out bench-results/ \
+    [--resume] [--limit N]
 
-# Run with Opus for release-gate confidence (more expensive):
-ANTHROPIC_API_KEY=sk-ant-... uv run agent-bench \
-    --tasks corpus/swe-bench-lite-v1.json \
-    --model claude-opus-4-7-20260315 \
-    --budget-usd 400
+# Re-render the reports from an existing run dir — NO API call. Reads the
+# stored trajectory JSONs and re-aggregates.
+uv run agent-bench report --runs bench-results/runs/<run-id>
 ```
+
+`--max-usd` is a **hard pre-flight gate**: `run` calls `estimate_cost`
+for `tasks × seeds × arms` and, if the projection exceeds the cap, prints
+an `ABORT:` line and exits nonzero **before any Anthropic client is
+constructed**. `--resume` skips any `(task, arm, seed)` tuple whose
+trajectory file already exists on disk, so an interrupted run picks up
+where it left off without re-paying for completed work.
 
 ## Output
 
 ```
-bench-results/<version>/
-├── control-summary.json     # machine-readable per-task results
-├── control-summary.md       # human-readable aggregate
-├── treatment-summary.json
-├── treatment-summary.md
-└── comparison.md            # side-by-side with deltas + Wilson CIs
+<out>/runs/<run-id>/
+├── raw/<arm>/<instance_id>__seed<seed>.json   # per-run ArmTrajectory.to_dict()
+├── <arm>-summary.json                         # machine-readable per-arm
+├── <arm>-summary.md                           # human-readable per-arm
+├── comparison.json                            # A/B/C multi-arm payload
+└── comparison.md                              # A/B/C side-by-side + McNemar
 ```
 
-The summary files are **committed to the repo** so the trend across
-releases is part of the git history. Raw trajectories (per-task
-turn-by-turn JSONL) are NOT committed (volume + privacy of any
-embedded API outputs); they're written to `runs/<run-id>/` which is
-gitignored.
+The trajectory file name encodes the `(instance_id, seed)` tuple so
+`--resume` can detect completed runs and the reporter can re-aggregate
+offline. The summary files can be **committed to the repo** so the trend
+across releases lives in git history; raw trajectories are large and may
+embed API output, so keep `runs/` gitignored if that's a concern.
 
-> **Note:** `estimate` is build-only and makes ZERO API calls. The
-> actual A/B/C model run — budget enforcement, per-task isolation,
-> resume-from-checkpoint, Docker patch eval, and CI — ships with the
-> deferred **PR-B** infrastructure. A cheap smoke corpus
-> (`corpus/swe-bench-lite-smoke.json`, 4 real SWE-bench_Lite instance
-> ids with placeholder statements) is included for wiring tests.
+> **Note:** `estimate` and `report` make ZERO API calls. `run` is
+> **build-only** in this milestone: the harness runs **end-to-end with a
+> fake client** (see `tests/test_cli_run.py`), and a real run is gated on
+> a budget (`--max-usd`) plus the live infrastructure below. A cheap
+> smoke corpus (`corpus/swe-bench-lite-smoke.json`, 4 real SWE-bench_Lite
+> instance ids with placeholder statements) is included for wiring tests.
+
+### What a REAL run needs
+
+- `ANTHROPIC_API_KEY` in the environment (the agent loop hits the API).
+- `git` on PATH — `GitRepoProvider` clones each task's repo and checks
+  out `base_commit` into an isolated per-task tempdir.
+- The `rts-mcp` / `rts-daemon` binaries for the `retrieval` /
+  `retrieval_verify` arms (the `baseline` arm needs neither).
+- **Docker + x86_64 + the `swebench` harness + multi-GB per-repo images**
+  for *real* task success (FAIL_TO_PASS resolution via
+  `eval_docker.evaluate_patches`). Without Docker results, success falls
+  back to a `halt_reason == "submit"` **proxy**, labelled as such in the
+  report.
 
 ## What this does NOT do (yet)
 
@@ -141,18 +164,31 @@ gitignored.
 agent-bench/
 ├── agent_bench/
 │   ├── mcp_bridge.py   # spawn rts-mcp, JSON-RPC stdio, list_tools, call_tool
-│   ├── run.py          # one task → two arms → trajectory
-│   ├── isolation.py    # per-task tempdir + per-task daemon socket
-│   ├── preflight.py    # cost estimate + budget caps + confound asserts
-│   ├── report.py       # tool-use ratio + Wilson CI + Markdown summary
-│   └── cli.py          # `agent-bench` entry point
+│   ├── run.py          # one task → one arm → trajectory
+│   ├── isolation.py    # per-task tempdir + per-task daemon socket (boundaries)
+│   ├── corpus.py       # load Task records from JSON or a dataset id (boundary)
+│   ├── eval_verify.py  # offline EVR/BCIR/SHR/IHR via the rts verify CLI boundary
+│   ├── eval_docker.py  # swebench-in-Docker patch eval + success vectors (boundary)
+│   ├── report.py       # tool-use ratio + Wilson CI + McNemar + Markdown
+│   └── cli.py          # `agent-bench` entry point: estimate / run / report
 ├── corpus/
-│   └── swe-bench-lite-v1.json   # curated 30-instance subset
-├── prompts/
-│   └── system.md       # SHA-locked across arms
+│   └── swe-bench-lite-smoke.json   # cheap smoke subset for wiring tests
 └── tests/
     └── test_mcp_bridge.py   # integration test against real rts-mcp
 ```
+
+Every external boundary is a `Protocol` injected into the code under
+test, so the suite runs with **zero** real model / API / daemon / Docker
+/ network:
+
+| Boundary | Real implementation | Test fake |
+|---|---|---|
+| `run.AnthropicClient` | `anthropic.Anthropic` | `FakeAnthropicClient` |
+| `isolation.RepoProvider` | `GitRepoProvider` (git clone + checkout) | `FakeRepoProvider` (fixture tree) |
+| `isolation.DaemonHandle` | `RtsDaemonHandle` (spawn rts-daemon) | fake socket path |
+| `corpus.CorpusLoader` | `HuggingFaceLoader` | `FakeLoader` (canned rows) |
+| `eval_verify.RtsVerifyRunner` | `CliRtsVerifyRunner` (`rts verify`) | `FakeRunner` |
+| `eval_docker.PatchEvalRunner` | swebench-in-Docker | `FakePatchEvalRunner` |
 
 See [`agent_bench/mcp_bridge.py`](agent_bench/mcp_bridge.py) — the
 single load-bearing component is the bridge that lets Anthropic's
@@ -164,12 +200,17 @@ budget, same lifecycle.
 
 ## Cost expectations
 
-Per the [research](../docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md#risk-analysis--mitigation):
+The `estimate` subcommand projects `tasks × seeds × arms` runs, each at a
+per-run token model (defaults ~120k in / 8k out), priced by `--in-price` /
+`--out-price` (Sonnet list by default). Examples for the A/B/C (3-arm) design:
 
-| Configuration | Estimate per full bench run (30 tasks × 2 arms) |
+| Configuration | Projected spend |
 |---|---|
-| Sonnet 4 | ~$50-100 |
-| Opus 4 | ~$300+ |
+| Pilot — 30 tasks × 1 seed × 3 arms, Sonnet | ~$30–60 |
+| Publishable — 300 tasks × 3 seeds × 3 arms, Sonnet | ~$1,000–1,800 |
+| Opus | ≈ 4–5× the above |
 
-Pre-flight estimates `n × mean_tokens × $/Mtok × 2 × 1.5_safety`
-before any API call; hard ceiling aborts the run at 90 % consumed.
+`run --max-usd <cap>` computes this projection up front and **aborts before any
+API call** if it exceeds the cap (a hard pre-flight gate — there is no
+mid-run/runtime abort). Run `agent_bench estimate ...` for the exact figure of a
+specific run before authorizing spend.
