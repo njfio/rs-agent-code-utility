@@ -7,10 +7,11 @@ next. `prepare_task` is a context manager that:
   1. Creates a guaranteed-cleaned tempdir under `workdir`.
   2. Materializes the task's repo at `base_commit` via the `RepoProvider`
      boundary (real = git clone + checkout; test = a fixture tree).
-  3. For arms that need rts tools, starts a per-task daemon on a PRIVATE
-     socket via the `DaemonHandle` boundary (real = spawn rts-daemon;
-     test = a fake socket path). Baseline arms pass `daemon=None` and get
-     `socket=None`.
+  3. Optionally starts a per-task daemon via the `DaemonHandle` boundary
+     (an injectable seam kept for tests). In REAL runs no separate daemon
+     is started — rts-mcp auto-spawns its own per-workspace rts-daemon, so
+     the bridge owns the daemon. Real runs pass `daemon=None` for every
+     arm and get `socket=None`; the bridge is built over `repo_dir`.
 
 The tempdir is removed on `__exit__` — including on exception — and any
 daemon is stopped. Both boundaries are Protocols so the whole module is
@@ -100,34 +101,15 @@ class GitRepoProvider:
         )
 
 
-class RtsDaemonHandle:
-    """Real `DaemonHandle`: spawn `rts-daemon` on a private unix socket.
-
-    The socket lives inside the task workdir so it is removed with the
-    tempdir. `stop()` terminates the process. Used only in real runs.
-    """
-
-    def __init__(self, rts_daemon_bin: str = "rts-daemon") -> None:
-        self._bin = rts_daemon_bin
-        self._proc = None
-
-    def start(self, workdir: Path) -> str:
-        import subprocess
-
-        socket_path = str(workdir / ".rts-daemon.sock")
-        self._proc = subprocess.Popen(  # noqa: S603 — real-run only
-            [self._bin, "--socket", socket_path, "--workspace", str(workdir)],
-        )
-        return socket_path
-
-    def stop(self) -> None:
-        if self._proc is not None:
-            self._proc.terminate()
-            try:
-                self._proc.wait(timeout=10)
-            except Exception:  # noqa: BLE001 — best-effort teardown
-                self._proc.kill()
-            self._proc = None
+# NOTE: there is deliberately NO real `DaemonHandle` implementation here.
+# rts-mcp auto-spawns its own per-workspace rts-daemon (wired via
+# RTS_DAEMON_BIN), so the bridge (mcp_bridge.McpBridge) owns the daemon
+# lifecycle. A separate harness-managed daemon was redundant — and the
+# previous attempt passed rts-daemon a socket-path flag it does not
+# accept (it derives its socket from XDG_RUNTIME_DIR/HOME and takes only
+# an optional `--workspace` prewarm). The real default
+# `daemon_factory` therefore yields `None` for every arm, leaving
+# `socket=None`, and the bridge is built over the materialized workspace.
 
 
 # --- The context manager ------------------------------------------

@@ -371,7 +371,7 @@ def run_command(
     client_factory: Callable[[str], Any] | None = None,
     repo_provider: Any = None,
     daemon_factory: Callable[[str], Any] | None = None,
-    bridge_factory: Callable[[str, str | None], Any] | None = None,
+    bridge_factory: Callable[[str, str], Any] | None = None,
     verify_runner: Any = None,
     run_id: str | None = None,
 ) -> int:
@@ -381,7 +381,12 @@ def run_command(
       - `client_factory(model)` → an Anthropic-shaped client.
       - `repo_provider` → isolation.RepoProvider (git in real runs).
       - `daemon_factory(arm)` → isolation.DaemonHandle or None (baseline).
-      - `bridge_factory(arm, socket)` → mcp_bridge.McpBridge or None.
+        The REAL default returns None for every arm: rts-mcp auto-spawns
+        its own per-workspace rts-daemon, so the harness owns no separate
+        daemon (a redundant one only printed an unknown-argument error).
+      - `bridge_factory(arm, workspace_dir)` → mcp_bridge.McpBridge or None.
+        For rts arms the bridge is built over the materialized repo dir
+        (the workspace); it spawns rts-mcp which auto-spawns rts-daemon.
       - `verify_runner` → eval_verify.RtsVerifyRunner.
       - `run_id` → deterministic id (tests pin it).
 
@@ -425,9 +430,11 @@ def run_command(
         return 1
 
     # (2b) PRE-FLIGHT rts-arm wiring — BEFORE any client is constructed.
-    # Non-baseline arms need an MCP bridge + per-task daemon. When no
-    # bridge_factory was injected (a real run, not a test), wire the REAL
-    # bridge/daemon over the built binaries. If the binaries are missing we
+    # Non-baseline arms need an MCP bridge over the materialized workspace.
+    # The bridge OWNS the daemon: rts-mcp auto-spawns its own per-workspace
+    # rts-daemon (via RTS_DAEMON_BIN), so the harness wires NO separate
+    # daemon. When no bridge_factory was injected (a real run, not a test),
+    # wire the REAL bridge over the built binaries. If they're missing we
     # FAIL FAST here — no client is constructed and no arm runs, so a real
     # invocation can never spend baseline API calls only to abort when the
     # first rts arm finds bridge=None.
@@ -444,8 +451,6 @@ def run_command(
             return 1
         rts_mcp_bin, rts_daemon_bin = binaries
         bridge_factory = _real_bridge_factory(rts_mcp_bin, rts_daemon_bin)
-        if daemon_factory is None:
-            daemon_factory = _real_daemon_factory(rts_daemon_bin)
 
     out_root = Path(args.out)
     rid = run_id or _new_run_id()
@@ -486,7 +491,9 @@ def run_command(
                 ) as ws:
                     materialized = _with_repo_dir(task, ws.repo_dir)
                     bridge = (
-                        bridge_factory(arm, ws.socket) if bridge_factory is not None else None
+                        bridge_factory(arm, str(ws.repo_dir))
+                        if bridge_factory is not None
+                        else None
                     )
                     client = client_factory(args.model)
                     try:
@@ -562,41 +569,23 @@ def _discover_rts_binaries() -> tuple[Path, Path] | None:
     return None
 
 
-def _real_daemon_factory(rts_daemon_bin: Path) -> Callable[[str], Any]:
-    """Factory: a per-task `RtsDaemonHandle` for non-baseline arms.
-
-    Baseline arms get `None` (no daemon, `socket=None` from prepare_task).
-    """
-    from agent_bench.isolation import RtsDaemonHandle
-
-    def make(arm: str) -> Any:
-        if arm == "baseline":
-            return None
-        return RtsDaemonHandle(rts_daemon_bin=str(rts_daemon_bin))
-
-    return make
-
-
 def _real_bridge_factory(
     rts_mcp_bin: Path, rts_daemon_bin: Path
-) -> Callable[[str, str | None], Any]:
-    """Factory: a real `McpBridge` over the per-task daemon socket.
+) -> Callable[[str, str], Any]:
+    """Factory: a real `McpBridge` over the materialized workspace.
 
-    Baseline arms get `None`. For rts arms the per-task daemon was started
-    over the materialized repo and its socket lives inside that repo dir
-    (`<repo_dir>/.rts-daemon.sock`), so the bridge's workspace is the
-    socket's parent directory. The bridge spawns its own rts-mcp wired to
-    `rts_daemon_bin`.
+    Baseline arms get `None`. For rts arms the bridge is spawned over the
+    materialized repo dir (`workspace_dir`): it owns the rts-mcp
+    subprocess, which auto-spawns its own per-workspace rts-daemon (wired
+    via `RTS_DAEMON_BIN`). The harness keeps NO separate daemon — that
+    redundant path only ever printed an unknown-argument error.
     """
     from agent_bench.mcp_bridge import McpBridge
 
-    def make(arm: str, socket: str | None) -> Any:
+    def make(arm: str, workspace_dir: str) -> Any:
         if arm == "baseline":
             return None
-        if socket is None:
-            raise ValueError(f"arm {arm!r} requires a daemon socket but got None")
-        workspace = Path(socket).parent
-        return McpBridge.spawn(rts_mcp_bin, rts_daemon_bin, workspace)
+        return McpBridge.spawn(rts_mcp_bin, rts_daemon_bin, Path(workspace_dir))
 
     return make
 

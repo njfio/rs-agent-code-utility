@@ -101,14 +101,14 @@ class FakeBridge:
         self.closed += 1
 
 
-def _bridge_factory(arm, socket):
-    # Baseline needs no bridge; rts arms get a fake bridge.
+def _bridge_factory(arm, workspace):
+    # Baseline needs no bridge; rts arms get a fake bridge over the workspace.
     if arm == "baseline":
         return None
     return FakeBridge()
 
 
-def _bridge_factory_none(arm, socket):
+def _bridge_factory_none(arm, workspace):
     # Baseline-only paths: no bridge ever needed.
     return None
 
