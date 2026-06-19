@@ -309,6 +309,51 @@ class TestResume:
         json.loads((raw / "acme__widget-0__seed0.json").read_text())
 
 
+class TestBudgetFlags:
+    def _capture_config(self, monkeypatch):
+        # `run_command` does `from agent_bench.run import run_one_arm` locally,
+        # so patch the source module.
+        seen = {}
+        import agent_bench.run as runmod
+
+        real = runmod.run_one_arm
+
+        def capturing(*, client, task, arm, config, bridge):
+            seen["max_turns"] = config.max_turns
+            seen["max_input_tokens"] = config.max_input_tokens
+            return real(client=client, task=task, arm=arm, config=config, bridge=bridge)
+
+        monkeypatch.setattr(runmod, "run_one_arm", capturing)
+        return seen
+
+    def _run(self, tmp_path, monkeypatch, **extra):
+        corpus = _write_corpus(tmp_path, n=1)
+        seen = self._capture_config(monkeypatch)
+        rc = run_command(
+            _make_args(corpus=str(corpus), arms="baseline", out=str(tmp_path / "o"), **extra),
+            client_factory=lambda model: _submit_client(),
+            repo_provider=FakeRepoProvider(),
+            daemon_factory=lambda arm: None,
+            bridge_factory=_bridge_factory_none,
+            verify_runner=FakeVerifyRunner(),
+            run_id="run-test",
+        )
+        assert rc == 0
+        return seen
+
+    def test_flags_flow_into_runconfig(self, tmp_path, monkeypatch) -> None:
+        seen = self._run(tmp_path, monkeypatch, max_turns=40, max_input_tokens=350000)
+        assert seen["max_turns"] == 40
+        assert seen["max_input_tokens"] == 350000
+
+    def test_absent_flags_keep_runconfig_defaults(self, tmp_path, monkeypatch) -> None:
+        from agent_bench.run import DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_TURNS
+
+        seen = self._run(tmp_path, monkeypatch)  # no flags on the Namespace
+        assert seen["max_turns"] == DEFAULT_MAX_TURNS
+        assert seen["max_input_tokens"] == DEFAULT_MAX_INPUT_TOKENS
+
+
 # --- report subcommand (offline) ----------------------------------
 
 

@@ -128,8 +128,11 @@ How to use what's already shipped:
 # only per-arm delta is Arm C's verify nudge, applied inside run.py).
 _DEFAULT_SYSTEM_PROMPT = (
     "You are a software engineer fixing a bug in a repository. "
-    "Investigate the codebase, make a minimal correct change, and call "
-    "submit_patch with a unified diff once you are confident."
+    "Investigate the codebase efficiently, then make a minimal correct change "
+    "and call submit_patch with a unified diff. Budget your turns: do not "
+    "explore indefinitely. Before you run low on turns, ALWAYS call "
+    "submit_patch with your best-effort unified diff rather than leaving it "
+    "unsubmitted — a best attempt is far better than no patch."
 )
 
 # Each arm name maps to its run.ArmConfig tool profile.
@@ -484,7 +487,16 @@ def run_command(
                 ):
                     continue
 
-                config = RunConfig(model=args.model, system_prompt=_DEFAULT_SYSTEM_PROMPT)
+                rc_kwargs: dict[str, Any] = {}
+                if getattr(args, "max_turns", None) is not None:
+                    rc_kwargs["max_turns"] = args.max_turns
+                if getattr(args, "max_input_tokens", None) is not None:
+                    rc_kwargs["max_input_tokens"] = args.max_input_tokens
+                config = RunConfig(
+                    model=args.model,
+                    system_prompt=_DEFAULT_SYSTEM_PROMPT,
+                    **rc_kwargs,
+                )
                 daemon = daemon_factory(arm)
                 with prepare_task(
                     task, workdir, repo_provider=repo_provider, daemon=daemon
@@ -677,6 +689,20 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run_p.add_argument(
         "--limit", type=int, default=None, help="Truncate corpus to first N tasks."
+    )
+    run_p.add_argument(
+        "--max-turns",
+        type=int,
+        default=None,
+        dest="max_turns",
+        help="Max agent turns per (task, arm, seed). Default: RunConfig default.",
+    )
+    run_p.add_argument(
+        "--max-input-tokens",
+        type=int,
+        default=None,
+        dest="max_input_tokens",
+        help="Max accumulated input tokens per run. Default: RunConfig default.",
     )
 
     rep_p = sub.add_parser(
