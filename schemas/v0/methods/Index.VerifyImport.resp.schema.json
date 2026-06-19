@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyImport.resp.schema.json",
+  "title": "Index.VerifyImport result",
+  "description": "verify-v0 P1.U3. `resolves` + `resolution`. Final segment present → resolves:true, exact. Single-segment path decidably absent → resolves:false, not_found, ranked candidates[]. Multi-segment path whose final segment is absent (or otherwise undecidable) → indeterminate + reason (no confident false negative), with optional candidates[].",
+  "type": "object",
+  "properties": {
+    "resolves": { "type": "boolean" },
+    "resolution": {
+      "type": "string",
+      "enum": ["exact", "not_found", "indeterminate"]
+    },
+    "reason": {
+      "description": "IndeterminateReason wire string. Present only when resolution is `indeterminate`.",
+      "type": "string",
+      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload", "undecidable_signature"]
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "edit_distance":  { "type": "integer", "minimum": 0 },
+          "pagerank":       { "type": "number" }
+        },
+        "required": ["qualified_name", "edit_distance", "pagerank"]
+      }
+    }
+  },
+  "required": ["resolution"]
+}

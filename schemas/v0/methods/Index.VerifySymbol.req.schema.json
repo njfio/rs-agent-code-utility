@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifySymbol.req.schema.json",
+  "title": "Index.VerifySymbol request params",
+  "description": "verify-v0 P1.U1, capability `verify_symbol`. Answers \"does this symbol exist?\" — returns exists/resolution plus ranked near-miss candidates on a miss.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "kind": {
+      "type": "string",
+      "enum": ["fn", "struct", "enum", "type", "trait", "const", "static", "impl", "method", "class", "interface", "module", "heading"]
+    },
+    "lang": { "type": "string" },
+    "file": { "type": "string" },
+    "content_version": { "type": "string" }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

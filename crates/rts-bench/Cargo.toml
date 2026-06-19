@@ -20,6 +20,13 @@ path = "src/main.rs"
 # concurrently, so we want the full multi-thread Tokio runtime.
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "process", "time", "fs", "net"] }
 
+# rts's own tree-sitter pipeline. The `verify` subcommand parses agent-
+# emitted code with `extract_references` (F3) to turn snippets into the
+# referenced symbols / imports / call-arities it checks against the live
+# index — same path dep the daemon uses, so the bench measures the exact
+# extractor the daemon ships.
+rust_tree_sitter = { path = "../rts-core" }
+
 # Wire encoding for MCP JSON-RPC + corpus.lock + bench-*.json output.
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

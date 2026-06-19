@@ -1,0 +1,43 @@
+# Self-validation fixture for the hallucination-metric harness
+# (`rts-bench verify`, verify-v0 P1.U5).
+#
+# This corpus has a KNOWN expected Symbol Hallucination Rate so the
+# metric provably detects what it should. It is checked against the tiny
+# workspace seeded by the `verify_selftest` integration test
+# (`crates/rts-bench/tests/verify_metrics_integration.rs`), which defines:
+#
+#   make_widget / make_circle / format_widget  — three real symbols
+#                                                 (one def each → `exact`)
+#   dup_helper                                  — TWO defs across two files
+#                                                 (ambiguous overload →
+#                                                  `indeterminate`)
+#
+# The snippet below references those plus two invented names
+# (`invented_fn`, `another_bogus`). The extractor (F3) emits one `Call`
+# reference per call. Against the seeded workspace:
+#
+#   exact:         make_widget, make_circle, format_widget  (3)
+#   not_found:     invented_fn, another_bogus               (2)
+#   indeterminate: dup_helper                               (1, EXCLUDED)
+#
+#   SHR = not_found / decidable = 2 / (3 + 2) = 2/5 = 0.4
+#   indeterminate_excluded = 1
+#
+# If this expected value ever drifts, either the extractor or the verify
+# resolution changed — investigate before re-baselining.
+
+version = 1
+
+[[snippet]]
+name = "selftest: 3 real + 2 invented + 1 ambiguous (expected SHR = 0.4)"
+lang = "rust"
+code = """
+fn agent_emitted() {
+    let a = make_widget(1);
+    let b = make_circle(2);
+    let c = format_widget(a);
+    let d = invented_fn(b);
+    let e = another_bogus(c);
+    let f = dup_helper(d);
+}
+"""

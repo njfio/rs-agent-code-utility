@@ -327,6 +327,141 @@ struct FindCallersParams {
     file: Option<String>,
 }
 
+/// `Index.VerifySymbol` params (verify-v0 P1.U1). Answers "does this
+/// symbol exist?" — `name` is required (bare or qualified, e.g.
+/// `Store::commit_batch`); `kind`/`lang`/`file` are optional filters.
+/// `content_version` is echoed back; U1 does not hard-fail on mismatch.
+#[derive(Debug, Deserialize)]
+struct VerifySymbolParams {
+    /// Symbol name to verify. 1..=256 chars. Bare (`commit_batch`) or
+    /// qualified (`Store::commit_batch`); the handler matches the
+    /// stored bare name and, when the input is qualified, its final
+    /// `::`-segment too.
+    name: String,
+    /// Optional `kind` filter (`fn`/`method`/`struct`/...). Loose
+    /// string form, same as `Index.FindSymbol.kind`.
+    #[serde(default)]
+    kind: Option<String>,
+    /// Optional language filter. Accepted but currently advisory —
+    /// def kinds are language-agnostic in v0; reserved for U2+ where
+    /// signature/import checks become language-specific.
+    #[serde(default)]
+    #[allow(dead_code)]
+    lang: Option<String>,
+    /// Optional workspace-relative file filter — scopes the match (and
+    /// the ambiguity decision) to one file.
+    #[serde(default)]
+    file: Option<String>,
+    /// Optional content-version echo. U1 echoes it back verbatim and
+    /// does NOT hard-fail on mismatch (the writer's generation already
+    /// guards staleness for the candidate pool).
+    #[serde(default)]
+    content_version: Option<String>,
+}
+
+/// `Index.VerifySignature` params (verify-v0 P1.U2). "Does a call match
+/// the definition?" — `name` resolves the indexed def; `claimed` is the
+/// shape the caller believes it has.
+#[derive(Debug, Deserialize)]
+struct VerifySignatureParams {
+    /// Symbol name to resolve. 1..=256 chars. Bare or qualified, same
+    /// resolution as `Index.VerifySymbol`.
+    name: String,
+    /// Optional `kind` filter (loose-string form), to disambiguate
+    /// same-named defs of different kinds.
+    #[serde(default)]
+    kind: Option<String>,
+    /// Optional language filter. Advisory in v0 (the def's file
+    /// extension drives shape extraction).
+    #[serde(default)]
+    #[allow(dead_code)]
+    lang: Option<String>,
+    /// Optional workspace-relative file filter, to disambiguate
+    /// overloaded names across files.
+    #[serde(default)]
+    file: Option<String>,
+    /// The signature shape the caller claims the symbol has.
+    claimed: ClaimedSignature,
+}
+
+/// The caller's claimed signature shape for `Index.VerifySignature`.
+#[derive(Debug, Clone, Deserialize)]
+struct ClaimedSignature {
+    /// Claimed parameter count (excluding any receiver).
+    arity: u32,
+    /// Claimed parameter names, in order.
+    #[serde(default)]
+    params: Vec<String>,
+    /// Claimed return type (string compared against the actual).
+    #[serde(default)]
+    returns: Option<String>,
+}
+
+/// `Index.VerifyImport` params (verify-v0 P1.U3). Thin: resolves the
+/// FINAL segment of `path` against the index. Real cross-module path
+/// resolution is deferred to its own plan.
+#[derive(Debug, Deserialize)]
+struct VerifyImportParams {
+    /// The import path, e.g. `crate::store::CommitOptions`. The final
+    /// `::`-segment is what's resolved against the index.
+    path: String,
+    /// Optional language hint. Advisory in v0.
+    #[serde(default)]
+    #[allow(dead_code)]
+    lang: Option<String>,
+}
+
+/// `Index.VerifyClaims` params (verify-v0 P1.U4). Batch verification of
+/// a heterogeneous claim list; composes U1/U2/U3 + a location check.
+#[derive(Debug, Deserialize)]
+struct VerifyClaimsParams {
+    #[serde(default)]
+    claims: Vec<ClaimItem>,
+}
+
+/// One claim in a `Index.VerifyClaims` batch. Tagged by `type`.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ClaimItem {
+    /// "does this symbol exist?" — delegates to `verify_symbol_inner`.
+    Symbol {
+        name: String,
+        #[serde(default)]
+        kind: Option<String>,
+        #[serde(default)]
+        lang: Option<String>,
+        #[serde(default)]
+        file: Option<String>,
+    },
+    /// "does this call match the def?" — delegates to
+    /// `verify_signature_inner`.
+    Signature {
+        name: String,
+        #[serde(default)]
+        kind: Option<String>,
+        #[serde(default)]
+        lang: Option<String>,
+        #[serde(default)]
+        file: Option<String>,
+        claimed: ClaimedSignature,
+    },
+    /// "does the final segment resolve?" — delegates to
+    /// `verify_import_inner`.
+    Import {
+        path: String,
+        #[serde(default)]
+        lang: Option<String>,
+    },
+    /// "is this symbol's def at file:line?" — local location check.
+    Location {
+        symbol: String,
+        file: String,
+        line: u32,
+        #[serde(default)]
+        kind: Option<String>,
+    },
+}
+
 #[derive(Debug, Deserialize)]
 struct ImpactOfParams {
     /// Name of the symbol whose transitive callers we want. Required.
@@ -2105,6 +2240,1074 @@ pub async fn find_callers(
         "callers":   callers,
         "truncated": truncated,
     }))
+}
+
+/// Render the signature for a single resolved def, reusing the
+/// shared `DaemonState::signature_cache` (keyed on `(path, byte
+/// range, mtime)`). Returns `None` when the file can't be read, the
+/// byte range is degenerate, or the language has no renderer.
+///
+/// Factored out of `find_symbol`'s inline loop so the verify-family
+/// handlers (`verify_symbol` here; signature/import siblings next)
+/// render a `matches[].signature` the same way `find_symbol`'s
+/// `include_signature` path does — one rendering policy, one cache.
+fn render_signature_for(
+    state: &Arc<DaemonState>,
+    root: &Path,
+    found: &FoundSymbol,
+) -> Option<String> {
+    let abs = match crate::path::resolve_workspace_path(root, &found.file) {
+        Ok((abs, _)) => abs,
+        Err(_) => return None,
+    };
+    let (body_bytes, mtime_ns) = match std::fs::read(&abs).and_then(|b| {
+        let meta = std::fs::metadata(&abs)?;
+        let mtime_ns = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_nanos() as i128)
+            .unwrap_or(0);
+        Ok((b, mtime_ns))
+    }) {
+        Ok(v) => v,
+        Err(_) => return None,
+    };
+    let (start, end) = (found.start_byte as usize, found.end_byte as usize);
+    if !(end > start && end <= body_bytes.len()) {
+        return None;
+    }
+    let slice = &body_bytes[start..end];
+    state
+        .signature_cache
+        .get_or_compute(&abs, found.start_byte, found.end_byte, mtime_ns, || {
+            crate::language::info_for_path(&found.file)
+                .and_then(|info| info.signature_renderer)
+                .and_then(|render| render(slice))
+        })
+}
+
+/// Build the `(qualified_name, pagerank)` name pool that
+/// `rust_tree_sitter::rank_candidates` consumes for "did you mean…"
+/// near-miss ranking. Enumerates every indexed def name via the same
+/// `find_symbols_batch_with_sids` path `find_symbol` uses (one read
+/// txn, shared fid→path cache), renders each def's qualified name
+/// (`parent::name`), and attaches its symbol-level PageRank from the
+/// already-loaded `SymbolRanks` (0.0 when ranks are cold).
+///
+/// One entry per *def site*, not per name — an overloaded name shows
+/// up once per def so a candidate in the right module/type can win the
+/// PageRank tie-break. The verify-family siblings (import/claims)
+/// reuse this verbatim for their own miss paths.
+fn verify_candidate_pool(
+    store: &Arc<Store>,
+    ranks: Option<&Arc<SymbolRanks>>,
+) -> Result<Vec<(String, f64)>, ProtocolError> {
+    let all: Vec<String> = store
+        .all_defined_names()
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("all_defined_names storage error: {e:#}"),
+            )
+        })?
+        .into_iter()
+        .collect();
+    let batched = store.find_symbols_batch_with_sids(&all).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("find_symbols_batch_with_sids storage error: {e:#}"),
+        )
+    })?;
+    let mut pool: Vec<(String, f64)> = Vec::with_capacity(batched.len());
+    for (_name, (sid, hits)) in batched {
+        let rank = sid
+            .and_then(|s| ranks.map(|r| r.rank_for(s)))
+            .unwrap_or(0.0);
+        for h in hits {
+            pool.push((render_qualified_name(&h.name, h.parent.as_deref()), rank));
+        }
+    }
+    Ok(pool)
+}
+
+/// `Index.VerifySymbol(name, kind?, lang?, file?, content_version?)`
+/// — verify-v0 P1.U1, capability `verify_symbol`.
+///
+/// Answers "does this symbol exist?" with precision over recall:
+/// never a confident wrong answer. A miss is a RESULT, not an error —
+/// the handler returns `exists:false` and a ranked `candidates[]`
+/// shortlist so the agent can self-correct an invented name.
+///
+/// Wire shape:
+/// ```jsonc
+/// {
+///   "exists": true,
+///   "resolution": "exact",            // exact | not_found | indeterminate
+///   "reason": "ambiguous_overload",   // present ONLY on indeterminate
+///   "matches": [ { "qualified_name": "...", "kind": "method",
+///                  "file": "...", "line": 242,
+///                  "signature": "fn ...", "pagerank": 0.0143 } ],
+///   "candidates": [ { "qualified_name": "...", "edit_distance": 2,
+///                     "pagerank": 0.0102 } ],   // miss only
+///   "content_version": "…"
+/// }
+/// ```
+///
+/// Resolution rules:
+/// - ≥1 def after filters → `exists:true, "exact"`.
+/// - filters leave multiple defs and neither `file` nor `kind`
+///   disambiguates → `exists:true, "indeterminate",
+///   reason:"ambiguous_overload"` (still lists all `matches`).
+/// - no def → `exists:false, "not_found"`, ranked `candidates[]`.
+///
+/// `content_version` always echoes: the matched file's version on a
+/// hit, else the index generation. `INVALID_PARAMS` on empty/oversize
+/// `name`. Walks the full name pool on a miss → cancellable.
+pub async fn verify_symbol(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifySymbolParams = parse_params(params)?;
+    if p.name.is_empty() || p.name.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`name` must be 1..=256 characters",
+        ));
+    }
+
+    let (root, store_arc) = snapshot(state)?;
+    // Read generation BEFORE any read txn (Deepening §C cache invariant).
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ctx = VerifyCtx {
+        root: &root,
+        store: &store_arc,
+        generation,
+        ranks: ranks.as_ref(),
+    };
+    verify_symbol_inner(&p, state, &ctx, &token)
+}
+
+/// Resolved per-call context shared by the verify-family inner fns.
+/// Snapshotted once by each JSON-RPC entrypoint (and once per batch by
+/// `verify_claims`), then threaded into the reusable inner logic so
+/// U4 composes U1–U3 without re-dispatching through the wire layer.
+struct VerifyCtx<'a> {
+    root: &'a Path,
+    store: &'a Arc<Store>,
+    generation: u64,
+    ranks: Option<&'a Arc<SymbolRanks>>,
+}
+
+/// Reusable core of `Index.VerifySymbol`. Assumes `p.name` is already
+/// validated (1..=256 chars). Pure resolution logic over the resolved
+/// `ctx`; the public handler owns snapshot + validation, `verify_claims`
+/// calls this directly per `{type:"symbol"}` claim.
+fn verify_symbol_inner(
+    p: &VerifySymbolParams,
+    state: &Arc<DaemonState>,
+    ctx: &VerifyCtx<'_>,
+    token: &CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Near-miss candidate count surfaced on a `not_found`.
+    const CANDIDATE_LIMIT: usize = 5;
+
+    let root = ctx.root;
+    let store_arc = ctx.store;
+    let generation = ctx.generation;
+    let ranks = ctx.ranks.cloned();
+
+    let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
+    let file_filter = p.file.as_deref();
+
+    // Resolve the name. The stored key is the bare name; when the
+    // caller passes a qualified name (`Store::commit_batch`) we also
+    // try its final `::`-segment so qualified inputs resolve.
+    let bare = p.name.rsplit("::").next().unwrap_or(&p.name).to_string();
+    let mut lookup_names: Vec<String> = vec![p.name.clone()];
+    if bare != p.name {
+        lookup_names.push(bare.clone());
+    }
+    let mut batched = store_arc
+        .find_symbols_batch_with_sids(&lookup_names)
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("find_symbols_batch_with_sids storage error: {e:#}"),
+            )
+        })?;
+    // Take the first lookup name that resolved to ≥1 def.
+    let mut hits: Vec<FoundSymbol> = Vec::new();
+    for n in &lookup_names {
+        if let Some((_sid, found)) = batched.remove(n) {
+            if !found.is_empty() {
+                hits = found;
+                break;
+            }
+        }
+    }
+
+    // When the caller passed a QUALIFIED name (`Foo::new`), the bare-segment
+    // fallback above resolved every `new` in the index — so we must narrow to
+    // hits whose immediate container actually matches the qualifier, or we'd
+    // confirm `Foo::new` exists when only `Bar::new` does (a false positive).
+    // The store tracks only the immediate parent, so we match that segment; a
+    // free function (`parent: None`) never satisfies a qualified claim.
+    let qualifier: Option<String> = if p.name.contains("::") {
+        let mut segs: Vec<&str> = p.name.split("::").collect();
+        segs.pop(); // drop the final (bare) segment
+        segs.into_iter()
+            .rev()
+            .find(|s| !s.is_empty())
+            .map(str::to_string)
+    } else {
+        None
+    };
+
+    // Apply optional kind/file filters plus the qualifier narrowing above.
+    let filtered: Vec<FoundSymbol> = hits
+        .into_iter()
+        .filter(|h| kind_filter.map(|k| h.kind == k).unwrap_or(true))
+        .filter(|h| file_filter.map(|f| h.file == f).unwrap_or(true))
+        .filter(|h| match &qualifier {
+            Some(q) => h.parent.as_deref() == Some(q.as_str()),
+            None => true,
+        })
+        .collect();
+
+    // Echo `content_version`: the matched file's version on a hit
+    // (first match's file), else the index generation. We keep the
+    // caller's echoed value out of the response unless we have nothing
+    // better — the wire field is the daemon's view, not the agent's.
+    let content_version_for = |found: Option<&FoundSymbol>| -> String {
+        match found {
+            Some(h) => match crate::path::resolve_workspace_path(root, &h.file) {
+                Ok((abs, _)) => match std::fs::read(&abs).ok().and_then(|bytes| {
+                    let meta = std::fs::metadata(&abs).ok()?;
+                    let mtime_ns = meta
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_nanos() as i128)
+                        .unwrap_or(0);
+                    Some(content_version(&bytes, mtime_ns, generation))
+                }) {
+                    Some(cv) => cv,
+                    None => format!("@{generation}"),
+                },
+                Err(_) => format!("@{generation}"),
+            },
+            None => p
+                .content_version
+                .clone()
+                .unwrap_or_else(|| format!("@{generation}")),
+        }
+    };
+
+    if filtered.is_empty() {
+        // MISS. Build the ranked near-miss shortlist. This walks the
+        // whole name pool, so poll the cancel token first.
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let pool = verify_candidate_pool(store_arc, ranks.as_ref())?;
+        let candidates =
+            rust_tree_sitter::rank_candidates(&bare, pool.into_iter(), CANDIDATE_LIMIT);
+        let candidates_json: Vec<serde_json::Value> = candidates
+            .into_iter()
+            .map(|c| {
+                serde_json::json!({
+                    "qualified_name": c.qualified_name,
+                    "edit_distance":  c.edit_distance,
+                    "pagerank":       c.pagerank,
+                })
+            })
+            .collect();
+        return Ok(serde_json::json!({
+            "exists":          false,
+            "resolution":      rust_tree_sitter::Resolution::NotFound,
+            "matches":         [],
+            "candidates":      candidates_json,
+            "content_version": content_version_for(None),
+        }));
+    }
+
+    // HIT (one or more defs survived the filters). Render each as a
+    // `matches[]` entry. Stable order: (file, start_byte).
+    let mut survivors = filtered;
+    survivors.sort_by(|a, b| a.file.cmp(&b.file).then(a.start_byte.cmp(&b.start_byte)));
+
+    let matches: Vec<serde_json::Value> = survivors
+        .iter()
+        .map(|h| {
+            let pagerank = ranks.as_ref().map(|r| r.rank_for(h.sid)).unwrap_or(0.0);
+            let signature = render_signature_for(state, root, h);
+            serde_json::json!({
+                "qualified_name": render_qualified_name(&h.name, h.parent.as_deref()),
+                "kind":           h.kind.as_wire_str(),
+                "file":           h.file,
+                "line":           h.start_line,
+                "signature":      signature,
+                "pagerank":       pagerank,
+            })
+        })
+        .collect();
+
+    let content_version = content_version_for(survivors.first());
+
+    // Ambiguous when multiple defs survive AND no filter narrowed to
+    // one. With a `file` or `kind` filter that already selected a
+    // single def we'd be in the single-match branch; if multiple defs
+    // share the same file+kind, that's still genuinely ambiguous.
+    if survivors.len() > 1 {
+        return Ok(serde_json::json!({
+            "exists":          true,
+            "resolution":      rust_tree_sitter::Resolution::Indeterminate,
+            "reason":          rust_tree_sitter::IndeterminateReason::AmbiguousOverload,
+            "matches":         matches,
+            "candidates":      [],
+            "content_version": content_version,
+        }));
+    }
+
+    Ok(serde_json::json!({
+        "exists":          true,
+        "resolution":      rust_tree_sitter::Resolution::Exact,
+        "matches":         matches,
+        "candidates":      [],
+        "content_version": content_version,
+    }))
+}
+
+/// Find the indexed def's ACTUAL `SignatureShape` by reading its file,
+/// parsing it, locating the function/method node that covers the def's
+/// byte range, and running `signature_shape`.
+///
+/// Returns `Ok(Some(shape))` on a decided shape, `Ok(None)` when the
+/// language is unsupported, the file can't be read/parsed, no def node
+/// covers the range, or the shape is undecidable (variadics) — every
+/// one of those collapses to an `indeterminate` verify result. The
+/// language is mapped from the def's file path via `info_for_path`
+/// (the same registry the writer and `find_symbol` use).
+fn actual_signature_shape(
+    root: &Path,
+    found: &FoundSymbol,
+) -> Option<rust_tree_sitter::SignatureShape> {
+    use rust_tree_sitter::Parser;
+
+    let info = crate::language::info_for_path(&found.file)?;
+    let lang = info.language;
+
+    let abs = crate::path::resolve_workspace_path(root, &found.file)
+        .ok()
+        .map(|(abs, _)| abs)?;
+    let src = std::fs::read(&abs).ok()?;
+
+    // Parse the whole file (the def's byte offsets are file-relative).
+    let src_str = std::str::from_utf8(&src).ok()?;
+    let parser = Parser::new(lang).ok()?;
+    let tree = parser.parse(src_str, None).ok()?;
+
+    // Locate the def node: the deepest function/method node whose byte
+    // range contains the def's start byte. The writer's def range can
+    // be slightly wider/narrower than tree-sitter's node (attributes,
+    // doc comments), so we anchor on `start_byte` containment and pick
+    // the innermost recognised def kind.
+    let target = found.start_byte as usize;
+    let root_node = tree.root_node().inner();
+    let def_node = find_def_node(root_node, target)?;
+    rust_tree_sitter::signature_shape(def_node, &src, lang)
+}
+
+/// Depth-first search for the innermost tree-sitter node of a
+/// recognised function/method-definition kind whose byte range covers
+/// `offset`. Returns the deepest such node so a method inside an impl
+/// wins over its enclosing item.
+fn find_def_node(
+    node: rust_tree_sitter::tree_sitter::Node<'_>,
+    offset: usize,
+) -> Option<rust_tree_sitter::tree_sitter::Node<'_>> {
+    /// Kinds `signature_shape` recognises across Rust / TS / Python.
+    const DEF_KINDS: &[&str] = &[
+        "function_item",
+        "function_signature_item",
+        "function_declaration",
+        "function_signature",
+        "method_definition",
+        "method_signature",
+        "generator_function_declaration",
+        "function_definition",
+    ];
+
+    if offset < node.start_byte() || offset >= node.end_byte() {
+        return None;
+    }
+    // Recurse first so a nested def (deeper) is preferred over `node`.
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if let Some(found) = find_def_node(child, offset) {
+            return Some(found);
+        }
+    }
+    if DEF_KINDS.contains(&node.kind()) {
+        return Some(node);
+    }
+    None
+}
+
+/// `Index.VerifySignature(name, kind?, lang?, file?, claimed{arity,
+/// params, returns?})` — verify-v0 P1.U2, capability `verify_signature`.
+///
+/// Resolves the indexed def (same lookup as `Index.VerifySymbol`), reads
+/// the def's actual `SignatureShape`, and reports whether the claim
+/// matches plus a structured `diff[]`.
+///
+/// Wire shape (hit, decidable):
+/// ```jsonc
+/// { "match": false, "resolution": "exact",
+///   "actual": { "arity": 1, "params": ["entries"], "returns": "Result<()>" },
+///   "diff": [ { "issue": "arity", "claimed": 2, "actual": 1 },
+///             { "issue": "unknown_param", "name": "flush" } ],
+///   "content_version": "…" }
+/// ```
+/// `diff[]` issue kinds: `arity`, `unknown_param`, `param_order`,
+/// `return_shape`. When `signature_shape` can't decide (variadics /
+/// unsupported language) → `resolution:"indeterminate"`, `reason` set,
+/// `match` OMITTED. When the symbol doesn't exist → `resolution:
+/// "not_found"`, `exists:false`, ranked `candidates[]`.
+pub async fn verify_signature(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifySignatureParams = parse_params(params)?;
+    if p.name.is_empty() || p.name.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`name` must be 1..=256 characters",
+        ));
+    }
+
+    let (root, store_arc) = snapshot(state)?;
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ctx = VerifyCtx {
+        root: &root,
+        store: &store_arc,
+        generation,
+        ranks: ranks.as_ref(),
+    };
+    verify_signature_inner(&p, &ctx, &token)
+}
+
+/// Reusable core of `Index.VerifySignature`. Assumes `p.name` validated.
+fn verify_signature_inner(
+    p: &VerifySignatureParams,
+    ctx: &VerifyCtx<'_>,
+    token: &CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Near-miss candidate count surfaced on a `not_found`.
+    const CANDIDATE_LIMIT: usize = 5;
+
+    let root = ctx.root;
+    let store_arc = ctx.store;
+
+    let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
+    let file_filter = p.file.as_deref();
+
+    // Resolve the def (reuse U1's bare/qualified lookup).
+    let bare = p.name.rsplit("::").next().unwrap_or(&p.name).to_string();
+    let mut lookup_names: Vec<String> = vec![p.name.clone()];
+    if bare != p.name {
+        lookup_names.push(bare.clone());
+    }
+    let mut batched = store_arc
+        .find_symbols_batch_with_sids(&lookup_names)
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("find_symbols_batch_with_sids storage error: {e:#}"),
+            )
+        })?;
+    let mut hits: Vec<FoundSymbol> = Vec::new();
+    for n in &lookup_names {
+        if let Some((_sid, found)) = batched.remove(n) {
+            if !found.is_empty() {
+                hits = found;
+                break;
+            }
+        }
+    }
+    let filtered: Vec<FoundSymbol> = hits
+        .into_iter()
+        .filter(|h| kind_filter.map(|k| h.kind == k).unwrap_or(true))
+        .filter(|h| file_filter.map(|f| h.file == f).unwrap_or(true))
+        .collect();
+
+    // MISS → not_found + candidates (reuse U1's pool).
+    if filtered.is_empty() {
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let pool = verify_candidate_pool(store_arc, ctx.ranks)?;
+        let candidates =
+            rust_tree_sitter::rank_candidates(&bare, pool.into_iter(), CANDIDATE_LIMIT);
+        let candidates_json: Vec<serde_json::Value> = candidates
+            .into_iter()
+            .map(|c| {
+                serde_json::json!({
+                    "qualified_name": c.qualified_name,
+                    "edit_distance":  c.edit_distance,
+                    "pagerank":       c.pagerank,
+                })
+            })
+            .collect();
+        return Ok(serde_json::json!({
+            "exists":     false,
+            "resolution": rust_tree_sitter::Resolution::NotFound,
+            "candidates": candidates_json,
+        }));
+    }
+
+    // Multiple surviving defs with no disambiguating filter → we can't
+    // decide WHICH def the claim is about. Honest answer: indeterminate.
+    if filtered.len() > 1 {
+        return Ok(serde_json::json!({
+            "resolution": rust_tree_sitter::Resolution::Indeterminate,
+            "reason":     rust_tree_sitter::IndeterminateReason::AmbiguousOverload,
+        }));
+    }
+
+    let def = &filtered[0];
+
+    // Get the ACTUAL shape. `None` (unsupported lang / unparseable /
+    // variadic) → indeterminate, `match` omitted.
+    let actual = match actual_signature_shape(root, def) {
+        Some(s) => s,
+        None => {
+            return Ok(serde_json::json!({
+                "resolution": rust_tree_sitter::Resolution::Indeterminate,
+                "reason":     rust_tree_sitter::IndeterminateReason::UndecidableSignature,
+            }));
+        }
+    };
+
+    // Build the structured diff.
+    let claimed = &p.claimed;
+    let mut diff: Vec<serde_json::Value> = Vec::new();
+
+    if claimed.arity != actual.arity {
+        diff.push(serde_json::json!({
+            "issue":   "arity",
+            "claimed": claimed.arity,
+            "actual":  actual.arity,
+        }));
+    }
+
+    // `unknown_param`: a claimed param name not present in the actual
+    // param set. One diff entry per offending name.
+    for cp in &claimed.params {
+        if !actual.params.contains(cp) {
+            diff.push(serde_json::json!({
+                "issue": "unknown_param",
+                "name":  cp,
+            }));
+        }
+    }
+
+    // `param_order`: same SET of names, different order. Only meaningful
+    // when neither side has an unknown param (the sets are equal) and
+    // the ordered lists differ.
+    {
+        use std::collections::BTreeSet;
+        let claimed_set: BTreeSet<&String> = claimed.params.iter().collect();
+        let actual_set: BTreeSet<&String> = actual.params.iter().collect();
+        if claimed_set == actual_set && claimed.params != actual.params {
+            diff.push(serde_json::json!({
+                "issue":   "param_order",
+                "claimed": claimed.params,
+                "actual":  actual.params,
+            }));
+        }
+    }
+
+    // `return_shape`: the caller asserted a return type, so flag it if the
+    // actual differs OR the actual has none at all (claiming `-> u32` for a
+    // `-> ()` fn is a mismatch, not a match). A caller that omits `returns`
+    // asserts nothing about it, so claimed-None is never a mismatch.
+    if let Some(cr) = claimed.returns.as_ref() {
+        if actual.returns.as_deref() != Some(cr.as_str()) {
+            diff.push(serde_json::json!({
+                "issue":   "return_shape",
+                "claimed": cr,
+                "actual":  actual.returns,  // null when the def declares no return
+            }));
+        }
+    }
+
+    let matched = diff.is_empty();
+    Ok(serde_json::json!({
+        "match":      matched,
+        "resolution": rust_tree_sitter::Resolution::Exact,
+        "actual": {
+            "arity":   actual.arity,
+            "params":  actual.params,
+            "returns": actual.returns,
+        },
+        "diff":       diff,
+    }))
+}
+
+/// `Index.VerifyImport(path, lang?)` — verify-v0 P1.U3, capability
+/// `verify_import`. THIN: resolves only the FINAL `::`-segment of `path`
+/// against the index. Real cross-module path resolution (validating
+/// each intermediate segment forms a real module chain) is deferred to
+/// its own plan — this tool never claims a confident `not_found` for a
+/// path whose intermediate segments it cannot decide.
+///
+/// Wire shape:
+/// ```jsonc
+/// { "resolves": true, "resolution": "exact" }              // final seg present
+/// { "resolves": false, "resolution": "not_found",
+///   "candidates": [ … ] }                                   // decidably absent
+/// { "resolution": "indeterminate", "reason": "unresolved_ref" } // can't decide
+/// ```
+pub async fn verify_import(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifyImportParams = parse_params(params)?;
+    if p.path.is_empty() || p.path.len() > 1024 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`path` must be 1..=1024 characters",
+        ));
+    }
+
+    let (root, store_arc) = snapshot(state)?;
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ctx = VerifyCtx {
+        root: &root,
+        store: &store_arc,
+        generation,
+        ranks: ranks.as_ref(),
+    };
+    verify_import_inner(&p, &ctx, &token)
+}
+
+/// Reusable core of `Index.VerifyImport`. Assumes `p.path` validated.
+fn verify_import_inner(
+    p: &VerifyImportParams,
+    ctx: &VerifyCtx<'_>,
+    token: &CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Near-miss candidate count surfaced on a `not_found`.
+    const CANDIDATE_LIMIT: usize = 5;
+
+    let store_arc = ctx.store;
+
+    // Split on `::` (Rust) AND `.` (TS/Python dotted paths) so the
+    // "final segment" notion holds across the languages we index.
+    let final_seg = p
+        .path
+        .rsplit([':', '.'])
+        .find(|s| !s.is_empty())
+        .unwrap_or(p.path.as_str())
+        .to_string();
+
+    if final_seg.is_empty() {
+        return Ok(serde_json::json!({
+            "resolution": rust_tree_sitter::Resolution::Indeterminate,
+            "reason":     rust_tree_sitter::IndeterminateReason::UnresolvedRef,
+        }));
+    }
+
+    // Is the final segment present as a def (module/type/symbol)?
+    let sid = store_arc.sid_for_name(&final_seg).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("sid_for_name storage error: {e:#}"),
+        )
+    })?;
+
+    if sid.is_some() {
+        return Ok(serde_json::json!({
+            "resolves":   true,
+            "resolution": rust_tree_sitter::Resolution::Exact,
+        }));
+    }
+
+    // The final segment is absent. We can only confidently report
+    // `not_found` for a SINGLE-segment path (no intermediates to
+    // resolve) — a bare name that simply isn't indexed. For a
+    // multi-segment path, the intermediates might name an external
+    // crate / module we never indexed, so deciding `not_found` would
+    // risk a confident false negative: report `indeterminate` instead
+    // and defer real path resolution.
+    let segments: Vec<&str> = p.path.split([':', '.']).filter(|s| !s.is_empty()).collect();
+
+    if segments.len() <= 1 {
+        // Single segment, decidably absent → not_found + candidates.
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let pool = verify_candidate_pool(store_arc, ctx.ranks)?;
+        let candidates =
+            rust_tree_sitter::rank_candidates(&final_seg, pool.into_iter(), CANDIDATE_LIMIT);
+        let candidates_json: Vec<serde_json::Value> = candidates
+            .into_iter()
+            .map(|c| {
+                serde_json::json!({
+                    "qualified_name": c.qualified_name,
+                    "edit_distance":  c.edit_distance,
+                    "pagerank":       c.pagerank,
+                })
+            })
+            .collect();
+        return Ok(serde_json::json!({
+            "resolves":   false,
+            "resolution": rust_tree_sitter::Resolution::NotFound,
+            "candidates": candidates_json,
+        }));
+    }
+
+    // Multi-segment path whose final segment is absent. We still offer
+    // a candidate shortlist (the agent may have a typo) but DO NOT
+    // claim `not_found` — the path may cross into un-indexed modules.
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let pool = verify_candidate_pool(store_arc, ctx.ranks)?;
+    let candidates =
+        rust_tree_sitter::rank_candidates(&final_seg, pool.into_iter(), CANDIDATE_LIMIT);
+    let candidates_json: Vec<serde_json::Value> = candidates
+        .into_iter()
+        .map(|c| {
+            serde_json::json!({
+                "qualified_name": c.qualified_name,
+                "edit_distance":  c.edit_distance,
+                "pagerank":       c.pagerank,
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({
+        "resolution": rust_tree_sitter::Resolution::Indeterminate,
+        "reason":     rust_tree_sitter::IndeterminateReason::UnresolvedRef,
+        "candidates": candidates_json,
+    }))
+}
+
+/// `Index.VerifyClaims(claims[])` — verify-v0 P1.U4, capability
+/// `verify_claims`. Batch verification of a heterogeneous claim list,
+/// composing U1/U2/U3 inner logic + a local location check.
+///
+/// Wire shape:
+/// ```jsonc
+/// { "results": [ { "ok": true, … }, { "ok": false, … } ],
+///   "grounded": 2, "total": 3, "grounding_rate": 0.667 }
+/// ```
+///
+/// **Decidability rule:** `indeterminate` results are EXCLUDED from both
+/// `grounded` and `total` (the denominator is decidable claims only).
+/// `grounding_rate = grounded/total`, and is `null` (not NaN) when
+/// `total == 0`.
+pub async fn verify_claims(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    /// Hard cap on batch size — a runaway claim list is a tooling bug.
+    const MAX_CLAIMS: usize = 256;
+
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifyClaimsParams = parse_params(params)?;
+    if p.claims.len() > MAX_CLAIMS {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            format!("`claims` length {} exceeds {MAX_CLAIMS}", p.claims.len()),
+        ));
+    }
+
+    // Snapshot ONCE for the whole batch (Deepening §C: read generation
+    // before any read txn). Every inner call reuses this context.
+    let (root, store_arc) = snapshot(state)?;
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ctx = VerifyCtx {
+        root: &root,
+        store: &store_arc,
+        generation,
+        ranks: ranks.as_ref(),
+    };
+
+    let mut results: Vec<serde_json::Value> = Vec::with_capacity(p.claims.len());
+    let mut grounded: u64 = 0;
+    let mut total: u64 = 0;
+
+    for claim in &p.claims {
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        // Run the matching inner verifier, then map its resolution to
+        // an `ok` / decidability verdict. `indeterminate` results are
+        // excluded from BOTH numerator and denominator.
+        let (inner, ok): (serde_json::Value, ClaimVerdict) = match claim {
+            ClaimItem::Symbol {
+                name,
+                kind,
+                lang,
+                file,
+            } => {
+                if name.is_empty() || name.len() > 256 {
+                    (
+                        serde_json::json!({ "error": "`name` must be 1..=256 characters" }),
+                        ClaimVerdict::Indeterminate,
+                    )
+                } else {
+                    let sp = VerifySymbolParams {
+                        name: name.clone(),
+                        kind: kind.clone(),
+                        lang: lang.clone(),
+                        file: file.clone(),
+                        content_version: None,
+                    };
+                    let v = verify_symbol_inner(&sp, state, &ctx, &token)?;
+                    let verdict = verdict_from_resolution(
+                        &v,
+                        v.get("exists").and_then(|e| e.as_bool()).unwrap_or(false),
+                    );
+                    (v, verdict)
+                }
+            }
+            ClaimItem::Signature {
+                name,
+                kind,
+                lang,
+                file,
+                claimed,
+            } => {
+                if name.is_empty() || name.len() > 256 {
+                    (
+                        serde_json::json!({ "error": "`name` must be 1..=256 characters" }),
+                        ClaimVerdict::Indeterminate,
+                    )
+                } else {
+                    let sp = VerifySignatureParams {
+                        name: name.clone(),
+                        kind: kind.clone(),
+                        lang: lang.clone(),
+                        file: file.clone(),
+                        claimed: claimed.clone(),
+                    };
+                    let v = verify_signature_inner(&sp, &ctx, &token)?;
+                    // A signature claim is grounded iff `match: true`.
+                    let matched = v.get("match").and_then(|m| m.as_bool()).unwrap_or(false);
+                    let verdict = verdict_from_resolution(&v, matched);
+                    (v, verdict)
+                }
+            }
+            ClaimItem::Import { path, lang } => {
+                if path.is_empty() || path.len() > 1024 {
+                    (
+                        serde_json::json!({ "error": "`path` must be 1..=1024 characters" }),
+                        ClaimVerdict::Indeterminate,
+                    )
+                } else {
+                    let ip = VerifyImportParams {
+                        path: path.clone(),
+                        lang: lang.clone(),
+                    };
+                    let v = verify_import_inner(&ip, &ctx, &token)?;
+                    let resolves = v.get("resolves").and_then(|r| r.as_bool()).unwrap_or(false);
+                    let verdict = verdict_from_resolution(&v, resolves);
+                    (v, verdict)
+                }
+            }
+            ClaimItem::Location {
+                symbol,
+                file,
+                line,
+                kind,
+            } => verify_location(&ctx, symbol, file, *line, kind.as_deref())?,
+        };
+
+        let (ok_field, counts_toward_total): (serde_json::Value, bool) = match ok {
+            ClaimVerdict::Grounded => {
+                grounded += 1;
+                total += 1;
+                (serde_json::Value::Bool(true), true)
+            }
+            ClaimVerdict::NotGrounded => {
+                total += 1;
+                (serde_json::Value::Bool(false), true)
+            }
+            // Indeterminate: excluded from BOTH grounded and total.
+            ClaimVerdict::Indeterminate => (serde_json::Value::Null, false),
+        };
+        let _ = counts_toward_total;
+
+        let mut entry = serde_json::Map::new();
+        entry.insert("ok".into(), ok_field);
+        if let serde_json::Value::Object(map) = inner {
+            for (k, v) in map {
+                entry.insert(k, v);
+            }
+        } else {
+            entry.insert("detail".into(), inner);
+        }
+        results.push(serde_json::Value::Object(entry));
+    }
+
+    // `grounding_rate` is `null` (not NaN) when the denominator is 0.
+    let grounding_rate: serde_json::Value = if total == 0 {
+        serde_json::Value::Null
+    } else {
+        serde_json::json!((grounded as f64) / (total as f64))
+    };
+
+    Ok(serde_json::json!({
+        "results":        results,
+        "grounded":       grounded,
+        "total":          total,
+        "grounding_rate": grounding_rate,
+    }))
+}
+
+/// Decidability verdict for one claim in a `verify_claims` batch.
+enum ClaimVerdict {
+    /// Decidable AND the claim held (counts toward `grounded` + `total`).
+    Grounded,
+    /// Decidable AND the claim failed (counts toward `total` only).
+    NotGrounded,
+    /// Undecidable — excluded from both `grounded` and `total`.
+    Indeterminate,
+}
+
+/// Map an inner verify result's `resolution` (+ a pre-computed
+/// "claim held?" boolean) to a `ClaimVerdict`. `indeterminate` always
+/// wins (excluded from the denominator); otherwise the verdict follows
+/// the held flag.
+fn verdict_from_resolution(v: &serde_json::Value, held: bool) -> ClaimVerdict {
+    match v.get("resolution").and_then(|r| r.as_str()) {
+        Some("indeterminate") => ClaimVerdict::Indeterminate,
+        _ if held => ClaimVerdict::Grounded,
+        _ => ClaimVerdict::NotGrounded,
+    }
+}
+
+/// `location` claim check (verify-v0 P1.U4): the symbol's indexed def is
+/// at the claimed `file` AND the claimed `line` falls within the def's
+/// line range. Resolution mirrors the other verifiers: a missing symbol
+/// is `not_found` (decidable miss); an ambiguous overload that no
+/// `file`/`kind` filter narrows is `indeterminate`.
+fn verify_location(
+    ctx: &VerifyCtx<'_>,
+    symbol: &str,
+    file: &str,
+    line: u32,
+    kind: Option<&str>,
+) -> Result<(serde_json::Value, ClaimVerdict), ProtocolError> {
+    let store_arc = ctx.store;
+    let kind_filter = kind.map(SymbolKind::from_str_loose);
+
+    let bare = symbol.rsplit("::").next().unwrap_or(symbol).to_string();
+    let mut lookup_names: Vec<String> = vec![symbol.to_string()];
+    if bare != symbol {
+        lookup_names.push(bare.clone());
+    }
+    let mut batched = store_arc
+        .find_symbols_batch_with_sids(&lookup_names)
+        .map_err(|e| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                format!("find_symbols_batch_with_sids storage error: {e:#}"),
+            )
+        })?;
+    let mut hits: Vec<FoundSymbol> = Vec::new();
+    for n in &lookup_names {
+        if let Some((_sid, found)) = batched.remove(n) {
+            if !found.is_empty() {
+                hits = found;
+                break;
+            }
+        }
+    }
+    // Narrow by the claimed file first (a location claim always names a
+    // file), then optional kind.
+    let filtered: Vec<FoundSymbol> = hits
+        .into_iter()
+        .filter(|h| kind_filter.map(|k| h.kind == k).unwrap_or(true))
+        .collect();
+
+    if filtered.is_empty() {
+        return Ok((
+            serde_json::json!({
+                "symbol":     symbol,
+                "resolution": rust_tree_sitter::Resolution::NotFound,
+            }),
+            ClaimVerdict::NotGrounded,
+        ));
+    }
+
+    // Defs that live in the claimed file.
+    let in_file: Vec<&FoundSymbol> = filtered.iter().filter(|h| h.file == file).collect();
+    if in_file.is_empty() {
+        // The symbol exists, but not in the claimed file → decidably
+        // wrong location.
+        return Ok((
+            serde_json::json!({
+                "symbol":     symbol,
+                "resolution": rust_tree_sitter::Resolution::NotFound,
+                "actual_files": filtered.iter().map(|h| h.file.clone()).collect::<Vec<_>>(),
+            }),
+            ClaimVerdict::NotGrounded,
+        ));
+    }
+
+    // If several defs sit in the same file and none contains the line,
+    // it's still a decidable miss. A line that falls in ANY of them is
+    // a hit.
+    let hit = in_file
+        .iter()
+        .find(|h| line >= h.start_line && line <= h.end_line);
+    match hit {
+        Some(h) => Ok((
+            serde_json::json!({
+                "symbol":     symbol,
+                "resolution": rust_tree_sitter::Resolution::Exact,
+                "file":       h.file,
+                "range":      { "start_line": h.start_line, "end_line": h.end_line },
+            }),
+            ClaimVerdict::Grounded,
+        )),
+        None => Ok((
+            serde_json::json!({
+                "symbol":     symbol,
+                "resolution": rust_tree_sitter::Resolution::NotFound,
+                "file":       file,
+                "actual_ranges": in_file
+                    .iter()
+                    .map(|h| serde_json::json!({ "start_line": h.start_line, "end_line": h.end_line }))
+                    .collect::<Vec<_>>(),
+            }),
+            ClaimVerdict::NotGrounded,
+        )),
+    }
 }
 
 /// `Index.ImpactOf(name, depth?, token_budget?, max_nodes?, exclude_test_paths?)`

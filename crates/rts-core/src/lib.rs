@@ -50,6 +50,9 @@ pub mod signature;
 pub mod symbol;
 /// Syntax-tree traversal helpers.
 pub mod tree;
+/// Shared primitives for the verification layer (resolution model, fuzzy
+/// candidate ranking, use-site reference extraction, signature shapes).
+pub mod verify;
 
 // ---------- Re-exports ----------
 
@@ -59,6 +62,10 @@ pub use parser::{ParseOptions, Parser, create_edit};
 pub use query::{Query, QueryBuilder, QueryCapture, QueryMatch};
 pub use symbol::Symbol;
 pub use tree::{Node, SyntaxTree, TreeCursor, TreeEdit};
+pub use verify::{
+    Candidate, IndeterminateReason, RefKind, Reference, Resolution, SignatureShape,
+    extract_references, rank_candidates, signature_shape, supports_references,
+};
 
 // ---------- parse_content facade ----------
 
@@ -124,6 +131,11 @@ pub use constants::common::RiskLevel;
 
 // Tree-sitter type passthroughs
 pub use tree_sitter::{InputEdit, Point, Range};
+// Full crate passthrough so downstream crates (e.g. the daemon) can name
+// raw tree-sitter types (`Node`, `Tree`) for APIs like `signature_shape`
+// that take a `tree_sitter::Node`, without depending on tree-sitter
+// directly (which would risk a version skew against this crate's).
+pub use tree_sitter;
 
 // ---------- Crate-level helpers ----------
 

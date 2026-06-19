@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifySymbol.resp.schema.json",
+  "title": "Index.VerifySymbol result",
+  "description": "verify-v0 P1.U1. `exists` + `resolution` (exact|not_found|indeterminate). `matches[]` populated when exists; `candidates[]` (ranked near-misses) populated only on a miss; `reason` present only on indeterminate results.",
+  "type": "object",
+  "properties": {
+    "exists": { "type": "boolean" },
+    "resolution": {
+      "type": "string",
+      "enum": ["exact", "not_found", "indeterminate"]
+    },
+    "reason": {
+      "description": "IndeterminateReason wire string. Present only when resolution is `indeterminate`.",
+      "type": "string",
+      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload", "undecidable_signature"]
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "kind":           { "type": "string" },
+          "file":           { "type": "string" },
+          "line":           { "type": "integer", "minimum": 0 },
+          "signature":      { "type": ["string", "null"] },
+          "pagerank":       { "type": "number" }
+        },
+        "required": ["qualified_name", "kind", "file", "line", "signature", "pagerank"]
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "edit_distance":  { "type": "integer", "minimum": 0 },
+          "pagerank":       { "type": "number" }
+        },
+        "required": ["qualified_name", "edit_distance", "pagerank"]
+      }
+    },
+    "content_version": { "type": "string" }
+  },
+  "required": ["exists", "resolution", "matches", "candidates", "content_version"]
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyClaims.req.schema.json",
+  "title": "Index.VerifyClaims request params",
+  "description": "verify-v0 P1.U4, capability `verify_claims`. Batch verification of a heterogeneous claim list (symbol / signature / import / location), composing U1/U2/U3 + a location check.",
+  "type": "object",
+  "properties": {
+    "claims": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["symbol", "signature", "import", "location"]
+          },
+          "name":    { "type": "string" },
+          "kind":    { "type": "string" },
+          "lang":    { "type": "string" },
+          "file":    { "type": "string" },
+          "path":    { "type": "string" },
+          "symbol":  { "type": "string" },
+          "line":    { "type": "integer", "minimum": 0 },
+          "claimed": {
+            "type": "object",
+            "properties": {
+              "arity":   { "type": "integer", "minimum": 0 },
+              "params":  { "type": "array", "items": { "type": "string" } },
+              "returns": { "type": "string" }
+            },
+            "required": ["arity"]
+          }
+        },
+        "required": ["type"]
+      }
+    }
+  },
+  "required": ["claims"],
+  "additionalProperties": false
+}

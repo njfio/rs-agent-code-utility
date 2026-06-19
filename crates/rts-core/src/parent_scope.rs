@@ -57,7 +57,7 @@ pub(crate) fn assign_parents(
                     continue;
                 }
                 let span = e - s;
-                if best.as_ref().map_or(true, |(b, _)| span < *b) {
+                if best.as_ref().is_none_or(|(b, _)| span < *b) {
                     best = Some((span, name.clone()));
                 }
             }
@@ -199,7 +199,7 @@ fn container_name(node: &Node, kind: &str) -> Option<String> {
 /// `&'a Foo` -> `Foo`, `&mut Foo` -> `Foo`, `dyn Trait` -> `Trait`.
 fn type_head(t: &str) -> String {
     // Drop leading ref/qualifier tokens: &, *, mut, dyn, lifetimes ('a).
-    let cleaned = t.replace('&', " ").replace('*', " ");
+    let cleaned = t.replace(['&', '*'], " ");
     let head = cleaned
         .split_whitespace()
         .find(|tok| !matches!(*tok, "mut" | "dyn") && !tok.starts_with('\''))

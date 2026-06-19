@@ -171,6 +171,22 @@ pub async fn dispatch(
             counters.index_find_callers.fetch_add(1, Relaxed);
             index::find_callers(params, state, token).await
         }
+        "Index.VerifySymbol" => {
+            counters.index_verify_symbol.fetch_add(1, Relaxed);
+            index::verify_symbol(params, state, token).await
+        }
+        "Index.VerifySignature" => {
+            counters.index_verify_signature.fetch_add(1, Relaxed);
+            index::verify_signature(params, state, token).await
+        }
+        "Index.VerifyImport" => {
+            counters.index_verify_import.fetch_add(1, Relaxed);
+            index::verify_import(params, state, token).await
+        }
+        "Index.VerifyClaims" => {
+            counters.index_verify_claims.fetch_add(1, Relaxed);
+            index::verify_claims(params, state, token).await
+        }
         "Index.ImpactOf" => {
             counters.index_impact_of.fetch_add(1, Relaxed);
             index::impact_of(params, state, token).await
@@ -248,6 +264,10 @@ fn is_cancellable_method(method: &str) -> bool {
         "Index.Grep"
             | "Index.FindSymbol"
             | "Index.FindCallers"
+            | "Index.VerifySymbol"
+            | "Index.VerifySignature"
+            | "Index.VerifyImport"
+            | "Index.VerifyClaims"
             | "Index.ImpactOf"
             | "Index.ReadSymbol"
             | "Index.Outline"

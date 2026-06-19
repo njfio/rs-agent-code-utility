@@ -153,6 +153,83 @@ pub struct FindCallersArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifySymbolArgs {
+    /// The symbol name to verify — bare (`commit_batch`) or qualified
+    /// (`Store::commit_batch`). 1..=256 chars.
+    pub name: String,
+    /// Optional `kind` filter (`fn`, `method`, `struct`, `enum`,
+    /// `trait`, `const`, `module`, …). Same loose-string form as
+    /// `find_symbol.kind`. Disambiguates same-named defs of different
+    /// kinds.
+    #[serde(default)]
+    pub kind: Option<String>,
+    /// Optional language filter (`rust`, `python`, …). Advisory in v0.
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Optional `file` filter (workspace-relative path). Scopes the
+    /// existence check (and the ambiguity decision) to one file.
+    #[serde(default)]
+    pub file: Option<String>,
+    /// Optional content-version echo. Returned verbatim in the
+    /// response; does not affect the result in v0.
+    #[serde(default)]
+    pub content_version: Option<String>,
+}
+
+/// Claimed signature shape for `verify_signature`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ClaimedSignatureArgs {
+    /// Claimed parameter count, excluding any receiver (`self`/`cls`).
+    pub arity: u32,
+    /// Claimed parameter names, in order.
+    #[serde(default)]
+    pub params: Vec<String>,
+    /// Claimed return type (string-compared against the actual).
+    #[serde(default)]
+    pub returns: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifySignatureArgs {
+    /// Symbol name — bare (`commit_batch`) or qualified
+    /// (`Store::commit_batch`). 1..=256 chars.
+    pub name: String,
+    /// Optional `kind` filter (`fn`, `method`, …) to disambiguate
+    /// same-named defs of different kinds.
+    #[serde(default)]
+    pub kind: Option<String>,
+    /// Optional language filter (`rust`, `python`, …). Advisory in v0.
+    #[serde(default)]
+    pub lang: Option<String>,
+    /// Optional `file` filter (workspace-relative) to disambiguate
+    /// overloaded names across files.
+    #[serde(default)]
+    pub file: Option<String>,
+    /// The signature shape you believe the symbol has.
+    pub claimed: ClaimedSignatureArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifyImportArgs {
+    /// The import path, e.g. `crate::store::CommitOptions`. Only the
+    /// final segment is resolved against the index in v0.
+    pub path: String,
+    /// Optional language hint. Advisory in v0.
+    #[serde(default)]
+    pub lang: Option<String>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifyClaimsArgs {
+    /// The batch of claims to verify. Each item is a JSON object tagged
+    /// by `type`: `symbol` ({name, kind?, lang?, file?}),
+    /// `signature` ({name, claimed{arity, params?, returns?}, …}),
+    /// `import` ({path, lang?}), or `location`
+    /// ({symbol, file, line, kind?}).
+    pub claims: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ImpactOfArgs {
     /// Exact name of the symbol whose transitive callers we want.
     pub name: String,
@@ -468,6 +545,112 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.FindCallers", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Check whether a symbol (function, type, method, …) actually exists in this workspace, AST-precise. Prefer this over `Bash(grep 'fn name')` / `Bash(rg name)` before you call or import a symbol you're unsure about — shell grep matches comments, strings, and unrelated text and can't tell you you've invented a name; this returns `exists` + `resolution` (exact | not_found | indeterminate) and, on a miss, a ranked `candidates[]` did-you-mean shortlist so you self-correct. Use when the task includes 'does X exist', 'is there a function called X', 'verify', or you're about to reference a symbol from memory. Disambiguate overloaded names with `file` or `kind` (multiple defs → `indeterminate`). A miss is a result, not an error."
+    )]
+    async fn verify_symbol(
+        &self,
+        Parameters(args): Parameters<VerifySymbolArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("name".into(), Value::String(args.name));
+        if let Some(k) = args.kind {
+            params.insert("kind".into(), Value::String(k));
+        }
+        if let Some(l) = args.lang {
+            params.insert("lang".into(), Value::String(l));
+        }
+        if let Some(f) = args.file {
+            params.insert("file".into(), Value::String(f));
+        }
+        if let Some(cv) = args.content_version {
+            params.insert("content_version".into(), Value::String(cv));
+        }
+        match self
+            .call_daemon("Index.VerifySymbol", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Check whether a call matches a function/method's actual definition, AST-precise. Prefer this over `Bash(grep 'fn name')` or eyeballing a `read_symbol` body before you write a call: it resolves the indexed def, reads its real arity/params/returns, and returns `match` plus a structured `diff[]` (issue kinds: arity, unknown_param, param_order, return_shape) so you fix the exact mismatch. Use when the task includes 'does this call match', 'right arguments', 'verify signature', or you're about to call a function from memory. `indeterminate` (with `reason`, `match` omitted) when the language is unsupported or the params are variadic; `not_found` + ranked `candidates[]` when the symbol doesn't exist."
+    )]
+    async fn verify_signature(
+        &self,
+        Parameters(args): Parameters<VerifySignatureArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("name".into(), Value::String(args.name));
+        if let Some(k) = args.kind {
+            params.insert("kind".into(), Value::String(k));
+        }
+        if let Some(l) = args.lang {
+            params.insert("lang".into(), Value::String(l));
+        }
+        if let Some(f) = args.file {
+            params.insert("file".into(), Value::String(f));
+        }
+        let mut claimed = serde_json::Map::new();
+        claimed.insert("arity".into(), Value::Number(args.claimed.arity.into()));
+        claimed.insert(
+            "params".into(),
+            Value::Array(args.claimed.params.into_iter().map(Value::String).collect()),
+        );
+        if let Some(r) = args.claimed.returns {
+            claimed.insert("returns".into(), Value::String(r));
+        }
+        params.insert("claimed".into(), Value::Object(claimed));
+        match self
+            .call_daemon("Index.VerifySignature", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Check whether the final segment of an import/use path actually resolves to an indexed symbol, AST-precise. Prefer this over `Bash(rg 'CommitOptions')` before you add a `use crate::store::CommitOptions;` line: shell grep matches comments and strings and can't tell you you've invented a name. Returns `resolves` + `resolution` (exact | not_found | indeterminate) and, on a miss, a ranked `candidates[]` did-you-mean shortlist. Use when the task includes 'does this import exist', 'is X importable', 'verify import', or you're about to import a path from memory. THIN in v0: only the final path segment is resolved; an undecidable multi-segment path returns `indeterminate` rather than a confident false negative."
+    )]
+    async fn verify_import(
+        &self,
+        Parameters(args): Parameters<VerifyImportArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("path".into(), Value::String(args.path));
+        if let Some(l) = args.lang {
+            params.insert("lang".into(), Value::String(l));
+        }
+        match self
+            .call_daemon("Index.VerifyImport", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Batch-verify a list of claims (symbol exists / signature matches / import resolves / symbol is at file:line) in one call, AST-precise. Prefer this over a manual sequence of `Bash(grep)` checks when you want to ground-truth several facts you wrote from memory at once — e.g. before submitting a patch or summarizing a codebase. Each claim is `{type: symbol|signature|import|location, …}`; returns per-claim `results[]` plus a `grounding_rate` summary. Use when the task includes 'verify these', 'fact-check', 'are these correct', or you produced several symbol/signature/import claims to validate. Indeterminate claims are excluded from the grounding-rate denominator (no false negatives); the rate is null when nothing was decidable."
+    )]
+    async fn verify_claims(
+        &self,
+        Parameters(args): Parameters<VerifyClaimsArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        params.insert("claims".into(), Value::Array(args.claims));
+        match self
+            .call_daemon("Index.VerifyClaims", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),
