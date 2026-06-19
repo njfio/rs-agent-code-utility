@@ -705,9 +705,10 @@ fn io_to_anyhow(e: std::io::Error) -> CmdError {
 ///      and `indeterminate`.
 ///   4. Print each hallucination + (optional) top candidate.
 ///
-/// Exit codes: OK (clean / unsupported / nothing to check), NO_RESULTS
+/// Exit codes: OK=0 (clean / unsupported / nothing to check), NO_RESULTS=1
 /// (≥1 hallucination — repurposed as the hook's "found something" signal),
-/// DAEMON_ERROR (any daemon contact failure).
+/// DAEMON_ERROR=3 / TIMEOUT=4 (any daemon contact failure — the hook treats
+/// every non-1 exit as "nothing to surface", so 3 and 4 are both silent).
 async fn run_verify(
     client: &rts_mcp::connection::ConnectionManager,
     workspace: &std::path::Path,

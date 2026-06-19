@@ -4,7 +4,7 @@
 //! Exit-code contract (mirrors the rg-style convention in `rts.rs`):
 //!   0 — clean (or unsupported language / nothing to check)
 //!   1 — ≥1 hallucinated reference found
-//!   3 — daemon error / not reachable
+//!   3 (or 4 on timeout) — daemon error / not reachable
 
 mod cli_common;
 
