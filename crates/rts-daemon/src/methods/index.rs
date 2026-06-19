@@ -419,6 +419,50 @@ struct VerifyClaimsParams {
     claims: Vec<ClaimItem>,
 }
 
+/// `Index.VerifyImpact` params (verify-v0 P2.U1). "Will this change to a
+/// symbol break its callers?" — resolves the def, runs the impact BFS,
+/// and reports the blast radius as a pass/fail `verdict`.
+#[derive(Debug, Deserialize)]
+struct VerifyImpactParams {
+    /// Symbol whose change we want to gate. 1..=256 chars. Bare or
+    /// qualified, same resolution as `Index.ImpactOf`/`Index.VerifySymbol`.
+    symbol: String,
+    /// The kind of change being declared: `signature`, `remove`, `rename`.
+    change: VerifyImpactChange,
+    /// For `change: signature` — the proposed new signature, e.g.
+    /// `commit_batch(entries: &[Entry], flush: bool) -> Result<()>`. When
+    /// present and parseable we compute the new arity; when absent or
+    /// undecidable the verdict falls back to `would_break` iff there are
+    /// any callers, with `resolution:"indeterminate"`.
+    #[serde(default)]
+    new_signature: Option<String>,
+    /// BFS depth for the blast radius. DEFAULT 1 for verify_impact (direct
+    /// callers only) — a gate wants the immediate breakage, not the full
+    /// transitive closure. Clamped to [1, 4] by `ImpactBounds`.
+    #[serde(default)]
+    depth: Option<u32>,
+}
+
+/// The declared change kind for `Index.VerifyImpact`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum VerifyImpactChange {
+    Signature,
+    Remove,
+    Rename,
+}
+
+impl VerifyImpactChange {
+    /// Wire string echoed back in the `change` response field.
+    fn as_wire_str(self) -> &'static str {
+        match self {
+            VerifyImpactChange::Signature => "signature",
+            VerifyImpactChange::Remove => "remove",
+            VerifyImpactChange::Rename => "rename",
+        }
+    }
+}
+
 /// One claim in a `Index.VerifyClaims` batch. Tagged by `type`.
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -3433,6 +3477,302 @@ pub async fn impact_of(
         "tokens_returned":      walk.tokens_used,
         "token_counter":        TOKEN_COUNTER,
     }))
+}
+
+/// Compute the `SignatureShape` of a proposed `new_signature` string by
+/// wrapping it into a parseable function definition for the def's language
+/// and running the same `signature_shape` extractor `verify_signature`
+/// uses on the indexed def.
+///
+/// The parse trick: `signature_shape` needs a *function-definition node*,
+/// but `new_signature` is just the header (`name(params) -> ret`). We
+/// reconstruct a minimal valid definition per language —
+/// `fn <sig> {}` (Rust), `function <sig> {}` (TS), `def <sig>: pass`
+/// (Python) — parse it, locate the def node (`find_def_node`), and extract
+/// the shape. Returns `None` (→ undecidable) when the language is
+/// unsupported, the reconstructed source doesn't parse into a def node, or
+/// the shape itself is undecidable (variadics).
+fn new_signature_shape(
+    file: &str,
+    new_signature: &str,
+) -> Option<rust_tree_sitter::SignatureShape> {
+    use rust_tree_sitter::Parser;
+    use rust_tree_sitter::languages::Language;
+
+    let info = crate::language::info_for_path(file)?;
+    let lang = info.language;
+
+    let sig = new_signature.trim();
+    if sig.is_empty() {
+        return None;
+    }
+    // Wrap the bare header into a minimal valid definition for `lang`.
+    let wrapped = match lang {
+        Language::Rust => format!("fn {sig} {{}}"),
+        Language::TypeScript | Language::JavaScript => format!("function {sig} {{}}"),
+        Language::Python => format!("def {sig}: pass"),
+        // Other languages: signature_shape returns None for them anyway.
+        _ => return None,
+    };
+
+    let parser = Parser::new(lang).ok()?;
+    let tree = parser.parse(&wrapped, None).ok()?;
+    let root_node = tree.root_node().inner();
+    // The reconstructed def starts at byte 0-ish; the first recognised def
+    // node covers the wrapper. Anchor on a byte inside the header.
+    let anchor = wrapped.find(sig).unwrap_or(0);
+    let def_node = find_def_node(root_node, anchor)?;
+    rust_tree_sitter::signature_shape(def_node, wrapped.as_bytes(), lang)
+}
+
+/// Resolve the `FoundSymbol` (file + byte range) for a name whose `sid`
+/// we already know. Uses the same bare/qualified batch lookup
+/// `verify_signature` uses, then picks the def row whose `sid` matches
+/// `anchor_sid`. Returns `None` on a storage error or when no def row
+/// carries that sid (torn read). Best-effort: the caller treats `None` as
+/// an undecidable signature shape.
+fn resolve_found_for_sid(store: &Arc<Store>, name: &str, anchor_sid: u32) -> Option<FoundSymbol> {
+    let bare = name.rsplit("::").next().unwrap_or(name).to_string();
+    let mut lookup_names: Vec<String> = vec![name.to_string()];
+    if bare != name {
+        lookup_names.push(bare);
+    }
+    let mut batched = store.find_symbols_batch_with_sids(&lookup_names).ok()?;
+    for n in &lookup_names {
+        if let Some((_sid, hits)) = batched.remove(n) {
+            if let Some(found) = hits.into_iter().find(|h| h.sid == anchor_sid) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// `Index.VerifyImpact(symbol, change, new_signature?, depth?)` —
+/// verify-v0 P2.U1, capability `verify_impact`.
+///
+/// A verification-framed wrapper over `Index.ImpactOf`: the agent declares
+/// an intended change to `symbol` and gets the blast radius as a pass/fail
+/// `verdict` so it can gate an edit before making it.
+///
+/// Wire shape:
+/// ```jsonc
+/// { "resolution": "exact",          // exact | not_found | indeterminate
+///   "verdict": "would_break",       // would_break | safe (OMITTED on not_found)
+///   "change": "signature",
+///   "affected_count": 5,
+///   "affected_callers": [ { "file": "...", "line": 1532,
+///                           "enclosing": "<qualified_name>", "depth": 1,
+///                           "reason": "arity 1 -> 2" } ],
+///   "symbol": "store::Store::commit_batch",
+///   "truncated": false,             // true → affected_count is a lower bound
+///   "candidates": [] }              // populated only on not_found
+/// ```
+///
+/// Verdict logic (conservative — a false `would_break` only costs a
+/// review; a false `safe` ships a break):
+/// - `remove`/`rename`: `would_break` iff any callers, else `safe`.
+/// - `signature`: decidable old+new shape with differing arity →
+///   `would_break` (exact); equal arity → `safe` (exact, still lists
+///   callers); undecidable shape OR no `new_signature` → `would_break`
+///   iff any callers (indeterminate, `reason:"undecidable_signature"`).
+/// - Unknown symbol → `not_found`, `exists:false`, ranked `candidates[]`,
+///   NO `verdict`.
+///
+/// Default `depth` is 1 (direct callers) — a gate wants immediate
+/// breakage. `INVALID_PARAMS` on empty/oversize `symbol`. Walks the
+/// reverse call graph → cancellable.
+pub async fn verify_impact(
+    params: serde_json::Value,
+    state: &Arc<DaemonState>,
+    token: CancelToken,
+) -> Result<serde_json::Value, ProtocolError> {
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+    let p: VerifyImpactParams = parse_params(params)?;
+    if p.symbol.is_empty() || p.symbol.len() > 256 {
+        return Err(ProtocolError::new(
+            ErrorCode::InvalidParams,
+            "`symbol` must be 1..=256 characters",
+        ));
+    }
+
+    let (root, store_arc) = snapshot(state)?;
+    // Read generation BEFORE any read txn (Deepening §C cache invariant).
+    let generation = state.index_generation.load(Ordering::Relaxed);
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+
+    // Resolve the def's sid. A miss is a RESULT (not an error): return
+    // not_found + a ranked candidate shortlist so the agent self-corrects.
+    let anchor_sid = match store_arc.sid_for_name(&p.symbol).map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("sid_for_name storage error: {e:#}"),
+        )
+    })? {
+        Some(s) => s,
+        None => {
+            if token.is_cancelled() {
+                return Err(cancelled());
+            }
+            /// Near-miss candidate count surfaced on a `not_found`.
+            const CANDIDATE_LIMIT: usize = 5;
+            let bare = p.symbol.rsplit("::").next().unwrap_or(&p.symbol);
+            let pool = verify_candidate_pool(&store_arc, ranks.as_ref())?;
+            let candidates =
+                rust_tree_sitter::rank_candidates(bare, pool.into_iter(), CANDIDATE_LIMIT);
+            let candidates_json: Vec<serde_json::Value> = candidates
+                .into_iter()
+                .map(|c| {
+                    serde_json::json!({
+                        "qualified_name": c.qualified_name,
+                        "edit_distance":  c.edit_distance,
+                        "pagerank":       c.pagerank,
+                    })
+                })
+                .collect();
+            return Ok(serde_json::json!({
+                "resolution": rust_tree_sitter::Resolution::NotFound,
+                "exists":     false,
+                "change":     p.change.as_wire_str(),
+                "symbol":     p.symbol,
+                "candidates": candidates_json,
+            }));
+        }
+    };
+
+    // Run the impact BFS — direct callers by default (depth 1). Reuse
+    // ImpactBounds; CPU-bound BFS runs on a blocking thread like impact_of.
+    let bounds = crate::impact::ImpactBounds {
+        max_depth: p.depth.unwrap_or(1),
+        max_nodes: crate::impact::DEFAULT_MAX_NODES,
+        token_budget: crate::impact::DEFAULT_TOKEN_BUDGET,
+        exclude_test_paths: true,
+    };
+    let store_clone = store_arc.clone();
+    let ranks_clone = ranks.clone();
+    let token_clone = token.clone();
+    let walk = tokio::task::spawn_blocking(move || {
+        crate::impact::compute(
+            &store_clone,
+            anchor_sid,
+            bounds,
+            ranks_clone.as_deref(),
+            &token_clone,
+        )
+    })
+    .await
+    .map_err(|e| ProtocolError::new(ErrorCode::InternalError, format!("impact join error: {e}")))?
+    .map_err(|e| {
+        ProtocolError::new(
+            ErrorCode::InternalError,
+            format!("impact compute error: {e:#}"),
+        )
+    })?;
+    if token.is_cancelled() {
+        return Err(cancelled());
+    }
+
+    let affected_count = walk.impact.len();
+    // `affected_count` respects impact truncation: if ANY bound fired the
+    // BFS stopped early, so the count is a LOWER BOUND. Surface that so a
+    // gate doesn't read a partial `safe`-ish count as authoritative.
+    let truncated = walk.closure_truncated
+        || walk.wall_clock_truncated
+        || walk.depth_truncated
+        || walk.node_count_truncated;
+
+    // Decide the verdict + per-caller reason.
+    let (resolution, verdict, reason, per_caller_reason): (
+        rust_tree_sitter::Resolution,
+        bool, // would_break
+        Option<rust_tree_sitter::IndeterminateReason>,
+        String,
+    ) = match p.change {
+        VerifyImpactChange::Remove => (
+            rust_tree_sitter::Resolution::Exact,
+            affected_count > 0,
+            None,
+            "references removed symbol".to_string(),
+        ),
+        VerifyImpactChange::Rename => (
+            rust_tree_sitter::Resolution::Exact,
+            affected_count > 0,
+            None,
+            "references old name".to_string(),
+        ),
+        VerifyImpactChange::Signature => {
+            // Resolve the def's FoundSymbol (file + byte range) so we can
+            // read its ACTUAL shape and pick the right language for the
+            // proposed new_signature. Reuse the same bare/qualified name
+            // lookup verify_signature uses, then pick the def whose sid
+            // matches the anchor we already resolved.
+            let def = resolve_found_for_sid(&store_arc, &p.symbol, anchor_sid);
+            // OLD shape: from the indexed def (reuse verify_signature's helper).
+            let old_shape = def
+                .as_ref()
+                .and_then(|found| actual_signature_shape(&root, found));
+            // NEW shape: from the proposed new_signature string, parsed for
+            // the def's language.
+            let new_shape = match (&def, p.new_signature.as_deref()) {
+                (Some(found), Some(sig)) => new_signature_shape(&found.file, sig),
+                _ => None,
+            };
+            match (old_shape, new_shape) {
+                (Some(old), Some(new)) if old.arity != new.arity => (
+                    rust_tree_sitter::Resolution::Exact,
+                    true,
+                    None,
+                    format!("arity {} -> {}", old.arity, new.arity),
+                ),
+                (Some(_), Some(_)) => (
+                    // Arity-compatible: provably no arity break. Still list
+                    // callers for review, but verdict is safe.
+                    rust_tree_sitter::Resolution::Exact,
+                    false,
+                    None,
+                    "arity unchanged".to_string(),
+                ),
+                _ => (
+                    // Can't prove safe → conservative would_break iff callers.
+                    rust_tree_sitter::Resolution::Indeterminate,
+                    affected_count > 0,
+                    Some(rust_tree_sitter::IndeterminateReason::UndecidableSignature),
+                    "signature change, impact undecidable".to_string(),
+                ),
+            }
+        }
+    };
+
+    let affected_callers: Vec<serde_json::Value> = walk
+        .impact
+        .iter()
+        .map(|e| {
+            serde_json::json!({
+                "file":      e.file,
+                "line":      e.start_line,
+                "enclosing": e.qualified_name,
+                "depth":     e.depth,
+                "reason":    per_caller_reason,
+            })
+        })
+        .collect();
+
+    let mut out = serde_json::json!({
+        "resolution":       resolution,
+        "verdict":          if verdict { "would_break" } else { "safe" },
+        "change":           p.change.as_wire_str(),
+        "affected_count":   affected_count,
+        "affected_callers": affected_callers,
+        "symbol":           p.symbol,
+        "truncated":        truncated,
+        "candidates":       [],
+    });
+    if let Some(r) = reason {
+        out["reason"] = serde_json::json!(r);
+    }
+    Ok(out)
 }
 
 /// Internal struct used by `find_callers` (and U2's `read_symbol`

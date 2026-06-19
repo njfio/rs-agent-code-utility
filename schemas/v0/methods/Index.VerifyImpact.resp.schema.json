@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyImpact.resp.schema.json",
+  "title": "Index.VerifyImpact result",
+  "description": "verify-v0 P2.U1. On a hit: `verdict` (would_break | safe), echoed `change`, `affected_count`, `affected_callers[]`, and `truncated` (true → affected_count is a lower bound). `resolution` is `exact` for remove/rename and for a decidable signature arity comparison; `indeterminate` (with `reason`) when the signature shape is undecidable. On a miss: `resolution: not_found`, `exists: false`, ranked `candidates[]`, and NO `verdict`.",
+  "type": "object",
+  "properties": {
+    "resolution": {
+      "type": "string",
+      "enum": ["exact", "not_found", "indeterminate"]
+    },
+    "verdict": {
+      "description": "Pass/fail gate. Present on a hit; OMITTED on not_found.",
+      "type": "string",
+      "enum": ["would_break", "safe"]
+    },
+    "reason": {
+      "description": "IndeterminateReason wire string. Present only when resolution is `indeterminate`.",
+      "type": "string",
+      "enum": ["dynamic_dispatch", "macro_generated", "ffi", "unresolved_ref", "reflection", "ambiguous_overload", "undecidable_signature"]
+    },
+    "change": { "type": "string", "enum": ["signature", "remove", "rename"] },
+    "exists": { "type": "boolean" },
+    "symbol": { "type": "string" },
+    "affected_count": { "type": "integer", "minimum": 0 },
+    "truncated": {
+      "description": "True when an impact bound fired (closure / wall-clock / depth / node-count) and `affected_count` is therefore a lower bound.",
+      "type": "boolean"
+    },
+    "affected_callers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file":      { "type": "string" },
+          "line":      { "type": "integer", "minimum": 0 },
+          "enclosing": { "type": "string" },
+          "depth":     { "type": "integer", "minimum": 0 },
+          "reason":    { "type": "string" }
+        },
+        "required": ["file", "line", "enclosing", "depth", "reason"]
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "edit_distance":  { "type": "integer", "minimum": 0 },
+          "pagerank":       { "type": "number" }
+        },
+        "required": ["qualified_name", "edit_distance", "pagerank"]
+      }
+    }
+  },
+  "required": ["resolution"]
+}

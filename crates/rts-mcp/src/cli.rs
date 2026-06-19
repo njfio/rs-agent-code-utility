@@ -500,6 +500,112 @@ pub fn render_callers_tree<W: Write>(
     Ok(callers.len())
 }
 
+/// Render an `Index.VerifyImpact` verdict: a one-line headline
+/// (`would_break` / `safe` / `not_found`) followed by the affected
+/// callers grouped by file (mirrors `render_callers_tree`). Returns the
+/// number of affected callers so the binary can pick an exit code.
+pub fn render_impact_verdict<W: Write>(
+    body: &Value,
+    w: &mut W,
+    style: &Style,
+) -> std::io::Result<usize> {
+    let resolution = body
+        .get("resolution")
+        .and_then(|v| v.as_str())
+        .unwrap_or("?");
+    let symbol = body.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
+    let change = body.get("change").and_then(|v| v.as_str()).unwrap_or("?");
+
+    // Miss: not_found + did-you-mean candidates, no verdict.
+    if resolution == "not_found" {
+        writeln!(
+            w,
+            "{} {} ({})",
+            style.red("not found"),
+            style.bold(symbol),
+            change
+        )?;
+        let cands = body
+            .get("candidates")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        if !cands.is_empty() {
+            writeln!(w, "{}", style.dim("did you mean:"))?;
+            for c in &cands {
+                let qn = c
+                    .get("qualified_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("?");
+                writeln!(w, "  {}", style.cyan(qn))?;
+            }
+        }
+        return Ok(0);
+    }
+
+    let verdict = body.get("verdict").and_then(|v| v.as_str()).unwrap_or("?");
+    let count = body
+        .get("affected_count")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let headline = if verdict == "would_break" {
+        style.red("WOULD BREAK")
+    } else {
+        style.green("SAFE")
+    };
+    let mut line = format!("{headline} {} ({change})", style.bold(symbol));
+    if resolution == "indeterminate" {
+        let reason = body.get("reason").and_then(|v| v.as_str()).unwrap_or("");
+        line.push_str(&format!(
+            " {}",
+            style.dim(&format!("[indeterminate: {reason}]"))
+        ));
+    }
+    writeln!(w, "{line}")?;
+    let truncated = body
+        .get("truncated")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let count_note = if truncated {
+        format!("{count}+ affected caller(s) (truncated — lower bound)")
+    } else {
+        format!("{count} affected caller(s)")
+    };
+    writeln!(w, "{}", style.dim(&count_note))?;
+
+    let callers = body
+        .get("affected_callers")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let mut grouped: std::collections::BTreeMap<&str, Vec<&Value>> =
+        std::collections::BTreeMap::new();
+    for c in &callers {
+        let file = c.get("file").and_then(|v| v.as_str()).unwrap_or("?");
+        grouped.entry(file).or_default().push(c);
+    }
+    for (file, entries) in grouped {
+        writeln!(w, "{}", style.magenta(file))?;
+        for c in entries {
+            let cline = c.get("line").and_then(|v| v.as_u64()).unwrap_or(0);
+            let enclosing = c
+                .get("enclosing")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<file-scope>");
+            let reason = c.get("reason").and_then(|v| v.as_str()).unwrap_or("");
+            writeln!(
+                w,
+                "  {}:{}  {} {}",
+                style.dim("L"),
+                style.green(&cline.to_string()),
+                style.bold(enclosing),
+                style.cyan(&format!("({reason})")),
+            )?;
+        }
+    }
+    Ok(callers.len())
+}
+
 /// Render the daemon's `outline_text` directly. The daemon already
 /// produces a dotted-indent tree-style hierarchy (protocol-v0 §7.5);
 /// we just pass it through (with a header) so the CLI shape stays

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rts.local/schemas/v0/methods/Index.VerifyImpact.req.schema.json",
+  "title": "Index.VerifyImpact request params",
+  "description": "verify-v0 P2.U1, capability `verify_impact`. Declares an intended change to `symbol` and returns the blast radius as a pass/fail verdict so an agent can gate an edit. `new_signature` is consulted only for `change: signature`. `depth` defaults to 1 (direct callers); out-of-window values are clamped, not rejected.",
+  "type": "object",
+  "properties": {
+    "symbol":        { "type": "string", "minLength": 1, "maxLength": 256 },
+    "change":        { "type": "string", "enum": ["signature", "remove", "rename"] },
+    "new_signature": { "type": "string" },
+    "depth":         { "type": "integer", "minimum": 1, "maximum": 4 }
+  },
+  "required": ["symbol", "change"],
+  "additionalProperties": false
+}

@@ -49,6 +49,7 @@ pub fn rts_mcp::cli::render_callers_tree<W: std::io::Write>(body: &serde_json::v
 pub fn rts_mcp::cli::render_connection_error(e: &rts_mcp::connection::ConnectionError, style: &rts_mcp::cli::Style) -> i32
 pub fn rts_mcp::cli::render_find_table<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_grep_lines<W: std::io::Write>(body: &serde_json::value::Value, pattern: &str, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
+pub fn rts_mcp::cli::render_impact_verdict<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_outline<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_read<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>
 pub fn rts_mcp::cli::render_stats<W: std::io::Write>(body: &serde_json::value::Value, w: &mut W, style: &rts_mcp::cli::Style) -> std::io::error::Result<usize>

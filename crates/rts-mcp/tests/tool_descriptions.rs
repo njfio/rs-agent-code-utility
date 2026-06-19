@@ -65,6 +65,7 @@ const AUDITED_TOOLS: &[&str] = &[
     "verify_import",
     "verify_claims",
     "impact_of",
+    "verify_impact",
     "grep",
     "daemon_telemetry",
 ];

@@ -48,6 +48,7 @@ const PROTOCOL_METHODS: &[&str] = &[
     "Index.VerifyImport",
     "Index.VerifyClaims",
     "Index.ImpactOf",
+    "Index.VerifyImpact",
     "Index.ReadRange",
     "Index.ReadSymbol",
     "Index.ReadSymbolAt",
@@ -309,6 +310,10 @@ async fn response_matches_schema_for_each_method() -> anyhow::Result<()> {
             ]}),
         ),
         ("Index.ImpactOf", json!({"name": "answer"})),
+        (
+            "Index.VerifyImpact",
+            json!({"symbol": "answer", "change": "remove"}),
+        ),
         ("Index.Outline", json!({"token_budget": 4096})),
         ("Index.Grep", json!({"text": "answer"})),
         (
@@ -402,6 +407,7 @@ const EXPECTED_CAPABILITIES: &[&str] = &[
     "verify_signature",
     "verify_import",
     "verify_claims",
+    "verify_impact",
 ];
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

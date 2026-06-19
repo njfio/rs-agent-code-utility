@@ -191,6 +191,10 @@ pub async fn dispatch(
             counters.index_impact_of.fetch_add(1, Relaxed);
             index::impact_of(params, state, token).await
         }
+        "Index.VerifyImpact" => {
+            counters.index_verify_impact.fetch_add(1, Relaxed);
+            index::verify_impact(params, state, token).await
+        }
         "Index.ReadRange" => {
             counters.index_read_range.fetch_add(1, Relaxed);
             index::read_range(params, state).await
@@ -269,6 +273,7 @@ fn is_cancellable_method(method: &str) -> bool {
             | "Index.VerifyImport"
             | "Index.VerifyClaims"
             | "Index.ImpactOf"
+            | "Index.VerifyImpact"
             | "Index.ReadSymbol"
             | "Index.Outline"
             | "Workspace.Mount"

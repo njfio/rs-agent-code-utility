@@ -134,6 +134,25 @@ enum Cmd {
         #[arg(long)]
         file: Option<String>,
     },
+    /// Verify the blast radius of an intended change to a symbol.
+    ///
+    /// Declares a change (`signature`, `remove`, `rename`) and prints a
+    /// pass/fail verdict (`would_break` | `safe`) plus the affected
+    /// callers, so an edit can be gated before it's made.
+    Impact {
+        /// Exact symbol name (bare or qualified).
+        symbol: String,
+        /// The change kind: `signature`, `remove`, or `rename`.
+        #[arg(long, default_value = "signature")]
+        change: String,
+        /// For `--change signature`: the proposed new signature header,
+        /// e.g. `commit_batch(entries: &[Entry], flush: bool) -> Result<()>`.
+        #[arg(long)]
+        new_signature: Option<String>,
+        /// Blast-radius depth (default 1, direct callers; hard cap 4).
+        #[arg(long)]
+        depth: Option<u32>,
+    },
     /// Print the workspace outline (token-budgeted tree).
     Outline {
         /// Optional glob to restrict the outline.
@@ -514,6 +533,56 @@ async fn run_command(
             let n = cli::render_callers_tree(&body, &mut stdout, style).map_err(io_to_anyhow)?;
             stdout.flush().map_err(io_to_anyhow)?;
             Ok(if n == 0 { exit::NO_RESULTS } else { exit::OK })
+        }
+        Cmd::Impact {
+            symbol,
+            change,
+            new_signature,
+            depth,
+        } => {
+            let mut params = serde_json::Map::new();
+            params.insert("symbol".into(), Value::String(symbol.clone()));
+            params.insert("change".into(), Value::String(change.clone()));
+            if let Some(s) = new_signature {
+                params.insert("new_signature".into(), Value::String(s.clone()));
+            }
+            if let Some(d) = depth {
+                params.insert("depth".into(), Value::Number((*d).into()));
+            }
+            let body = match cli::call_method(
+                &client,
+                workspace,
+                "Index.VerifyImpact",
+                Value::Object(params),
+            )
+            .await
+            {
+                Ok(v) => v,
+                Err(e) => return Ok(cli::render_connection_error(&e, style)),
+            };
+            if cli.json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&body).unwrap_or_default()
+                );
+                // Exit OK on a verdict (would_break or safe); NO_RESULTS
+                // only when the symbol wasn't found.
+                let resolved = body
+                    .get("resolution")
+                    .and_then(|v| v.as_str())
+                    .map(|r| r != "not_found")
+                    .unwrap_or(false);
+                return Ok(if resolved { exit::OK } else { exit::NO_RESULTS });
+            }
+            let mut stdout = std::io::stdout().lock();
+            cli::render_impact_verdict(&body, &mut stdout, style).map_err(io_to_anyhow)?;
+            stdout.flush().map_err(io_to_anyhow)?;
+            let resolved = body
+                .get("resolution")
+                .and_then(|v| v.as_str())
+                .map(|r| r != "not_found")
+                .unwrap_or(false);
+            Ok(if resolved { exit::OK } else { exit::NO_RESULTS })
         }
         Cmd::Outline { glob, token_budget } => {
             let mut params = serde_json::Map::new();

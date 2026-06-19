@@ -201,6 +201,11 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // grounding-rate summary that excludes indeterminate claims from
     // the denominator. Additive.
     "verify_claims",
+    // verify-v0 P2.U1 — `Index.VerifyImpact`: declare an intended change
+    // to a symbol (signature/remove/rename) and get the blast radius as a
+    // pass/fail `verdict` (would_break | safe) so an edit can be gated.
+    // A verification-framed wrapper over `impact_of`. Additive.
+    "verify_impact",
 ];
 
 /// `Daemon.Ping` — heartbeat + capability advertisement (protocol-v0 §4.1, §7.1).
