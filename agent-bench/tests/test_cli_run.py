@@ -18,7 +18,12 @@ from pathlib import Path
 
 import pytest
 
-from agent_bench.cli import report_command, run_command
+from agent_bench.cli import (
+    _is_complete_trajectory,
+    _render_reports,
+    report_command,
+    run_command,
+)
 from agent_bench.run import Task
 from tests.conftest import FakeAnthropicClient, FakeMessageResponse
 
@@ -345,3 +350,177 @@ class TestReportOffline:
         cj = json.loads((run_dir / "comparison.json").read_text())
         assert cj["success_proxy"] is True
         assert "PROXY" in (run_dir / "comparison.md").read_text()
+
+
+# --- Fix 2: resume validates schema + identity --------------------
+
+
+def _full_record(
+    *, task_id: str, arm: str, model: str, halt_reason: str = "submit"
+) -> dict:
+    return {
+        "task_id": task_id,
+        "arm": arm,
+        "model": model,
+        "messages": [],
+        "tool_calls": [],
+        "final_patch": "p",
+        "halt_reason": halt_reason,
+        "wall_clock_s": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+    }
+
+
+class TestIsCompleteTrajectory:
+    def test_bare_object_is_incomplete(self, tmp_path: Path) -> None:
+        p = tmp_path / "t.json"
+        p.write_text("{}")
+        assert _is_complete_trajectory(
+            p, task_id="x", arm="baseline", model=PINNED_MODEL
+        ) is False
+
+    def test_partial_object_is_incomplete(self, tmp_path: Path) -> None:
+        p = tmp_path / "t.json"
+        p.write_text(json.dumps({"task_id": "x"}))
+        assert _is_complete_trajectory(
+            p, task_id="x", arm="baseline", model=PINNED_MODEL
+        ) is False
+
+    def test_wrong_arm_is_incomplete(self, tmp_path: Path) -> None:
+        p = tmp_path / "t.json"
+        p.write_text(json.dumps(_full_record(task_id="x", arm="retrieval", model=PINNED_MODEL)))
+        # Same schema but the arm doesn't match → re-run.
+        assert _is_complete_trajectory(
+            p, task_id="x", arm="baseline", model=PINNED_MODEL
+        ) is False
+
+    def test_wrong_model_is_incomplete(self, tmp_path: Path) -> None:
+        p = tmp_path / "t.json"
+        p.write_text(json.dumps(_full_record(task_id="x", arm="baseline", model="claude-opus-4-7-20260101")))
+        assert _is_complete_trajectory(
+            p, task_id="x", arm="baseline", model=PINNED_MODEL
+        ) is False
+
+    def test_full_matching_record_is_complete(self, tmp_path: Path) -> None:
+        p = tmp_path / "t.json"
+        p.write_text(json.dumps(_full_record(task_id="x", arm="baseline", model=PINNED_MODEL)))
+        assert _is_complete_trajectory(
+            p, task_id="x", arm="baseline", model=PINNED_MODEL
+        ) is True
+
+
+class TestResumeIdentity:
+    def test_resume_reruns_mismatched_model_record(self, tmp_path: Path) -> None:
+        # A complete-looking file left over from a DIFFERENT model must be
+        # re-run, not skipped (it would aggregate stale data).
+        corpus = _write_corpus(tmp_path, n=1)
+        out = tmp_path / "out"
+        raw = out / "runs" / "run-test" / "raw" / "baseline"
+        raw.mkdir(parents=True)
+        stale = _full_record(
+            task_id="acme__widget-0",
+            arm="baseline",
+            model="claude-opus-4-7-20260101",
+        )
+        (raw / "acme__widget-0__seed0.json").write_text(json.dumps(stale))
+
+        client_calls = {"n": 0}
+
+        def counting_factory(model: str):
+            client_calls["n"] += 1
+            return _submit_client()
+
+        rc = run_command(
+            _make_args(
+                corpus=str(corpus), arms="baseline", seeds=1, out=str(out), resume=True
+            ),
+            client_factory=counting_factory,
+            repo_provider=FakeRepoProvider(),
+            daemon_factory=lambda arm: None,
+            bridge_factory=_bridge_factory_none,
+            verify_runner=FakeVerifyRunner(),
+            run_id="run-test",
+        )
+        assert rc == 0
+        # Mismatched-model file was re-run.
+        assert client_calls["n"] == 1
+        body = json.loads((raw / "acme__widget-0__seed0.json").read_text())
+        assert body["model"] == PINNED_MODEL
+
+
+# --- Fix 3: McNemar pairs by task identity, not vector length -----
+
+
+def _seed_raw(raw_dir: Path, instance_id: str, seed: int, arm: str, *, submit: bool) -> None:
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    rec = _full_record(
+        task_id=instance_id,
+        arm=arm,
+        model=PINNED_MODEL,
+        halt_reason="submit" if submit else "no_patch",
+    )
+    (raw_dir / f"{instance_id}__seed{seed}.json").write_text(json.dumps(rec))
+
+
+class TestMcNemarPairsByIdentity:
+    def test_disjoint_task_ids_are_not_spuriously_paired(self, tmp_path: Path) -> None:
+        # Two arms, same COUNT (2 each) but DISJOINT task ids. Length-based
+        # pairing would emit a bogus contrast; identity pairing must skip it
+        # (empty intersection).
+        run_dir = tmp_path / "runs" / "r"
+        a = run_dir / "raw" / "baseline"
+        b = run_dir / "raw" / "retrieval"
+        _seed_raw(a, "acme__widget-0", 0, "baseline", submit=True)
+        _seed_raw(a, "acme__widget-1", 0, "baseline", submit=True)
+        _seed_raw(b, "acme__gadget-0", 0, "retrieval", submit=False)
+        _seed_raw(b, "acme__gadget-1", 0, "retrieval", submit=False)
+
+        _render_reports(run_dir, ["baseline", "retrieval"], FakeVerifyRunner())
+
+        cj = json.loads((run_dir / "comparison.json").read_text())
+        # No shared task ids → no B_vs_A contrast at all.
+        assert "B_vs_A" not in cj["mcnemar"]
+
+    def test_same_ids_different_file_order_pair_by_id(self, tmp_path: Path) -> None:
+        # Both arms ran the same two tasks. Arm A: widget-0 submit,
+        # widget-1 no-submit. Arm B: BOTH submit. Identity pairing must
+        # match widget-0↔widget-0 and widget-1↔widget-1 regardless of the
+        # (sorted) filename order.
+        run_dir = tmp_path / "runs" / "r"
+        a = run_dir / "raw" / "baseline"
+        b = run_dir / "raw" / "retrieval"
+        _seed_raw(a, "acme__widget-0", 0, "baseline", submit=True)
+        _seed_raw(a, "acme__widget-1", 0, "baseline", submit=False)
+        _seed_raw(b, "acme__widget-0", 0, "retrieval", submit=True)
+        _seed_raw(b, "acme__widget-1", 0, "retrieval", submit=True)
+
+        _render_reports(run_dir, ["baseline", "retrieval"], FakeVerifyRunner())
+
+        cj = json.loads((run_dir / "comparison.json").read_text())
+        assert "B_vs_A" in cj["mcnemar"]
+        block = cj["mcnemar"]["B_vs_A"]
+        # Contrast is (A=baseline, B=retrieval). widget-0: A=T,B=T
+        # (concordant). widget-1: A=F,B=T → b01 (a fail, b pass) = 1, b10 = 0.
+        # If the tasks were mispaired by order this would be wrong.
+        assert block["b01"] == 1
+        assert block["b10"] == 0
+
+    def test_partial_overlap_pairs_only_intersection(self, tmp_path: Path) -> None:
+        # Arm A ran widget-0,1; arm B ran widget-1,2 (resume with a missing
+        # file). Only widget-1 is shared → contrast over exactly 1 pair.
+        run_dir = tmp_path / "runs" / "r"
+        a = run_dir / "raw" / "baseline"
+        b = run_dir / "raw" / "retrieval"
+        _seed_raw(a, "acme__widget-0", 0, "baseline", submit=True)
+        _seed_raw(a, "acme__widget-1", 0, "baseline", submit=True)
+        _seed_raw(b, "acme__widget-1", 0, "retrieval", submit=True)
+        _seed_raw(b, "acme__widget-2", 0, "retrieval", submit=True)
+
+        _render_reports(run_dir, ["baseline", "retrieval"], FakeVerifyRunner())
+
+        cj = json.loads((run_dir / "comparison.json").read_text())
+        # Only widget-1 is shared, and it's T/T → concordant (b01=b10=0).
+        # The contrast is emitted (intersection non-empty) over that 1 pair.
+        block = cj["mcnemar"]["B_vs_A"]
+        assert block["b01"] == 0 and block["b10"] == 0
