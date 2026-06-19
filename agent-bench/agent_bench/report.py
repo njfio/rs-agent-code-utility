@@ -21,10 +21,11 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .mcp_bridge import RTS_TOOL_PREFIX
 from .run import ArmTrajectory, count_tool_uses_by_backend
 
 
@@ -60,6 +61,100 @@ def wilson_ci(successes: int, n: int, z: float = 1.96) -> WilsonCI:
     return WilsonCI(p=phat, lo=max(0.0, center - half), hi=min(1.0, center + half), n=n)
 
 
+# --- McNemar paired test ------------------------------------------
+#
+# McNemar's test compares two paired binary classifiers (here: two arms
+# run on the SAME tasks, success=True/False per task). Only the
+# DISCORDANT pairs matter:
+#   b01 = a fail, b pass   (b "fixed" what a got wrong)
+#   b10 = a pass, b fail   (b "broke" what a got right)
+# Concordant pairs (both pass / both fail) carry no signal.
+#
+# Method selection (documented threshold):
+#   - b01+b10 == 0          → no discordant pairs, p = 1.0, method "none"
+#   - b01+b10 <  25         → EXACT binomial two-sided test (n small;
+#                             the chi-square approximation is unreliable)
+#   - b01+b10 >= 25         → continuity-corrected chi-square
+#                             (Edwards' correction), df=1
+# We implement everything by hand (no scipy): the exact tail via the
+# binomial PMF summed directly, and the chi-square df=1 survival
+# function via math.erfc (chi2 df=1 == squared standard normal, so
+# P(X > x) = erfc(sqrt(x/2))).
+
+EXACT_MCNEMAR_THRESHOLD = 25
+
+
+def _binom_two_sided_p(k: int, n: int) -> float:
+    """Two-sided exact binomial p for k successes in n trials at p=0.5.
+
+    Sums the tail at the more-extreme-or-equal side and doubles it,
+    clamped to 1.0 — the standard two-sided exact McNemar p when the
+    null is symmetric (p=0.5). Computed by summing the binomial PMF
+    directly; no scipy.
+    """
+    if n == 0:
+        return 1.0
+    # Distance of k from the mean n/2; sum both tails at >= that distance.
+    kk = min(k, n - k)
+
+    def pmf(i: int) -> float:
+        return math.comb(n, i) * (0.5**n)
+
+    tail = sum(pmf(i) for i in range(kk + 1))
+    return min(1.0, 2.0 * tail)
+
+
+def _chi2_df1_sf(x: float) -> float:
+    """Survival function P(X > x) for a chi-square with df=1.
+
+    A chi-square(df=1) variate is the square of a standard normal, so
+    P(X > x) = P(|Z| > sqrt(x)) = erfc(sqrt(x/2)). Pure stdlib.
+    """
+    if x <= 0:
+        return 1.0
+    return math.erfc(math.sqrt(x / 2.0))
+
+
+def mcnemar(a: list[bool], b: list[bool]) -> dict[str, Any]:
+    """McNemar paired test over two arms' per-task success vectors.
+
+    `a` and `b` are equal-length lists of booleans (True = task
+    succeeded for that arm). Returns the discordant counts, the test
+    statistic, the two-sided p-value, and which method produced it.
+    Symmetric in (a, b): swapping the arguments swaps b01/b10 but
+    leaves the p-value unchanged.
+    """
+    if len(a) != len(b):
+        raise ValueError(
+            f"mcnemar: a and b must be the same length (got {len(a)} vs {len(b)})"
+        )
+    b01 = sum(1 for ai, bi in zip(a, b, strict=True) if (not ai) and bi)  # a fail, b pass
+    b10 = sum(1 for ai, bi in zip(a, b, strict=True) if ai and (not bi))  # a pass, b fail
+    n = b01 + b10
+
+    if n == 0:
+        return {"b01": 0, "b10": 0, "statistic": 0.0, "p_value": 1.0, "method": "none"}
+
+    if n < EXACT_MCNEMAR_THRESHOLD:
+        p = _binom_two_sided_p(min(b01, b10), n)
+        return {
+            "b01": b01,
+            "b10": b10,
+            "statistic": float(min(b01, b10)),
+            "p_value": p,
+            "method": "exact",
+        }
+
+    chi2 = (abs(b01 - b10) - 1) ** 2 / n
+    return {
+        "b01": b01,
+        "b10": b10,
+        "statistic": chi2,
+        "p_value": _chi2_df1_sf(chi2),
+        "method": "chi2_corrected",
+    }
+
+
 @dataclass
 class ArmAggregate:
     """One arm's roll-up across all tasks."""
@@ -84,6 +179,12 @@ class ArmAggregate:
 
     total_input_tokens: int
     total_output_tokens: int
+
+    # Per-tool breakdown, keyed by bare tool name (rts prefix stripped;
+    # local Bash/Read/submit_patch kept as-is). Summed across all tasks.
+    tool_calls_by_name: dict[str, int] = field(default_factory=dict)
+    # Total verify_* tool calls (names starting with "verify_").
+    verify_tools_total: int = 0
 
     def tool_use_ratio_ci(self) -> WilsonCI:
         """Tool-use ratio = rts_mcp / (all tool calls).
@@ -126,6 +227,8 @@ def aggregate_arm(arm: str, trajectories: list[ArmTrajectory]) -> ArmAggregate:
 
     total_tc = 0
     rts_tc = bash_tc = read_tc = submit_tc = 0
+    by_name: dict[str, int] = {}
+    verify_total = 0
     for traj in trajectories:
         c = count_tool_uses_by_backend(traj)
         total_tc += sum(c.values())
@@ -133,6 +236,18 @@ def aggregate_arm(arm: str, trajectories: list[ArmTrajectory]) -> ArmAggregate:
         bash_tc += c.get("bash", 0)
         read_tc += c.get("read", 0)
         submit_tc += c.get("submit", 0)
+        # Per-tool breakdown: strip the rts prefix so verify_* /
+        # find_symbol show up by bare name; verify_total counts the
+        # anti-hallucination tools.
+        for tc in traj.tool_calls:
+            bare = (
+                tc.name[len(RTS_TOOL_PREFIX):]
+                if tc.name.startswith(RTS_TOOL_PREFIX)
+                else tc.name
+            )
+            by_name[bare] = by_name.get(bare, 0) + 1
+            if bare.startswith("verify_"):
+                verify_total += 1
 
     wall_times = sorted(t.wall_clock_s for t in trajectories)
     median = wall_times[len(wall_times) // 2] if wall_times else 0.0
@@ -155,6 +270,8 @@ def aggregate_arm(arm: str, trajectories: list[ArmTrajectory]) -> ArmAggregate:
         p95_wall_clock_s=p95,
         total_input_tokens=sum(t.input_tokens for t in trajectories),
         total_output_tokens=sum(t.output_tokens for t in trajectories),
+        tool_calls_by_name=by_name,
+        verify_tools_total=verify_total,
     )
 
 
@@ -315,6 +432,144 @@ def comparison_markdown(
         f"| {treatment.total_output_tokens:,} |",
         "",
     ]
+    return "\n".join(lines)
+
+
+# --- 3-arm (A/B/C) comparison -------------------------------------
+
+MULTI_ARM_SCHEMA = "agent-bench/multi-arm/v1"
+
+# The three paired contrasts we always render for an A/B/C bench.
+_MULTI_ARM_DELTAS = ("B_vs_A", "C_vs_B", "C_vs_A")
+
+
+def multi_arm_comparison_json(
+    aggregates: list[ArmAggregate],
+    paired_success: dict[str, tuple[list[bool], list[bool]]],
+    verify_metrics: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Schema-versioned A/B/C comparison payload.
+
+    - `aggregates`: per-arm rollups (any order).
+    - `paired_success`: maps each contrast key in {"B_vs_A","C_vs_B",
+      "C_vs_A"} to a `(a_success, b_success)` tuple of equal-length
+      per-task booleans (the McNemar inputs).
+    - `verify_metrics`: maps arm name → that arm's verify-metric block
+      (from `eval_verify.evaluate_arm`); attached per arm.
+    """
+    arms_payload: list[dict[str, Any]] = []
+    arms_by_name: dict[str, dict[str, Any]] = {}
+    for agg in aggregates:
+        tur = agg.tool_use_ratio_ci()
+        suc = agg.success_rate_ci()
+        entry = {
+            "arm": agg.arm,
+            "model": agg.model,
+            "n_tasks": agg.n_tasks,
+            "success_rate": {
+                "point": suc.p,
+                "ci_low": suc.lo,
+                "ci_high": suc.hi,
+                "n": suc.n,
+            },
+            "tool_use_ratio": {
+                "point": tur.p,
+                "ci_low": tur.lo,
+                "ci_high": tur.hi,
+                "n": tur.n,
+            },
+            "tokens": {
+                "input": agg.total_input_tokens,
+                "output": agg.total_output_tokens,
+            },
+            "wall_clock_s": {
+                "median": agg.median_wall_clock_s,
+                "p95": agg.p95_wall_clock_s,
+            },
+            "tool_calls_by_name": dict(sorted(agg.tool_calls_by_name.items())),
+            "verify_tools_total": agg.verify_tools_total,
+            "verify_metrics": verify_metrics.get(agg.arm, {}),
+        }
+        arms_payload.append(entry)
+        arms_by_name[agg.arm] = entry
+
+    mcnemar_block: dict[str, Any] = {}
+    for key in _MULTI_ARM_DELTAS:
+        if key not in paired_success:
+            continue
+        av, bv = paired_success[key]
+        mcnemar_block[key] = mcnemar(av, bv)
+
+    return {
+        "schema": MULTI_ARM_SCHEMA,
+        "arms": arms_payload,
+        "arms_by_name": arms_by_name,
+        "mcnemar": mcnemar_block,
+    }
+
+
+def multi_arm_comparison_markdown(
+    aggregates: list[ArmAggregate],
+    paired_success: dict[str, tuple[list[bool], list[bool]]],
+    verify_metrics: dict[str, dict[str, Any]],
+) -> str:
+    """Human-readable A/B/C comparison."""
+    payload = multi_arm_comparison_json(aggregates, paired_success, verify_metrics)
+    lines = [
+        "# agent-bench A/B/C comparison",
+        "",
+        "## Per-arm summary (Wilson 95% CI)",
+        "",
+        "| Arm | Success | Tool-use ratio | Verify calls | Tokens (in/out) | Wall median/p95 |",
+        "|-----|---------|----------------|--------------|-----------------|-----------------|",
+    ]
+    for arm in payload["arms"]:
+        suc = arm["success_rate"]
+        tur = arm["tool_use_ratio"]
+        lines.append(
+            f"| {arm['arm']} "
+            f"| {suc['point'] * 100:.1f}% [{suc['ci_low'] * 100:.1f}, {suc['ci_high'] * 100:.1f}] "
+            f"| {tur['point'] * 100:.1f}% [{tur['ci_low'] * 100:.1f}, {tur['ci_high'] * 100:.1f}] "
+            f"| {arm['verify_tools_total']} "
+            f"| {arm['tokens']['input']:,}/{arm['tokens']['output']:,} "
+            f"| {arm['wall_clock_s']['median']:.1f}s/{arm['wall_clock_s']['p95']:.1f}s |"
+        )
+
+    lines += [
+        "",
+        "## Verify metrics (per arm)",
+        "",
+    ]
+    for arm in payload["arms"]:
+        vm = arm["verify_metrics"] or {}
+        lines.append(f"- **{arm['arm']}**: {vm if vm else '(none)'}")
+
+    lines += [
+        "",
+        "## Per-tool breakdown",
+        "",
+    ]
+    for arm in payload["arms"]:
+        breakdown = arm["tool_calls_by_name"]
+        rendered = ", ".join(f"{k}={v}" for k, v in breakdown.items()) or "(none)"
+        lines.append(f"- **{arm['arm']}**: {rendered}")
+
+    lines += [
+        "",
+        "## McNemar deltas (paired task success)",
+        "",
+        "| Contrast | b01 (a✗→b✓) | b10 (a✓→b✗) | statistic | p-value | method |",
+        "|----------|-------------|-------------|-----------|---------|--------|",
+    ]
+    for key in _MULTI_ARM_DELTAS:
+        m = payload["mcnemar"].get(key)
+        if m is None:
+            continue
+        lines.append(
+            f"| {key} | {m['b01']} | {m['b10']} "
+            f"| {m['statistic']:.3f} | {m['p_value']:.4f} | {m['method']} |"
+        )
+    lines.append("")
     return "\n".join(lines)
 
 

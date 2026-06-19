@@ -27,7 +27,6 @@ from typing import Any, Protocol
 
 from .mcp_bridge import RTS_TOOL_PREFIX, McpBridge
 
-
 # Built-in tool schemas the agent sees in BOTH arms.
 # We surface Bash + Read so the agent has a baseline shell-shaped
 # toolkit comparable to typical SWE-bench harnesses.
@@ -103,16 +102,97 @@ class Task:
     gold_patch: str = ""
 
 
+# --- Arm tool profiles --------------------------------------------
+#
+# A/B/C benchmark: each arm exposes a DIFFERENT rts tool surface. We
+# declare explicit allowlists of bare `mcp__rts__*` names (no prefix —
+# prefix is added when matching against the bridge's listing) so a
+# future rts tool can never silently leak into an arm. `build_tool_list`
+# intersects the bridge's live listing with the active profile's
+# allowlist; anything not on the list is excluded.
+
+# Arm B surface — read-only retrieval / navigation tools.
+RETRIEVAL_TOOLS: frozenset[str] = frozenset(
+    {
+        "find_symbol",
+        "grep",
+        "read_symbol",
+        "read_symbol_at",
+        "read_range",
+        "outline_workspace",
+        "find_callers",
+        "impact_of",
+    }
+)
+
+# Arm C adds the verify_* anti-hallucination tools on top of retrieval.
+VERIFY_TOOLS: frozenset[str] = frozenset(
+    {
+        "verify_symbol",
+        "verify_signature",
+        "verify_import",
+        "verify_claims",
+        "verify_impact",
+        "verify_edit",
+    }
+)
+
+# Profile → allowed bare rts tool names.
+_PROFILE_ALLOWLIST: dict[str, frozenset[str]] = {
+    "baseline": frozenset(),
+    "retrieval": RETRIEVAL_TOOLS,
+    "retrieval_verify": RETRIEVAL_TOOLS | VERIFY_TOOLS,
+}
+
+# One-line nudge appended to Arm C's system prompt, encouraging use of
+# the verify_* tools before asserting a symbol exists / changing a sig.
+VERIFY_NUDGE: str = (
+    "Before asserting a symbol exists or changing a signature, verify it "
+    "with the verify_* tools (verify_symbol, verify_signature, "
+    "verify_import, verify_claims, verify_impact, verify_edit)."
+)
+
+
 @dataclass
 class ArmConfig:
-    """The deltas that differentiate control from treatment.
+    """The deltas that differentiate the A/B/C arms.
 
     Holding the rest of the loop config fixed across arms is the
     primary confound control. The harness asserts on these.
+
+    `tool_profile` selects the rts tool surface:
+      - "baseline"          → no rts tools (Arm A / control)
+      - "retrieval"         → RETRIEVAL_TOOLS only (Arm B)
+      - "retrieval_verify"  → retrieval + verify tools, + verify nudge (Arm C)
+
+    `include_rts_tools` is kept as a back-compat shim: older call sites
+    construct `ArmConfig(arm=..., include_rts_tools=...)`; we derive the
+    profile from it (False→baseline, True→retrieval_verify, the widest
+    surface). When `tool_profile` is given explicitly, `include_rts_tools`
+    is derived from the profile instead.
     """
 
-    arm: str  # "control" or "treatment"
-    include_rts_tools: bool  # treatment: True; control: False
+    arm: str
+    tool_profile: str = ""
+    include_rts_tools: bool = False
+
+    def __post_init__(self) -> None:
+        if self.tool_profile:
+            if self.tool_profile not in _PROFILE_ALLOWLIST:
+                raise ValueError(
+                    f"unknown tool_profile {self.tool_profile!r}; "
+                    f"expected one of {sorted(_PROFILE_ALLOWLIST)}"
+                )
+            # Derive the back-compat flag from the profile.
+            self.include_rts_tools = self.tool_profile != "baseline"
+        else:
+            # Back-compat: derive a profile from include_rts_tools.
+            self.tool_profile = "retrieval_verify" if self.include_rts_tools else "baseline"
+
+    @property
+    def allowed_rts_tools(self) -> frozenset[str]:
+        """Bare rts tool names this arm may expose."""
+        return _PROFILE_ALLOWLIST[self.tool_profile]
 
 
 @dataclass
@@ -270,27 +350,48 @@ def build_tool_list(
 ) -> list[dict[str, Any]]:
     """Compose the Anthropic `tools=[...]` list for an arm.
 
-    Both arms get Bash + Read + submit_patch. Treatment also gets the
-    rts MCP tools (queried live from the bridge so the schema stays
-    in sync with whatever rts-mcp advertises).
+    Every arm gets Bash + Read + submit_patch. Arms with an rts
+    profile also get the subset of `mcp__rts__*` tools whose bare name
+    is on the profile's allowlist (queried live from the bridge so the
+    schema stays in sync with whatever rts-mcp advertises). A tool the
+    bridge advertises but the profile does NOT allow is excluded — a
+    future rts tool can't silently leak into an arm.
     """
     tools: list[dict[str, Any]] = [
         BASH_TOOL_SCHEMA,
         READ_TOOL_SCHEMA,
         SUBMIT_PATCH_TOOL_SCHEMA,
     ]
-    if arm.include_rts_tools:
-        if bridge is None:
-            raise ValueError("treatment arm requires an MCP bridge")
-        for t in bridge.list_tools():
-            tools.append(
-                {
-                    "name": f"{RTS_TOOL_PREFIX}{t.name}",
-                    "description": t.description,
-                    "input_schema": t.input_schema,
-                }
-            )
+    allowed = arm.allowed_rts_tools
+    if not allowed:
+        return tools  # baseline: no rts tools, bridge optional.
+
+    if bridge is None:
+        raise ValueError(f"arm {arm.arm!r} ({arm.tool_profile}) requires an MCP bridge")
+    for t in bridge.list_tools():
+        if t.name not in allowed:
+            continue  # not on this profile's allowlist — exclude.
+        tools.append(
+            {
+                "name": f"{RTS_TOOL_PREFIX}{t.name}",
+                "description": t.description,
+                "input_schema": t.input_schema,
+            }
+        )
     return tools
+
+
+def effective_system_prompt(base_prompt: str, arm: ArmConfig) -> str:
+    """The system prompt an arm actually sends.
+
+    Arm C ("retrieval_verify") appends a one-line verify nudge so the
+    extra verify_* tools have a behavioral pull; A and B send the base
+    prompt verbatim (confound control: the ONLY prompt delta is the
+    nudge, gated on the profile).
+    """
+    if arm.tool_profile == "retrieval_verify":
+        return f"{base_prompt}\n\n{VERIFY_NUDGE}"
+    return base_prompt
 
 
 # --- The loop -----------------------------------------------------
@@ -340,6 +441,7 @@ def run_one_arm(
     traj = ArmTrajectory(task_id=task.instance_id, arm=arm.arm, model=config.model)
 
     tools = build_tool_list(arm, bridge)
+    system_prompt = effective_system_prompt(config.system_prompt, arm)
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": task.problem_statement},
     ]
@@ -354,7 +456,7 @@ def run_one_arm(
         try:
             resp = client.create(
                 model=config.model,
-                system=config.system_prompt,
+                system=system_prompt,
                 messages=messages,
                 tools=tools,
                 max_tokens=4096,
