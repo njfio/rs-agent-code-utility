@@ -165,12 +165,36 @@ def _trajectory_filename(instance_id: str, seed: int) -> str:
     return f"{instance_id}__seed{seed}.json"
 
 
-def _is_complete_trajectory(path: Path) -> bool:
-    """True iff `path` exists and holds a parseable trajectory JSON object.
+# Fields a stored trajectory MUST carry for resume to trust it as
+# complete. These are exactly what `_load_trajectories` / `aggregate_arm`
+# read back; a file missing any of them would crash or silently aggregate
+# stale data, so it is treated as INCOMPLETE and re-run.
+_REQUIRED_TRAJECTORY_FIELDS = (
+    "task_id",
+    "arm",
+    "model",
+    "halt_reason",
+    "input_tokens",
+    "output_tokens",
+)
 
-    Resume treats only valid files as complete — a truncated/half-written
-    trajectory (process killed mid-write during a long real run) is re-run
-    rather than silently trusted.
+
+def _is_complete_trajectory(
+    path: Path,
+    *,
+    task_id: str | None = None,
+    arm: str | None = None,
+    model: str | None = None,
+) -> bool:
+    """True iff `path` holds a complete trajectory matching this identity.
+
+    Resume treats a file as complete only when it (a) parses as a JSON
+    object, (b) carries the full trajectory schema the loader/aggregator
+    read (`_REQUIRED_TRAJECTORY_FIELDS`), and (c) matches the CURRENT
+    (task_id, arm, model) when those are supplied. A truncated, bare
+    (`{}`), incomplete, or mismatched file is treated as INCOMPLETE and
+    re-run rather than silently trusted (which would crash the loader or
+    aggregate stale data from a different task/arm/model).
     """
     if not path.is_file():
         return False
@@ -178,7 +202,44 @@ def _is_complete_trajectory(path: Path) -> bool:
         obj = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         return False
-    return isinstance(obj, dict)
+    if not isinstance(obj, dict):
+        return False
+    if any(field not in obj for field in _REQUIRED_TRAJECTORY_FIELDS):
+        return False
+    # Identity must match the CURRENT (task_id, arm, model) when supplied —
+    # a leftover record from a different task/arm/model is NOT complete.
+    expected = {"task_id": task_id, "arm": arm, "model": model}
+    return all(
+        want is None or obj.get(field) == want for field, want in expected.items()
+    )
+
+
+def _trajectory_keys(raw_dir: Path) -> list[tuple[str, int]]:
+    """Per-task identity keys aligned with `_load_trajectories(raw_dir)`.
+
+    Returns `(instance_id, seed)` for each stored trajectory in the SAME
+    sorted order `_load_trajectories` yields, so the keys zip directly with
+    a success vector. The seed is recovered from the filename
+    (`<instance_id>__seed<seed>.json`); `instance_id` may itself contain
+    `__`, so we split on the final `__seed` marker.
+    """
+    keys: list[tuple[str, int]] = []
+    for path in sorted(raw_dir.glob("*.json")):
+        stem = path.stem  # drops ".json"
+        marker = "__seed"
+        idx = stem.rfind(marker)
+        if idx == -1:
+            # No recognizable seed suffix — key on the bare stem, seed 0.
+            keys.append((stem, 0))
+            continue
+        instance_id = stem[:idx]
+        seed_str = stem[idx + len(marker):]
+        try:
+            seed = int(seed_str)
+        except ValueError:
+            seed = 0
+        keys.append((instance_id, seed))
+    return keys
 
 
 def _load_trajectories(raw_dir: Path) -> list[Any]:
@@ -234,7 +295,10 @@ def _render_reports(
     raw_root = run_dir / "raw"
     aggregates = []
     verify_metrics: dict[str, dict[str, Any]] = {}
-    success_by_arm: dict[str, list[bool]] = {}
+    # Per arm: map each task key (instance_id, seed) → success bool. Keyed
+    # by identity (NOT position) so contrasts pair the SAME task across
+    # arms regardless of file order or which tasks each arm happened to run.
+    success_by_arm: dict[str, dict[tuple[str, int], bool]] = {}
     success_proxy = False
 
     for arm in arms:
@@ -254,13 +318,20 @@ def _render_reports(
         # Verify metrics (offline).
         verify_metrics[arm] = evaluate_arm(trajs, verify_runner)
         # Success vector — proxy (submit) when no Docker results present.
+        # `_trajectory_keys` is aligned with `_load_trajectories`, so the
+        # keys zip 1:1 with the success vector.
         vec, proxy = task_success_vector(trajs, None)
-        success_by_arm[arm] = vec
+        keys = _trajectory_keys(raw_dir)
+        success_by_arm[arm] = dict(zip(keys, vec, strict=True))
         # Any arm on the proxy → label the whole comparison as proxy success.
         success_proxy = success_proxy or proxy
 
-    # McNemar paired contrasts (proxy-labelled). Only emit a contrast when
-    # both arms ran the SAME tasks (equal-length vectors).
+    # McNemar paired contrasts (proxy-labelled). Pair the two arms by task
+    # IDENTITY over the INTERSECTION of keys present in BOTH arms, sorted
+    # deterministically. Equal vector LENGTH no longer implies pairing — two
+    # arms that ran different tasks (offline report / resumed runs with
+    # missing files) won't be spuriously matched. A contrast with an empty
+    # intersection is skipped.
     paired: dict[str, tuple[list[bool], list[bool]]] = {}
     contrasts = {
         "B_vs_A": ("baseline", "retrieval"),
@@ -268,10 +339,16 @@ def _render_reports(
         "C_vs_A": ("baseline", "retrieval_verify"),
     }
     for key, (a_arm, b_arm) in contrasts.items():
-        av = success_by_arm.get(a_arm)
-        bv = success_by_arm.get(b_arm)
-        if av is not None and bv is not None and len(av) == len(bv):
-            paired[key] = (av, bv)
+        a_map = success_by_arm.get(a_arm)
+        b_map = success_by_arm.get(b_arm)
+        if a_map is None or b_map is None:
+            continue
+        shared = sorted(a_map.keys() & b_map.keys())
+        if not shared:
+            continue
+        av = [a_map[k] for k in shared]
+        bv = [b_map[k] for k in shared]
+        paired[key] = (av, bv)
 
     (run_dir / "comparison.json").write_text(
         json.dumps(
@@ -347,6 +424,29 @@ def run_command(
         )
         return 1
 
+    # (2b) PRE-FLIGHT rts-arm wiring — BEFORE any client is constructed.
+    # Non-baseline arms need an MCP bridge + per-task daemon. When no
+    # bridge_factory was injected (a real run, not a test), wire the REAL
+    # bridge/daemon over the built binaries. If the binaries are missing we
+    # FAIL FAST here — no client is constructed and no arm runs, so a real
+    # invocation can never spend baseline API calls only to abort when the
+    # first rts arm finds bridge=None.
+    needs_rts = any(arm != "baseline" for arm in arms)
+    if needs_rts and bridge_factory is None:
+        binaries = _discover_rts_binaries()
+        if binaries is None:
+            print(
+                "error: rts arms require built rts-mcp/rts-daemon binaries: "
+                "cargo build --release -p rts-mcp -p rts-daemon; none found. "
+                "No client constructed; no API call made.",
+                file=sys.stderr,
+            )
+            return 1
+        rts_mcp_bin, rts_daemon_bin = binaries
+        bridge_factory = _real_bridge_factory(rts_mcp_bin, rts_daemon_bin)
+        if daemon_factory is None:
+            daemon_factory = _real_daemon_factory(rts_daemon_bin)
+
     out_root = Path(args.out)
     rid = run_id or _new_run_id()
     run_dir = out_root / "runs" / rid
@@ -366,11 +466,17 @@ def run_command(
         for task in tasks:
             for seed in seeds:
                 out_file = raw_dir / _trajectory_filename(task.instance_id, seed)
-                # (4) resume: skip tuples whose trajectory file exists AND
-                # parses as valid JSON. A truncated/half-written file (killed
-                # mid-run) is NOT trusted — it's re-run rather than silently
-                # treated as complete.
-                if args.resume and _is_complete_trajectory(out_file):
+                # (4) resume: skip tuples whose trajectory file is a COMPLETE
+                # record matching this exact (task, arm, model). A truncated,
+                # bare, or mismatched file (killed mid-run, or left over from a
+                # different arm/model) is NOT trusted — it's re-run rather than
+                # silently treated as complete.
+                if args.resume and _is_complete_trajectory(
+                    out_file,
+                    task_id=task.instance_id,
+                    arm=arm,
+                    model=args.model,
+                ):
                     continue
 
                 config = RunConfig(model=args.model, system_prompt=_DEFAULT_SYSTEM_PROMPT)
@@ -437,6 +543,62 @@ def _new_run_id() -> str:
     import datetime
 
     return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def _discover_rts_binaries() -> tuple[Path, Path] | None:
+    """Locate the built `rts-mcp`/`rts-daemon` release binaries.
+
+    Mirrors `tests/test_mcp_bridge.py`: the binaries live under
+    `<repo>/target/release/{rts-mcp,rts-daemon}`, where `<repo>` is the
+    workspace root two levels above this package. Returns
+    `(rts_mcp, rts_daemon)` when BOTH are present, else None (so the
+    caller can fail fast before any spend).
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    rts_mcp = repo_root / "target" / "release" / "rts-mcp"
+    rts_daemon = repo_root / "target" / "release" / "rts-daemon"
+    if rts_mcp.is_file() and rts_daemon.is_file():
+        return (rts_mcp, rts_daemon)
+    return None
+
+
+def _real_daemon_factory(rts_daemon_bin: Path) -> Callable[[str], Any]:
+    """Factory: a per-task `RtsDaemonHandle` for non-baseline arms.
+
+    Baseline arms get `None` (no daemon, `socket=None` from prepare_task).
+    """
+    from agent_bench.isolation import RtsDaemonHandle
+
+    def make(arm: str) -> Any:
+        if arm == "baseline":
+            return None
+        return RtsDaemonHandle(rts_daemon_bin=str(rts_daemon_bin))
+
+    return make
+
+
+def _real_bridge_factory(
+    rts_mcp_bin: Path, rts_daemon_bin: Path
+) -> Callable[[str, str | None], Any]:
+    """Factory: a real `McpBridge` over the per-task daemon socket.
+
+    Baseline arms get `None`. For rts arms the per-task daemon was started
+    over the materialized repo and its socket lives inside that repo dir
+    (`<repo_dir>/.rts-daemon.sock`), so the bridge's workspace is the
+    socket's parent directory. The bridge spawns its own rts-mcp wired to
+    `rts_daemon_bin`.
+    """
+    from agent_bench.mcp_bridge import McpBridge
+
+    def make(arm: str, socket: str | None) -> Any:
+        if arm == "baseline":
+            return None
+        if socket is None:
+            raise ValueError(f"arm {arm!r} requires a daemon socket but got None")
+        workspace = Path(socket).parent
+        return McpBridge.spawn(rts_mcp_bin, rts_daemon_bin, workspace)
+
+    return make
 
 
 def _real_repo_provider() -> Any:
