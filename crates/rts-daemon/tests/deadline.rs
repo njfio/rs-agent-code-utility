@@ -724,6 +724,12 @@ async fn deadline_interrupts_read_symbol_dependency_closure() -> anyhow::Result<
     // 5ms deadline fires (a CI-only flake).
     wait_for_closure_ready(&mut stream, &hub_name, leaf_count, Duration::from_secs(120)).await?;
 
+    // Use the MINIMUM valid deadline (1ms). The readiness barrier above
+    // guarantees a full ~`leaf_count` closure to render; rendering it cannot
+    // complete within 1ms on any machine, so the only outcome is
+    // DEADLINE_EXCEEDED. A larger budget (e.g. 5ms) raced the render and
+    // flaked on fast CI runners where the full render occasionally finished in
+    // time.
     let resp = round_trip(
         &mut stream,
         "2",
@@ -733,7 +739,7 @@ async fn deadline_interrupts_read_symbol_dependency_closure() -> anyhow::Result<
             "include_dependencies": true,
             "token_budget": 200_000,
         }),
-        Some(&[("deadline_ms", json!(5u64))]),
+        Some(&[("deadline_ms", json!(1u64))]),
     )
     .await?;
 
