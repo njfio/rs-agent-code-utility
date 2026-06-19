@@ -274,6 +274,27 @@ pub struct VerifyImpactArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct ProposedEditArg {
+    /// Workspace-relative path of the file being edited.
+    pub file: String,
+    /// FULL post-edit content of the file (not a diff hunk).
+    pub content: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifyEditArgs {
+    /// The proposed post-edit file states. Each entry's `content` is the
+    /// COMPLETE new content of `file`. Non-empty; each `file` is 1..=1024
+    /// chars; combined content is bounded (~2 MiB).
+    pub edits: Vec<ProposedEditArg>,
+    /// Optional filter over which finding kinds to report: `broken_caller`,
+    /// `dangling_ref`, `signature_break`, `new_symbol`. Omit to run all
+    /// four. Unknown names are ignored.
+    #[serde(default)]
+    pub checks: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReadSymbolAtArgs {
     /// Workspace-relative file path.
     pub file: String,
@@ -726,6 +747,40 @@ impl RtsServer {
         }
         match self
             .call_daemon("Index.VerifyImpact", Value::Object(params))
+            .await
+        {
+            Ok(v) => Ok(success_json(&v)),
+            Err(e) => Ok(connection_error_to_call_result(&e)),
+        }
+    }
+
+    #[tool(
+        description = "Gate a PROPOSED multi-file edit before you write it: pass the full post-edit `content` of each patched file and get a pass/warn/fail `verdict` with structured `findings`. The flagship check — prefer this over eyeballing a diff or a manual `find_callers` sweep after a refactor: it re-parses each file, diffs the defs, and queries the live index for callers of any def you remove or whose arity you change (callers inside your own patch are excluded, so a callee+caller edited together stays clean). Use when the task is 'is this patch safe' or right before a cross-file rename/signature change. `fail` lists `broken_caller` / `signature_break` sites; `dangling_ref` (warning) and `new_symbol` (info) round it out; `files_skipped` bumps a clean pass to warn."
+    )]
+    async fn verify_edit(
+        &self,
+        Parameters(args): Parameters<VerifyEditArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let mut params = serde_json::Map::new();
+        let edits: Vec<Value> = args
+            .edits
+            .into_iter()
+            .map(|e| {
+                let mut m = serde_json::Map::new();
+                m.insert("file".into(), Value::String(e.file));
+                m.insert("content".into(), Value::String(e.content));
+                Value::Object(m)
+            })
+            .collect();
+        params.insert("edits".into(), Value::Array(edits));
+        if let Some(checks) = args.checks {
+            params.insert(
+                "checks".into(),
+                Value::Array(checks.into_iter().map(Value::String).collect()),
+            );
+        }
+        match self
+            .call_daemon("Index.VerifyEdit", Value::Object(params))
             .await
         {
             Ok(v) => Ok(success_json(&v)),
