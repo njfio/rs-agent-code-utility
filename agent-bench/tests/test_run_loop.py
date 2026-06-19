@@ -15,8 +15,6 @@ import pytest
 
 from agent_bench.report import (
     aggregate_arm,
-    arm_summary_json,
-    arm_summary_markdown,
     comparison_markdown,
     wilson_ci,
     write_arm_outputs,
@@ -30,8 +28,7 @@ from agent_bench.run import (
     run_one_arm,
     tool_use_ratio,
 )
-from tests.conftest import FakeAnthropicClient, FakeMessageResponse, FakeUsage
-
+from tests.conftest import FakeAnthropicClient, FakeMessageResponse
 
 PINNED_MODEL = "claude-sonnet-4-7-20260315"
 
@@ -261,7 +258,7 @@ class TestRunOneArm:
         client = FakeAnthropicClient(
             [FakeMessageResponse(content=[])]
         )
-        with pytest.raises(ValueError, match="treatment arm requires"):
+        with pytest.raises(ValueError, match="requires an MCP bridge"):
             run_one_arm(
                 client=client,
                 task=make_task(tmp_path),
