@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rts.local/schemas/v0/methods/Index.VerifyImpact.resp.schema.json",
   "title": "Index.VerifyImpact result",
-  "description": "verify-v0 P2.U1. On a hit: `verdict` (would_break | safe), echoed `change`, `affected_count`, `affected_callers[]`, and `truncated` (true → affected_count is a lower bound). `resolution` is `exact` for remove/rename and for a decidable signature arity comparison; `indeterminate` (with `reason`) when the signature shape is undecidable. On a miss: `resolution: not_found`, `exists: false`, ranked `candidates[]`, and NO `verdict`.",
+  "description": "verify-v0 P2.U1. On a hit: `verdict` (would_break | safe), echoed `change`, `affected_count`, `affected_callers[]`, and `truncated` (true → affected_count is a lower bound). `resolution` is `exact` for remove/rename and for a decidable signature arity comparison; `indeterminate` (with `reason`) when the signature shape is undecidable, or `ambiguous_overload` when the name resolves to multiple defs (the agent should qualify it — the candidate defs are listed in `matches[]`). On a miss: `resolution: not_found`, `exists: false`, ranked `candidates[]`, and NO `verdict`.",
   "type": "object",
   "properties": {
     "resolution": {
@@ -51,6 +51,19 @@
           "pagerank":       { "type": "number" }
         },
         "required": ["qualified_name", "edit_distance", "pagerank"]
+      }
+    },
+    "matches": {
+      "description": "The ambiguous defs to disambiguate between. Present only when resolution is `indeterminate` with reason `ambiguous_overload`.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "qualified_name": { "type": "string" },
+          "file":           { "type": "string" },
+          "line":           { "type": "integer", "minimum": 0 }
+        },
+        "required": ["qualified_name", "file", "line"]
       }
     }
   },

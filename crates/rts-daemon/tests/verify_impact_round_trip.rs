@@ -160,6 +160,7 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
         workspace.path().join("hub.rs"),
         "pub fn target(x: u32) -> u32 { x + 1 }\n\
          pub fn orphan(y: u32) -> u32 { y + 2 }\n\
+         pub fn tested_only(z: u32) -> u32 { z }\n\
          pub struct Hub;\n\
          impl Hub { pub fn ping(&self) -> u32 { 0 } }\n",
     )?;
@@ -167,6 +168,22 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
         workspace.path().join("caller_a.rs"),
         "use crate::target;\n\
          pub fn caller_a() { let _ = target(1); }\n",
+    )?;
+    // The ONLY caller of `tested_only` lives in a test-path file — an edit
+    // gate must still report would_break (breaking a test is not `safe`).
+    std::fs::write(
+        workspace.path().join("probe_test.rs"),
+        "use crate::tested_only;\n\
+         pub fn probe() { let _ = tested_only(1); }\n",
+    )?;
+    // Two defs of the same bare name `dup` → an ambiguous impact target.
+    std::fs::write(
+        workspace.path().join("dup_x.rs"),
+        "pub fn dup() -> u32 { 1 }\n",
+    )?;
+    std::fs::write(
+        workspace.path().join("dup_y.rs"),
+        "pub fn dup() -> u32 { 2 }\n",
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
@@ -208,7 +225,16 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
     wait_for_symbol(&mut stream, "orphan", Duration::from_secs(5)).await?;
     wait_for_symbol(&mut stream, "caller_a", Duration::from_secs(5)).await?;
     wait_for_symbol(&mut stream, "ping", Duration::from_secs(5)).await?;
+    wait_for_symbol(&mut stream, "tested_only", Duration::from_secs(5)).await?;
+    wait_for_symbol(&mut stream, "dup", Duration::from_secs(5)).await?;
     wait_for_refs(&mut stream, "target", &["caller_a"], Duration::from_secs(5)).await?;
+    wait_for_refs(
+        &mut stream,
+        "tested_only",
+        &["probe"],
+        Duration::from_secs(5),
+    )
+    .await?;
 
     // 1. remove of a called fn → would_break + caller listed.
     let rm = round_trip(
@@ -355,6 +381,51 @@ async fn verify_impact_round_trip() -> anyhow::Result<()> {
         qbad["resolution"], "not_found",
         "Other::ping must NOT match the bare `ping` under Hub; got {qbad:?}"
     );
+
+    // 8. A symbol called ONLY from a test-path file → would_break. An edit
+    //    gate must count test callers (breaking a test is not `safe`).
+    let tested = round_trip(
+        &mut stream,
+        "17",
+        "Index.VerifyImpact",
+        json!({ "symbol": "tested_only", "change": "remove" }),
+    )
+    .await?;
+    let tr = &tested["result"];
+    assert_eq!(
+        tr["verdict"], "would_break",
+        "a test-only caller must still trip the gate; got {tr:?}"
+    );
+    let tcallers = tr["affected_callers"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        tcallers.iter().any(|c| c["file"] == "probe_test.rs"),
+        "the test-path caller must be listed; got {tr:?}"
+    );
+
+    // 9. An overloaded name (two defs of `dup`) → indeterminate, not an
+    //    arbitrary pick. The agent should qualify it.
+    let ambiguous = round_trip(
+        &mut stream,
+        "18",
+        "Index.VerifyImpact",
+        json!({ "symbol": "dup", "change": "remove" }),
+    )
+    .await?;
+    let am = &ambiguous["result"];
+    assert_eq!(
+        am["resolution"], "indeterminate",
+        "an overloaded impact target must be indeterminate; got {am:?}"
+    );
+    assert_eq!(am["reason"], "ambiguous_overload");
+    assert!(
+        am["verdict"].is_null(),
+        "indeterminate must not carry a verdict; got {am:?}"
+    );
+    let ms = am["matches"].as_array().cloned().unwrap_or_default();
+    assert_eq!(ms.len(), 2, "both `dup` defs should be listed; got {am:?}");
 
     Ok(())
 }

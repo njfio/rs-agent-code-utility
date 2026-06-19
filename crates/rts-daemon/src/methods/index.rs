@@ -3555,10 +3555,15 @@ fn new_signature_shape(
 ///   iff any callers (indeterminate, `reason:"undecidable_signature"`).
 /// - Unknown symbol → `not_found`, `exists:false`, ranked `candidates[]`,
 ///   NO `verdict`.
+/// - Ambiguous name (resolves to >1 def) → `indeterminate`,
+///   `reason:"ambiguous_overload"`, the defs listed in `matches[]`, NO
+///   `verdict` — the agent should qualify (picking one could falsely read
+///   `safe` while another overload has callers).
 ///
-/// Default `depth` is 1 (direct callers) — a gate wants immediate
-/// breakage. `INVALID_PARAMS` on empty/oversize `symbol`. Walks the
-/// reverse call graph → cancellable.
+/// Default `depth` is 1 (direct callers) — a gate wants immediate breakage.
+/// Test callers are INCLUDED (unlike `impact_of`): breaking a test is not
+/// `safe`. `INVALID_PARAMS` on empty/oversize `symbol`. Walks the reverse
+/// call graph → cancellable.
 pub async fn verify_impact(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
@@ -3625,6 +3630,33 @@ pub async fn verify_impact(
     if let Some(q) = &qualifier {
         hits.retain(|h| h.parent.as_deref() == Some(q.as_str()));
     }
+    // Ambiguous: the name resolves to MULTIPLE defs and we can't tell which
+    // one the agent means. Computing impact for an arbitrary overload could
+    // report `safe` while a different overload has callers, so return
+    // `indeterminate` (the agent should qualify the name) — same honesty rule
+    // as verify_symbol. List the candidates so the agent can disambiguate.
+    if hits.len() > 1 {
+        if token.is_cancelled() {
+            return Err(cancelled());
+        }
+        let matches: Vec<serde_json::Value> = hits
+            .iter()
+            .map(|h| {
+                let qn = match &h.parent {
+                    Some(parent) => format!("{parent}::{}", h.name),
+                    None => h.name.clone(),
+                };
+                serde_json::json!({ "qualified_name": qn, "file": h.file, "line": h.start_line })
+            })
+            .collect();
+        return Ok(serde_json::json!({
+            "resolution": rust_tree_sitter::Resolution::Indeterminate,
+            "reason":     rust_tree_sitter::IndeterminateReason::AmbiguousOverload,
+            "change":     p.change.as_wire_str(),
+            "symbol":     p.symbol,
+            "matches":    matches,
+        }));
+    }
     let anchor = match hits.into_iter().next() {
         Some(a) => a,
         None => {
@@ -3659,11 +3691,14 @@ pub async fn verify_impact(
 
     // Run the impact BFS — direct callers by default (depth 1). Reuse
     // ImpactBounds; CPU-bound BFS runs on a blocking thread like impact_of.
+    // Unlike `impact_of` (a refactoring-exploration tool that hides test
+    // noise), this is a BREAK GATE: a change that breaks a test caller is NOT
+    // `safe`, so test callers are INCLUDED.
     let bounds = crate::impact::ImpactBounds {
         max_depth: p.depth.unwrap_or(1),
         max_nodes: crate::impact::DEFAULT_MAX_NODES,
         token_budget: crate::impact::DEFAULT_TOKEN_BUDGET,
-        exclude_test_paths: true,
+        exclude_test_paths: false,
     };
     let store_clone = store_arc.clone();
     let ranks_clone = ranks.clone();
