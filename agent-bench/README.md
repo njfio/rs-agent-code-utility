@@ -200,12 +200,17 @@ budget, same lifecycle.
 
 ## Cost expectations
 
-Per the [research](../docs/plans/2026-05-16-001-feat-agent-habit-and-benchmark-plan.md#risk-analysis--mitigation):
+The `estimate` subcommand projects `tasks × seeds × arms` runs, each at a
+per-run token model (defaults ~120k in / 8k out), priced by `--in-price` /
+`--out-price` (Sonnet list by default). Examples for the A/B/C (3-arm) design:
 
-| Configuration | Estimate per full bench run (30 tasks × 2 arms) |
+| Configuration | Projected spend |
 |---|---|
-| Sonnet 4 | ~$50-100 |
-| Opus 4 | ~$300+ |
+| Pilot — 30 tasks × 1 seed × 3 arms, Sonnet | ~$30–60 |
+| Publishable — 300 tasks × 3 seeds × 3 arms, Sonnet | ~$1,000–1,800 |
+| Opus | ≈ 4–5× the above |
 
-Pre-flight estimates `n × mean_tokens × $/Mtok × 2 × 1.5_safety`
-before any API call; hard ceiling aborts the run at 90 % consumed.
+`run --max-usd <cap>` computes this projection up front and **aborts before any
+API call** if it exceeds the cap (a hard pre-flight gate — there is no
+mid-run/runtime abort). Run `agent_bench estimate ...` for the exact figure of a
+specific run before authorizing spend.

@@ -272,6 +272,37 @@ class TestResume:
         body = json.loads((raw / "acme__widget-0__seed0.json").read_text())
         assert body["final_patch"] == "preexisting"
 
+    def test_resume_reruns_corrupt_trajectory(self, tmp_path: Path) -> None:
+        # A truncated/half-written trajectory must NOT be trusted as complete.
+        corpus = _write_corpus(tmp_path, n=1)
+        out = tmp_path / "out"
+        raw = out / "runs" / "run-test" / "raw" / "baseline"
+        raw.mkdir(parents=True)
+        (raw / "acme__widget-0__seed0.json").write_text('{"task_id": "acme__widget-0"')  # truncated
+
+        client_calls = {"n": 0}
+
+        def counting_factory(model: str):
+            client_calls["n"] += 1
+            return _submit_client()
+
+        rc = run_command(
+            _make_args(
+                corpus=str(corpus), arms="baseline", seeds=1, out=str(out), resume=True
+            ),
+            client_factory=counting_factory,
+            repo_provider=FakeRepoProvider(),
+            daemon_factory=lambda arm: None,
+            bridge_factory=_bridge_factory_none,
+            verify_runner=FakeVerifyRunner(),
+            run_id="run-test",
+        )
+        assert rc == 0
+        # The corrupt file was re-run (not skipped) → client built once.
+        assert client_calls["n"] == 1
+        # And overwritten with a valid trajectory.
+        json.loads((raw / "acme__widget-0__seed0.json").read_text())
+
 
 # --- report subcommand (offline) ----------------------------------
 
@@ -309,3 +340,8 @@ class TestReportOffline:
         assert (run_dir / "comparison.md").is_file() or (
             run_dir / "comparison.json"
         ).is_file()
+        # Success is the submit proxy (no Docker eval), so the comparison MUST
+        # be labelled proxy — a reader can't mistake it for real resolved.
+        cj = json.loads((run_dir / "comparison.json").read_text())
+        assert cj["success_proxy"] is True
+        assert "PROXY" in (run_dir / "comparison.md").read_text()

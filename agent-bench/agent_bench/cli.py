@@ -165,6 +165,22 @@ def _trajectory_filename(instance_id: str, seed: int) -> str:
     return f"{instance_id}__seed{seed}.json"
 
 
+def _is_complete_trajectory(path: Path) -> bool:
+    """True iff `path` exists and holds a parseable trajectory JSON object.
+
+    Resume treats only valid files as complete — a truncated/half-written
+    trajectory (process killed mid-write during a long real run) is re-run
+    rather than silently trusted.
+    """
+    if not path.is_file():
+        return False
+    try:
+        obj = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    return isinstance(obj, dict)
+
+
 def _load_trajectories(raw_dir: Path) -> list[Any]:
     """Reconstruct ArmTrajectory objects from stored raw JSON files."""
     from agent_bench.run import ArmTrajectory, ToolCall
@@ -219,6 +235,7 @@ def _render_reports(
     aggregates = []
     verify_metrics: dict[str, dict[str, Any]] = {}
     success_by_arm: dict[str, list[bool]] = {}
+    success_proxy = False
 
     for arm in arms:
         raw_dir = raw_root / arm
@@ -237,8 +254,10 @@ def _render_reports(
         # Verify metrics (offline).
         verify_metrics[arm] = evaluate_arm(trajs, verify_runner)
         # Success vector — proxy (submit) when no Docker results present.
-        vec, _proxy = task_success_vector(trajs, None)
+        vec, proxy = task_success_vector(trajs, None)
         success_by_arm[arm] = vec
+        # Any arm on the proxy → label the whole comparison as proxy success.
+        success_proxy = success_proxy or proxy
 
     # McNemar paired contrasts (proxy-labelled). Only emit a contrast when
     # both arms ran the SAME tasks (equal-length vectors).
@@ -256,11 +275,16 @@ def _render_reports(
 
     (run_dir / "comparison.json").write_text(
         json.dumps(
-            multi_arm_comparison_json(aggregates, paired, verify_metrics), indent=2
+            multi_arm_comparison_json(
+                aggregates, paired, verify_metrics, success_proxy=success_proxy
+            ),
+            indent=2,
         )
     )
     (run_dir / "comparison.md").write_text(
-        multi_arm_comparison_markdown(aggregates, paired, verify_metrics)
+        multi_arm_comparison_markdown(
+            aggregates, paired, verify_metrics, success_proxy=success_proxy
+        )
     )
 
 
@@ -342,8 +366,11 @@ def run_command(
         for task in tasks:
             for seed in seeds:
                 out_file = raw_dir / _trajectory_filename(task.instance_id, seed)
-                # (4) resume: skip tuples whose trajectory file exists.
-                if args.resume and out_file.exists():
+                # (4) resume: skip tuples whose trajectory file exists AND
+                # parses as valid JSON. A truncated/half-written file (killed
+                # mid-run) is NOT trusted — it's re-run rather than silently
+                # treated as complete.
+                if args.resume and _is_complete_trajectory(out_file):
                     continue
 
                 config = RunConfig(model=args.model, system_prompt=_DEFAULT_SYSTEM_PROMPT)
