@@ -102,7 +102,8 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
         workspace.path().join("sig.rs"),
         "pub fn flush(entries: Vec<u32>) -> u32 { entries.len() as u32 }\n\
          pub unsafe extern \"C\" fn vararg(x: u32, ...) -> u32 { x }\n\
-         pub fn pair(a: u32, b: u32) -> u32 { a + b }\n",
+         pub fn pair(a: u32, b: u32) -> u32 { a + b }\n\
+         pub fn noret(a: u32) { let _ = a; }\n",
     )?;
 
     let socket_path = if cfg!(target_os = "macos") {
@@ -262,6 +263,32 @@ async fn verify_signature_round_trip() -> anyhow::Result<()> {
     assert!(
         !cands.is_empty(),
         "miss should carry candidates; got {mr:?}"
+    );
+
+    // 7. Claimed a return for a function that has none → match:false +
+    //    {issue:"return_shape", actual:null}. (Codex false-positive fix:
+    //    a claimed return must not pass just because arity matches.)
+    let ret = round_trip(
+        &mut stream,
+        "16",
+        "Index.VerifySignature",
+        json!({ "name": "noret", "claimed": { "arity": 1, "returns": "u32" } }),
+    )
+    .await?;
+    let rer = &ret["result"];
+    assert_eq!(
+        rer["match"], false,
+        "claiming a return for a no-return fn must be match:false; got {rer:?}"
+    );
+    let retdiff = rer["diff"].as_array().cloned().unwrap_or_default();
+    let rs = retdiff
+        .iter()
+        .find(|d| d["issue"] == "return_shape")
+        .expect("expected a return_shape diff");
+    assert_eq!(rs["claimed"], "u32");
+    assert!(
+        rs["actual"].is_null(),
+        "actual return should be null; got {rs:?}"
     );
 
     Ok(())

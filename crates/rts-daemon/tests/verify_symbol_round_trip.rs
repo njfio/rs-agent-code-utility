@@ -120,6 +120,11 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
         workspace.path().join("dup_b.rs"),
         "pub fn overloaded() -> u32 { 2 }\n",
     )?;
+    // A method whose container is `Store` — drives the qualified-name cases.
+    std::fs::write(
+        workspace.path().join("api.rs"),
+        "pub struct Store;\nimpl Store { pub fn boot() -> u32 { 0 } }\n",
+    )?;
 
     let socket_path = if cfg!(target_os = "macos") {
         home_dir
@@ -158,6 +163,7 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
 
     wait_for_symbol(&mut stream, "commit_batch", Duration::from_secs(5)).await?;
     wait_for_symbol(&mut stream, "overloaded", Duration::from_secs(5)).await?;
+    wait_for_symbol(&mut stream, "boot", Duration::from_secs(5)).await?;
 
     // 1. Indexed symbol → exists:true, resolution:"exact".
     let resp = round_trip(
@@ -267,6 +273,37 @@ async fn verify_symbol_round_trip() -> anyhow::Result<()> {
         fr["reason"].is_null(),
         "exact result must not carry a reason; got {fr:?}"
     );
+
+    // 5. Qualified name whose container matches → exact.
+    let q_ok = round_trip(
+        &mut stream,
+        "14",
+        "Index.VerifySymbol",
+        json!({ "name": "Store::boot" }),
+    )
+    .await?;
+    let qok = &q_ok["result"];
+    assert_eq!(
+        qok["exists"], true,
+        "Store::boot should resolve; got {qok:?}"
+    );
+    assert_eq!(qok["resolution"], "exact");
+
+    // 6. Qualified name whose container does NOT match → not_found, even
+    //    though a bare `boot` exists (the false-positive Codex flagged).
+    let q_bad = round_trip(
+        &mut stream,
+        "15",
+        "Index.VerifySymbol",
+        json!({ "name": "Other::boot" }),
+    )
+    .await?;
+    let qbad = &q_bad["result"];
+    assert_eq!(
+        qbad["exists"], false,
+        "Other::boot must NOT match the bare `boot` under Store; got {qbad:?}"
+    );
+    assert_eq!(qbad["resolution"], "not_found");
 
     Ok(())
 }

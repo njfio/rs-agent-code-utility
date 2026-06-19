@@ -2452,13 +2452,32 @@ fn verify_symbol_inner(
         }
     }
 
-    // Apply optional kind/file filters. A qualified input may also be
-    // narrowed by matching the parent segment, but U1 keeps it simple:
-    // kind + file only (the two the wire spec names).
+    // When the caller passed a QUALIFIED name (`Foo::new`), the bare-segment
+    // fallback above resolved every `new` in the index — so we must narrow to
+    // hits whose immediate container actually matches the qualifier, or we'd
+    // confirm `Foo::new` exists when only `Bar::new` does (a false positive).
+    // The store tracks only the immediate parent, so we match that segment; a
+    // free function (`parent: None`) never satisfies a qualified claim.
+    let qualifier: Option<String> = if p.name.contains("::") {
+        let mut segs: Vec<&str> = p.name.split("::").collect();
+        segs.pop(); // drop the final (bare) segment
+        segs.into_iter()
+            .rev()
+            .find(|s| !s.is_empty())
+            .map(str::to_string)
+    } else {
+        None
+    };
+
+    // Apply optional kind/file filters plus the qualifier narrowing above.
     let filtered: Vec<FoundSymbol> = hits
         .into_iter()
         .filter(|h| kind_filter.map(|k| h.kind == k).unwrap_or(true))
         .filter(|h| file_filter.map(|f| h.file == f).unwrap_or(true))
+        .filter(|h| match &qualifier {
+            Some(q) => h.parent.as_deref() == Some(q.as_str()),
+            None => true,
+        })
         .collect();
 
     // Echo `content_version`: the matched file's version on a hit
@@ -2820,13 +2839,16 @@ fn verify_signature_inner(
         }
     }
 
-    // `return_shape`: string compare, only when BOTH sides declare one.
-    if let (Some(cr), Some(ar)) = (claimed.returns.as_ref(), actual.returns.as_ref()) {
-        if cr != ar {
+    // `return_shape`: the caller asserted a return type, so flag it if the
+    // actual differs OR the actual has none at all (claiming `-> u32` for a
+    // `-> ()` fn is a mismatch, not a match). A caller that omits `returns`
+    // asserts nothing about it, so claimed-None is never a mismatch.
+    if let Some(cr) = claimed.returns.as_ref() {
+        if actual.returns.as_deref() != Some(cr.as_str()) {
             diff.push(serde_json::json!({
                 "issue":   "return_shape",
                 "claimed": cr,
-                "actual":  ar,
+                "actual":  actual.returns,  // null when the def declares no return
             }));
         }
     }

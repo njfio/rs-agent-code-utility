@@ -145,21 +145,29 @@ fn walk_rust(node: Node<'_>, src: &[u8], out: &mut Vec<Reference>) {
             return;
         }
         "type_identifier" => {
-            // A type reference; skip the names that are part of a
-            // definition's own name (those live under `name` fields and
-            // are handled by definition extraction, not here). We accept
-            // all type_identifiers in use-position; definitions of types
-            // are rare in arbitrary verification snippets and harmless.
-            if let Some(name) = text(&node, src) {
-                let (line, column) = pos(&node);
-                out.push(Reference {
-                    name: name.to_string(),
-                    qualified: None,
-                    kind: RefKind::Type,
-                    line,
-                    column,
-                    call_arity: None,
-                });
+            // A type reference — but NOT a definition's own name. A snippet
+            // that *defines* a type (`struct Foo;`, `enum E {}`, `trait T {}`,
+            // `type A = …`) must not have that name counted as a *use*, or the
+            // verifier would flag a freshly-defined type as a hallucinated
+            // reference. Genuine uses (fields, impls, bounds, generics) are kept.
+            let is_def_name = node.parent().is_some_and(|p| {
+                matches!(
+                    p.kind(),
+                    "struct_item" | "enum_item" | "union_item" | "trait_item" | "type_item"
+                ) && p.child_by_field_name("name").map(|n| n.id()) == Some(node.id())
+            });
+            if !is_def_name {
+                if let Some(name) = text(&node, src) {
+                    let (line, column) = pos(&node);
+                    out.push(Reference {
+                        name: name.to_string(),
+                        qualified: None,
+                        kind: RefKind::Type,
+                        line,
+                        column,
+                        call_arity: None,
+                    });
+                }
             }
         }
         _ => {}
@@ -236,12 +244,19 @@ fn collect_rust_use_tree(
         }
         "scoped_use_list" | "use_list" => {
             // `a::{b, c}` — the path before `{` is the new prefix.
-            let new_prefix = node
-                .child_by_field_name("path")
+            let path_node = node.child_by_field_name("path");
+            let new_prefix = path_node
                 .and_then(|p| text(&p, src))
                 .map(|p| join_path(prefix, p))
                 .unwrap_or_else(|| prefix.to_string());
+            // The `path` child is itself a `scoped_identifier`; it's already
+            // folded into `new_prefix`, so skip it — recursing into it would
+            // emit a bogus `a::b::a::b` import for `use a::b::{c}`.
+            let path_id = path_node.map(|p| p.id());
             for_each_child(*node, |child| {
+                if Some(child.id()) == path_id {
+                    return;
+                }
                 if matches!(
                     child.kind(),
                     "scoped_identifier"
@@ -607,6 +622,59 @@ mod tests {
         assert_eq!(
             import.qualified.as_deref(),
             Some("crate::store::CommitOptions")
+        );
+    }
+
+    #[test]
+    fn rust_braced_use_list_has_no_bogus_prefix_import() {
+        // `use a::b::{A, B};` must yield exactly a::b::A and a::b::B — the
+        // prefix path child must NOT be recursed into (no `a::b::a::b`).
+        let snippet = b"use crate::store::{CommitOptions, CommitConfig};";
+        let refs = extract_references(snippet, Language::Rust);
+        let imports: Vec<(&str, Option<&str>)> = refs
+            .iter()
+            .filter(|r| r.kind == RefKind::Import)
+            .map(|r| (r.name.as_str(), r.qualified.as_deref()))
+            .collect();
+        assert!(
+            imports.contains(&("CommitOptions", Some("crate::store::CommitOptions"))),
+            "got {imports:?}"
+        );
+        assert!(
+            imports.contains(&("CommitConfig", Some("crate::store::CommitConfig"))),
+            "got {imports:?}"
+        );
+        // No import may repeat the prefix (the bug emitted `crate::store::store`).
+        assert!(
+            !imports.iter().any(|(_, q)| q
+                .is_some_and(|q| q.contains("store::store") || q.contains("store::crate"))),
+            "bogus prefix import present: {imports:?}"
+        );
+        assert_eq!(
+            imports.len(),
+            2,
+            "exactly two leaf imports; got {imports:?}"
+        );
+    }
+
+    #[test]
+    fn rust_definition_name_is_not_a_type_reference() {
+        // A snippet that DEFINES a type must not count the definition's own
+        // name as a used type reference (it isn't in the index → would read
+        // as a hallucination). Genuine uses (the field type) are still kept.
+        let snippet = b"struct NewWidget { inner: Gadget }\nenum State { On, Off }";
+        let refs = extract_references(snippet, Language::Rust);
+        assert!(
+            !refs
+                .iter()
+                .any(|r| r.kind == RefKind::Type && (r.name == "NewWidget" || r.name == "State")),
+            "definition names must not be type references; got {refs:?}"
+        );
+        // The field's type IS a use and must be kept.
+        assert!(
+            refs.iter()
+                .any(|r| r.kind == RefKind::Type && r.name == "Gadget"),
+            "field type `Gadget` should be a type reference; got {refs:?}"
         );
     }
 
