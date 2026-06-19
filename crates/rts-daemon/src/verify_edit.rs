@@ -411,11 +411,15 @@ fn collect_defs(content: &str, lang: Language) -> HashMap<DefKey, DefInfo> {
 
     for sym in &outcome.symbols {
         let key: DefKey = (sym.parent.clone(), sym.name.clone());
-        // Anchor on the byte offset at the start of the def's line. The
-        // symbol's column isn't always the def keyword, so anchoring on the
-        // line start and letting `find_def_node` pick the innermost def
-        // covering that offset is robust enough for the diff.
+        // Anchor on the def's actual (line, column) — the symbol position is
+        // INSIDE its def node. Anchoring on the line *start* would land on the
+        // leading whitespace of an indented def (a method in an `impl`, a
+        // nested fn), which falls OUTSIDE the function node, so `find_def_node`
+        // would return `None` and arity changes on methods would silently pass.
+        // `start_column` is a byte offset within the line, so it composes
+        // directly with the line's byte offset.
         let shape = byte_offset_of_line(src, sym.start_line)
+            .map(|off| off + sym.start_column)
             .and_then(|off| find_def_node(root_node, off))
             .and_then(|node| signature_shape(node, src, lang));
         // First def with a given key wins; an overload collision is rare in
@@ -565,6 +569,30 @@ mod tests {
         let ns = new_defs[&k].shape.as_ref().expect("new shape");
         assert_eq!(os.arity, 1);
         assert_eq!(ns.arity, 2);
+    }
+
+    #[test]
+    fn collect_defs_decides_indented_method_shape() {
+        // Regression: an INDENTED def (method in an `impl`) must get a decidable
+        // signature shape. Anchoring on the line start instead of the symbol
+        // column lands on the leading whitespace, outside the fn node, so the
+        // shape would be None and a method arity change would silently pass.
+        let old = "pub struct S;\nimpl S {\n    pub fn m(&self, x: u32) -> u32 { x }\n}\n";
+        let new =
+            "pub struct S;\nimpl S {\n    pub fn m(&self, x: u32, y: u32) -> u32 { x + y }\n}\n";
+        let old_defs = collect_defs(old, Language::Rust);
+        let new_defs = collect_defs(new, Language::Rust);
+        let k = (Some("S".to_string()), "m".to_string());
+        let os = old_defs[&k]
+            .shape
+            .as_ref()
+            .expect("indented method old shape must be decidable");
+        let ns = new_defs[&k]
+            .shape
+            .as_ref()
+            .expect("indented method new shape must be decidable");
+        assert_eq!(os.arity, 1, "self excluded → arity 1");
+        assert_eq!(ns.arity, 2, "self excluded → arity 2 after the change");
     }
 
     #[test]
