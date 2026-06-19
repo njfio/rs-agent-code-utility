@@ -249,14 +249,135 @@ pub fn load_corpus(path: &Path) -> Result<Corpus> {
 }
 
 // ---------------------------------------------------------------------
+// Edit corpus (EVR / BCIR)
+// ---------------------------------------------------------------------
+
+/// Parsed verify-EDIT-eval corpus. Mirrors the snippet-corpus TOML shape:
+/// a pinned `version` plus an `[[edit_set]]` array, where each entry is a
+/// whole proposed patch (a list of `[file, content]` edits) with a KNOWN
+/// expected verdict the self-validation fixture pins.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EditCorpus {
+    #[allow(dead_code)]
+    pub version: u32,
+    #[serde(rename = "edit_set")]
+    pub edit_sets: Vec<CorpusEditSet>,
+}
+
+/// One proposed edit-set: a label, the list of `{file, content}` edits
+/// (full post-edit content), and the verdict the fixture expects. The
+/// expected fields are advisory metadata for the human summary / a future
+/// grader — the measured EVR / BCIR are computed from the LIVE daemon
+/// verdict, never from these.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CorpusEditSet {
+    /// Free-text label for the edit-set (what it exercises).
+    #[serde(default)]
+    pub name: String,
+    /// The proposed edits — each `{file, content}` carries the full
+    /// post-edit content of `file`.
+    pub edits: Vec<CorpusEdit>,
+    /// Expected verdict (`pass` | `warn` | `fail`). Advisory — surfaced
+    /// in the summary so a drift is visible; not used in aggregation.
+    #[serde(default)]
+    pub expected_verdict: Option<String>,
+}
+
+/// One proposed file edit inside a [`CorpusEditSet`].
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CorpusEdit {
+    /// Workspace-relative file path.
+    pub file: String,
+    /// The COMPLETE new content of `file` after the edit.
+    pub content: String,
+}
+
+impl CorpusEditSet {
+    /// The `edits` array as the JSON the daemon's `Index.VerifyEdit`
+    /// expects: `[{ "file": …, "content": … }]`.
+    pub fn edits_json(&self) -> serde_json::Value {
+        serde_json::to_value(&self.edits).unwrap_or_else(|_| json!([]))
+    }
+}
+
+/// Load and parse a TOML verify-EDIT-eval corpus.
+pub fn load_edit_corpus(path: &Path) -> Result<EditCorpus> {
+    let bytes =
+        std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    let parsed: EditCorpus = toml::from_str(&bytes)
+        .with_context(|| format!("parse {} as verify-edit corpus TOML", path.display()))?;
+    Ok(parsed)
+}
+
+// ---------------------------------------------------------------------
 // Verify oracle
 // ---------------------------------------------------------------------
 
-/// Abstracts the three live verify calls so the aggregation pipeline can
-/// run against the real daemon in production and canned answers in tests.
+/// The outcome of one `verify_edit` call: the verdict string plus the
+/// distinct finding kinds the daemon reported. Kept deliberately small —
+/// the edit metrics (EVR / BCIR) only need the verdict and whether a
+/// caller-breaking kind appeared, not the full finding payload.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EditVerdict {
+    /// `pass` | `warn` | `fail` (frozen wire strings). An unknown /
+    /// missing verdict is treated as `fail` by the aggregator (an
+    /// undecodable verdict is never counted as a clean pass).
+    pub verdict: String,
+    /// The distinct `kind` strings across `findings[]`
+    /// (`broken_caller`, `signature_break`, `dangling_ref`,
+    /// `new_symbol`, …). Used to decide BCIR membership.
+    pub finding_kinds: BTreeSet<String>,
+}
+
+impl EditVerdict {
+    /// True when the verdict reads as a clean `pass` (the EVR numerator
+    /// criterion). `warn` and `fail` — and any unknown verdict — count
+    /// AGAINST EVR.
+    pub fn is_pass(&self) -> bool {
+        self.verdict == "pass"
+    }
+
+    /// True when any finding kind is caller-breaking (`broken_caller`
+    /// or `signature_break`) — the BCIR numerator criterion.
+    pub fn introduces_broken_caller(&self) -> bool {
+        self.finding_kinds.contains("broken_caller")
+            || self.finding_kinds.contains("signature_break")
+    }
+
+    /// Build an [`EditVerdict`] from a raw `Index.VerifyEdit` response
+    /// body. Missing `verdict` → `"fail"` (honest default — never read
+    /// an undecodable body as a pass). Missing/empty `findings` → no
+    /// kinds.
+    pub fn from_body(body: &serde_json::Value) -> Self {
+        let verdict = body
+            .get("verdict")
+            .and_then(|v| v.as_str())
+            .unwrap_or("fail")
+            .to_string();
+        let finding_kinds = body
+            .get("findings")
+            .and_then(|f| f.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|f| f.get("kind").and_then(|k| k.as_str()))
+                    .map(|s| s.to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+        EditVerdict {
+            verdict,
+            finding_kinds,
+        }
+    }
+}
+
+/// Abstracts the live verify calls so the aggregation pipeline can run
+/// against the real daemon in production and canned answers in tests.
 ///
-/// Each method returns the [`Resolution`] for one reference. The pure
-/// math never sees the daemon; this trait is the only seam that does.
+/// Each per-reference method returns the [`Resolution`] for one
+/// reference; [`verify_edit`](VerifyOracle::verify_edit) returns the
+/// [`EditVerdict`] for one whole edit-set. The pure math never sees the
+/// daemon; this trait is the only seam that does.
 #[allow(async_fn_in_trait)]
 pub trait VerifyOracle {
     /// `verify_symbol(name)` → resolution.
@@ -272,6 +393,11 @@ pub trait VerifyOracle {
     /// driver (a call site is only decidable when the callee exists), so
     /// this method just reports the signature outcome.
     async fn verify_signature(&mut self, name: &str, arity: u32) -> Result<Resolution>;
+    /// `verify_edit(edits)` → the verdict + finding kinds for one
+    /// proposed edit-set. `edits` is the `[{file, content}]` array
+    /// (full post-edit content) forwarded verbatim to the daemon's
+    /// `Index.VerifyEdit`.
+    async fn verify_edit(&mut self, edits: &serde_json::Value) -> Result<EditVerdict>;
 }
 
 /// Live [`VerifyOracle`] backed by an `McpSession` talking to the real
@@ -346,6 +472,16 @@ impl VerifyOracle for SessionOracle<'_> {
             },
             other => other,
         })
+    }
+
+    async fn verify_edit(&mut self, edits: &serde_json::Value) -> Result<EditVerdict> {
+        let call = self
+            .session
+            .tools_call("verify_edit", json!({ "edits": edits }), self.retries)
+            .await
+            .context("verify_edit call")?;
+        let body = call.result_body.clone().unwrap_or_default();
+        Ok(EditVerdict::from_body(&body))
     }
 }
 
@@ -465,6 +601,115 @@ pub fn report_from_resolutions(
         acc.unsupported_language_refs,
         acc.languages_covered,
     )
+}
+
+// ---------------------------------------------------------------------
+// Edit metrics: EVR / BCIR
+// ---------------------------------------------------------------------
+
+/// A simple fraction over the edit corpus: `numerator / denominator`,
+/// with `rate = None` when the corpus is empty (never `NaN`). Same
+/// honest-denominator convention as [`Metric`], but every edit-set is
+/// always decidable (a verdict always comes back), so there is no
+/// excluded-indeterminate bucket here.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditRate {
+    /// Edit-sets matching the metric's criterion.
+    pub numerator: u64,
+    /// Total edit-sets considered.
+    pub denominator: u64,
+    /// `numerator / denominator`, or `null` when `denominator == 0`.
+    pub rate: Option<f64>,
+}
+
+impl EditRate {
+    fn new(numerator: u64, denominator: u64) -> Self {
+        let rate = if denominator == 0 {
+            None
+        } else {
+            Some(numerator as f64 / denominator as f64)
+        };
+        EditRate {
+            numerator,
+            denominator,
+            rate,
+        }
+    }
+}
+
+/// Versioned edit-quality report. EVR (Edit Validity Rate) and BCIR
+/// (Broken-Caller Introduction Rate) over a corpus of proposed edit-sets.
+///
+/// - **EVR** = fraction of edit-sets whose `verify_edit` verdict is
+///   `pass`. `warn` / `fail` (and any undecodable verdict) count against
+///   it.
+/// - **BCIR** = fraction of edit-sets whose findings include ≥1
+///   `broken_caller` or `signature_break`. The complement of "clean of
+///   caller breaks" — higher is worse.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditQualityReport {
+    /// Schema version for this report payload.
+    pub version: u32,
+    /// `rts-bench` package version.
+    pub rts_bench_version: String,
+    /// Workspace the edits were validated against.
+    pub workspace_path: String,
+    /// Corpus file the edit-sets came from.
+    pub corpus_path: String,
+    /// Number of corpus edit-sets processed.
+    pub edit_set_count: usize,
+    /// Edit Validity Rate: `pass` verdicts / all edit-sets.
+    pub evr: EditRate,
+    /// Broken-Caller Introduction Rate: edit-sets with ≥1
+    /// `broken_caller`/`signature_break` finding / all edit-sets.
+    pub bcir: EditRate,
+}
+
+/// Aggregate EVR / BCIR from an iterator of per-edit-set [`EditVerdict`]s.
+/// Pure math — no daemon, no IO.
+pub fn build_edit_report(
+    rts_bench_version: &str,
+    workspace_path: &str,
+    corpus_path: &str,
+    verdicts: impl IntoIterator<Item = EditVerdict>,
+) -> EditQualityReport {
+    let mut total = 0u64;
+    let mut passes = 0u64;
+    let mut broken = 0u64;
+    for v in verdicts {
+        total += 1;
+        if v.is_pass() {
+            passes += 1;
+        }
+        if v.introduces_broken_caller() {
+            broken += 1;
+        }
+    }
+    EditQualityReport {
+        version: 1,
+        rts_bench_version: rts_bench_version.to_string(),
+        workspace_path: workspace_path.to_string(),
+        corpus_path: corpus_path.to_string(),
+        edit_set_count: total as usize,
+        evr: EditRate::new(passes, total),
+        bcir: EditRate::new(broken, total),
+    }
+}
+
+/// Run an edit corpus through the oracle, calling `verify_edit` once per
+/// edit-set and collecting the verdicts. A single failed RPC aborts the
+/// run (unlike snippet metrics, an edit-set has no honest "skip" — a
+/// missing verdict would silently shrink the denominator).
+pub async fn run_edit_corpus<O: VerifyOracle>(
+    oracle: &mut O,
+    corpus: &EditCorpus,
+) -> Result<Vec<EditVerdict>> {
+    let mut out = Vec::with_capacity(corpus.edit_sets.len());
+    for set in &corpus.edit_sets {
+        let edits = set.edits_json();
+        out.push(oracle.verify_edit(&edits).await?);
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -603,6 +848,21 @@ mod tests {
         symbols: HashMap<String, Resolution>,
         imports: HashMap<String, Resolution>,
         signatures: HashMap<String, Resolution>,
+        /// Canned `verify_edit` verdicts, returned in order. Each call
+        /// pops the next. A panic on exhaustion makes a miscounted test
+        /// loud instead of silently reusing a stale verdict.
+        edit_verdicts: Vec<EditVerdict>,
+    }
+
+    impl StubOracle {
+        fn empty() -> Self {
+            StubOracle {
+                symbols: HashMap::new(),
+                imports: HashMap::new(),
+                signatures: HashMap::new(),
+                edit_verdicts: Vec::new(),
+            }
+        }
     }
 
     impl VerifyOracle for StubOracle {
@@ -627,6 +887,19 @@ mod tests {
                 .copied()
                 .unwrap_or(Resolution::Indeterminate))
         }
+        async fn verify_edit(&mut self, _edits: &serde_json::Value) -> Result<EditVerdict> {
+            if self.edit_verdicts.is_empty() {
+                anyhow::bail!("StubOracle.verify_edit called more times than canned verdicts");
+            }
+            Ok(self.edit_verdicts.remove(0))
+        }
+    }
+
+    fn verdict(v: &str, kinds: &[&str]) -> EditVerdict {
+        EditVerdict {
+            verdict: v.to_string(),
+            finding_kinds: kinds.iter().map(|s| s.to_string()).collect(),
+        }
     }
 
     fn block_on<F: std::future::Future>(f: F) -> F::Output {
@@ -645,6 +918,7 @@ mod tests {
             symbols: HashMap::from([("make_thing".to_string(), Resolution::Exact)]),
             imports: HashMap::new(),
             signatures: HashMap::from([("make_thing".to_string(), Resolution::NotFound)]),
+            edit_verdicts: Vec::new(),
         };
         let mut acc = Resolutions::default();
         block_on(resolve_snippet(
@@ -671,6 +945,7 @@ mod tests {
             symbols: HashMap::from([("invented".to_string(), Resolution::NotFound)]),
             imports: HashMap::new(),
             signatures: HashMap::from([("invented".to_string(), Resolution::NotFound)]),
+            edit_verdicts: Vec::new(),
         };
         let mut acc = Resolutions::default();
         block_on(resolve_snippet(
@@ -694,6 +969,7 @@ mod tests {
             symbols: HashMap::new(),
             imports: HashMap::from([("std::collections::HashMap".to_string(), Resolution::Exact)]),
             signatures: HashMap::new(),
+            edit_verdicts: Vec::new(),
         };
         let mut acc = Resolutions::default();
         block_on(resolve_snippet(
@@ -721,6 +997,7 @@ mod tests {
             symbols: HashMap::new(),
             imports: HashMap::new(),
             signatures: HashMap::new(),
+            edit_verdicts: Vec::new(),
         };
         let acc = block_on(run_corpus(&mut oracle, &corpus)).unwrap();
         // Go has no F3 support → no decidable refs, 4 non-blank lines
@@ -746,10 +1023,148 @@ mod tests {
             symbols: HashMap::new(),
             imports: HashMap::new(),
             signatures: HashMap::new(),
+            edit_verdicts: Vec::new(),
         };
         let acc =
             block_on(run_corpus(&mut oracle, &corpus)).expect("must not abort on unknown lang");
         assert!(acc.symbol.is_empty());
         assert_eq!(acc.unsupported_language_refs, 2);
+    }
+
+    // ---- EVR / BCIR aggregation (edit metrics) ----
+
+    #[test]
+    fn edit_verdict_from_body_defaults_missing_verdict_to_fail() {
+        // No `verdict` field → fail (never a false pass), no kinds.
+        let v = EditVerdict::from_body(&json!({}));
+        assert_eq!(v.verdict, "fail");
+        assert!(!v.is_pass());
+        assert!(v.finding_kinds.is_empty());
+
+        // A pass with a new_symbol finding: is_pass true, no broken caller.
+        let v = EditVerdict::from_body(&json!({
+            "verdict": "pass",
+            "findings": [{ "kind": "new_symbol", "symbol": "brand_new" }],
+        }));
+        assert!(v.is_pass());
+        assert!(!v.introduces_broken_caller());
+
+        // A fail with a broken_caller: not a pass, IS a broken caller.
+        let v = EditVerdict::from_body(&json!({
+            "verdict": "fail",
+            "findings": [{ "kind": "broken_caller", "symbol": "target" }],
+        }));
+        assert!(!v.is_pass());
+        assert!(v.introduces_broken_caller());
+
+        // signature_break also counts toward BCIR.
+        let v = EditVerdict::from_body(&json!({
+            "verdict": "fail",
+            "findings": [{ "kind": "signature_break", "symbol": "target" }],
+        }));
+        assert!(v.introduces_broken_caller());
+    }
+
+    #[test]
+    fn build_edit_report_evr_bcir_numerator_denominator() {
+        // 4 edit-sets: 2 pass (one with a benign new_symbol), 1 warn,
+        // 1 fail-with-broken_caller.
+        //   EVR  = passes / total      = 2 / 4 = 0.5
+        //   BCIR = caller-breaks / total = 1 / 4 = 0.25
+        let verdicts = vec![
+            verdict("pass", &[]),
+            verdict("pass", &["new_symbol"]),
+            verdict("warn", &["dangling_ref"]),
+            verdict("fail", &["broken_caller"]),
+        ];
+        let report = build_edit_report("0.0.0-test", "/ws", "/c.toml", verdicts);
+        assert_eq!(report.version, 1);
+        assert_eq!(report.edit_set_count, 4);
+        assert_eq!(report.evr.numerator, 2);
+        assert_eq!(report.evr.denominator, 4);
+        assert_eq!(report.evr.rate, Some(0.5));
+        assert_eq!(report.bcir.numerator, 1);
+        assert_eq!(report.bcir.denominator, 4);
+        assert_eq!(report.bcir.rate, Some(0.25));
+    }
+
+    #[test]
+    fn build_edit_report_signature_break_counts_toward_bcir() {
+        // A `fail` driven by a signature_break (not broken_caller) still
+        // lands in BCIR — both kinds are caller-breaking.
+        let verdicts = vec![verdict("fail", &["signature_break"])];
+        let report = build_edit_report("0.0.0-test", "/ws", "/c.toml", verdicts);
+        assert_eq!(report.evr.rate, Some(0.0));
+        assert_eq!(report.bcir.numerator, 1);
+        assert_eq!(report.bcir.rate, Some(1.0));
+    }
+
+    #[test]
+    fn build_edit_report_empty_corpus_is_none_not_nan() {
+        let report = build_edit_report("0.0.0-test", "/ws", "/c.toml", []);
+        assert_eq!(report.edit_set_count, 0);
+        assert_eq!(report.evr.rate, None);
+        assert_eq!(report.bcir.rate, None);
+        // And serializes as JSON null, never NaN.
+        let j = serde_json::to_value(&report).unwrap();
+        assert!(j["evr"]["rate"].is_null());
+        assert!(j["bcir"]["rate"].is_null());
+    }
+
+    #[test]
+    fn run_edit_corpus_calls_verify_edit_per_set_in_order() {
+        // Two edit-sets; the stub returns a canned verdict per call.
+        // run_edit_corpus must preserve order and emit one verdict each.
+        let corpus = EditCorpus {
+            version: 1,
+            edit_sets: vec![
+                CorpusEditSet {
+                    name: "breaking".into(),
+                    edits: vec![CorpusEdit {
+                        file: "hub.rs".into(),
+                        content: "pub fn unrelated() {}\n".into(),
+                    }],
+                    expected_verdict: Some("fail".into()),
+                },
+                CorpusEditSet {
+                    name: "safe".into(),
+                    edits: vec![CorpusEdit {
+                        file: "hub.rs".into(),
+                        content: "pub fn target(x: u32) -> u32 { x }\npub fn extra() {}\n".into(),
+                    }],
+                    expected_verdict: Some("pass".into()),
+                },
+            ],
+        };
+        let mut oracle = StubOracle::empty();
+        oracle.edit_verdicts = vec![
+            verdict("fail", &["broken_caller"]),
+            verdict("pass", &["new_symbol"]),
+        ];
+        let verdicts = block_on(run_edit_corpus(&mut oracle, &corpus)).unwrap();
+        assert_eq!(verdicts.len(), 2);
+        assert_eq!(verdicts[0].verdict, "fail");
+        assert!(verdicts[0].introduces_broken_caller());
+        assert_eq!(verdicts[1].verdict, "pass");
+
+        // And the report over those verdicts: EVR=1/2, BCIR=1/2.
+        let report = build_edit_report("0.0.0-test", "/ws", "/c.toml", verdicts);
+        assert_eq!(report.evr.rate, Some(0.5));
+        assert_eq!(report.bcir.rate, Some(0.5));
+    }
+
+    #[test]
+    fn corpus_edit_set_edits_json_matches_daemon_shape() {
+        let set = CorpusEditSet {
+            name: "x".into(),
+            edits: vec![CorpusEdit {
+                file: "a.rs".into(),
+                content: "fn a() {}\n".into(),
+            }],
+            expected_verdict: None,
+        };
+        let j = set.edits_json();
+        assert_eq!(j[0]["file"], "a.rs");
+        assert_eq!(j[0]["content"], "fn a() {}\n");
     }
 }

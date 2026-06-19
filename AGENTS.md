@@ -323,6 +323,39 @@ disables the nudge hook. The hook locates the `rts` binary via `$RTS_BIN`
 Test it locally with `.claude/hooks/tests/run-verify-tests.sh` (pure
 bash; needs `jq`; stubs the `rts` binary so it needs no daemon).
 
+### `rts verify-edit` — the CI / pre-merge gate (verify-v0 P3)
+
+Where `rts verify <file>` annotates and never blocks, **`rts verify-edit`**
+is the *blocking* gate: it validates a whole proposed patch *before it is
+written* and fails the build by exit code on a caller-breaking change.
+
+```
+rts verify-edit --edits pr-edits.json --fail-on critical
+```
+
+`--edits` takes a path or `-` (stdin) to an edits JSON —
+`[{ "file": "...", "content": "..." }]`, where each `content` is the FULL
+post-edit content of that file. It calls `Index.VerifyEdit`, prints the
+pass/warn/fail verdict + findings (`SEVERITY  kind  symbol  site  — detail`;
+`--json` passes the daemon response straight through), and maps the verdict
+to an exit code via **`--fail-on <none|warn|critical>`** (default
+`critical`):
+
+| `--fail-on` | pass | warn | fail | daemon error / bad input |
+|-------------|------|------|------|--------------------------|
+| `critical`  | 0    | 0    | 2    | 3                        |
+| `warn`      | 0    | 2    | 2    | 3                        |
+| `none`      | 0    | 0    | 0    | 3                        |
+
+So `--fail-on critical` (the default) fails the build only on a real break
+(`broken_caller` / `signature_break`); `--fail-on warn` is stricter; and
+`--fail-on none` is report-only (always exits 0). A malformed/empty edits
+JSON errors cleanly with exit 3, never a panic.
+
+The same EVR/BCIR numbers this gate is built on are measured in bulk by
+`rts-bench verify-edit --corpus … --workspace …` (Edit Validity Rate and
+Broken-Caller Introduction Rate over a corpus of edit-sets).
+
 ### Where shell `grep` / `rg` is still the right tool
 
 - Searching files outside the indexed workspace (vendored deps,

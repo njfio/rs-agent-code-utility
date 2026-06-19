@@ -1,0 +1,54 @@
+# Self-validation fixture for the edit-quality harness
+# (`rts-bench verify-edit`, verify-v0 P3.U2).
+#
+# This corpus has KNOWN expected EVR / BCIR so the metric provably
+# detects what it should. It is checked against the tiny workspace seeded
+# by the `verify_edit_metrics_integration` test
+# (`crates/rts-bench/tests/verify_edit_metrics_integration.rs`), which
+# defines:
+#
+#   hub.rs       — `pub fn target(x: u32) -> u32` (arity 1), called by
+#   caller_a.rs  — `pub fn caller_a()` → `target(1)`
+#
+# Each `[[edit_set]]` is a whole proposed patch (a list of
+# `{file, content}` FULL post-edit contents) with a KNOWN expected
+# verdict.  The measured numbers come from the LIVE daemon — the
+# `expected_verdict` field below is advisory metadata only.
+#
+# Against the seeded workspace, the three edit-sets resolve as:
+#
+#   1. "breaking-remove"     hub.rs no longer defines `target`
+#                            → fail + broken_caller (caller_a)        [BCIR]
+#   2. "safe-add"            keep `target`, add `brand_new`
+#                            → pass + new_symbol
+#   3. "safe-body"           arity-preserving body edit of `target`
+#                            → pass
+#
+#   EVR  = pass / total              = 2 / 3
+#   BCIR = caller-breaking / total   = 1 / 3
+#
+# If these expected values ever drift, either `Index.VerifyEdit` or the
+# extractor changed — investigate before re-baselining.
+
+version = 1
+
+[[edit_set]]
+name = "breaking-remove: drop a called fn → broken_caller"
+expected_verdict = "fail"
+edits = [
+  { file = "hub.rs", content = "pub fn unrelated() -> u32 { 0 }\n" },
+]
+
+[[edit_set]]
+name = "safe-add: add a new fn, keep target intact → pass"
+expected_verdict = "pass"
+edits = [
+  { file = "hub.rs", content = "pub fn target(x: u32) -> u32 { x + 1 }\npub fn brand_new() -> u32 { 9 }\n" },
+]
+
+[[edit_set]]
+name = "safe-body: arity-preserving body edit → pass"
+expected_verdict = "pass"
+edits = [
+  { file = "hub.rs", content = "pub fn target(x: u32) -> u32 { x + 100 }\n" },
+]
