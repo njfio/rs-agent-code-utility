@@ -121,9 +121,13 @@ pub struct ValidationInput {
     pub all: Option<bool>,
 }
 
-/// Default match limit when `params.limit` is unset. Mirrors the v1
-/// `DEFAULT_LIMIT` from `methods/index.rs`.
-const DEFAULT_LIMIT: u32 = 256;
+/// Default RESPONSE budget when `params.limit` is unset: how many
+/// ranked matches a bare grep returns. Mirrors
+/// `GREP_DEFAULT_BUDGET` in `methods/index.rs`. This caps the RETURNED
+/// set only — the handler still collects a larger ranking pool
+/// (`RANK_POOL`) to rank from, so the top-40 is drawn from a real
+/// candidate population rather than the first 40 in scan order.
+const DEFAULT_LIMIT: u32 = 40;
 
 /// Maximum allowed `text` length (chars). Mirrors v1.
 const MAX_TEXT_LEN: usize = 1024;
@@ -500,6 +504,16 @@ mod tests {
     fn default_limit_when_unset() {
         let (_, shared) = validate(&input_text("hello")).unwrap();
         assert_eq!(shared.limit, DEFAULT_LIMIT);
+    }
+
+    #[test]
+    fn unset_limit_defaults_to_grep_budget_40() {
+        // Task 4: a bare grep (no `limit`) must resolve to the
+        // GREP_DEFAULT_BUDGET response cap of 40. The handler still
+        // ranks from a larger RANK_POOL; this asserts only the RETURNED
+        // budget default.
+        let (_, shared) = validate(&input_text("x")).unwrap();
+        assert_eq!(shared.limit, 40);
     }
 
     // ----- New regex-default + literal/all inputs -----

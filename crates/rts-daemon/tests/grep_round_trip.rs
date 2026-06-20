@@ -765,3 +765,223 @@ async fn grep_regex_compile_failure_falls_back_to_literal() -> anyhow::Result<()
 
     Ok(())
 }
+
+/// Spawn a daemon, mount `workspace`, and return the connected stream
+/// plus the kill guard. Mirrors the inline scaffolding used by the
+/// other tests in this file but keeps the Task-4 ranking/budget tests
+/// readable. `poll_name` is a symbol the writer is expected to commit
+/// so we know indexing has settled before grepping.
+async fn spawn_and_mount(
+    workspace: &std::path::Path,
+    runtime_dir: &tempfile::TempDir,
+    state_dir: &tempfile::TempDir,
+    home_dir: &tempfile::TempDir,
+    poll_name: &str,
+) -> anyhow::Result<(UnixStream, std::process::Child)> {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = cmd.spawn()?;
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace }),
+    )
+    .await?;
+    anyhow::ensure!(mount["error"].is_null(), "mount failed: {mount:?}");
+    let _ = poll_for_match(&mut stream, poll_name, Duration::from_secs(5)).await?;
+    Ok((stream, child))
+}
+
+/// Task 4: matches are returned in non-increasing `rank_score` order.
+/// The workspace gives `hub` a high PageRank (called from many sites)
+/// while `lonely` is uncalled (rank ~0). Both function bodies contain
+/// the common search term, so the ranked response must surface `hub`'s
+/// match before `lonely`'s.
+#[tokio::test(flavor = "current_thread")]
+async fn matches_are_ranked_by_rank_score_desc() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // `hub` is called by 12 distinct callers => high PageRank.
+    // `lonely` is never called => PageRank floor.
+    // Both bodies contain the literal "needle_token".
+    //
+    // CRUCIAL for the pool/budget decoupling: `hub`'s definition is
+    // emitted LAST, after 60 low-rank `noise_*` functions that each
+    // also contain "needle_token". In scan order hub's match sits well
+    // past position 40, so if the handler truncated to the response
+    // budget BEFORE ranking, hub's high-rank hit would be dropped and
+    // could never surface first. Its appearance at/near the top proves
+    // ranking drew from a real candidate pool, not the first-N.
+    let mut lib = String::new();
+    lib.push_str("pub fn lonely() -> i32 {\n    let needle_token = 2;\n    needle_token\n}\n");
+    for i in 0..60 {
+        lib.push_str(&format!(
+            "pub fn noise_{i}() -> i32 {{\n    let needle_token = {i};\n    needle_token\n}}\n"
+        ));
+    }
+    for i in 0..12 {
+        lib.push_str(&format!(
+            "pub fn caller_{i}() -> i32 {{\n    hub()\n}}\n"
+        ));
+    }
+    // hub defined last => its body's match is late in scan order.
+    lib.push_str("pub fn hub() -> i32 {\n    let needle_token = 1;\n    needle_token\n}\n");
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "hub").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "50",
+        "Index.Grep",
+        json!({ "text": "needle_token" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        matches.len() >= 2,
+        "expected at least two needle_token matches: {resp:?}"
+    );
+
+    // The rank_score sequence over returned matches is non-increasing.
+    for window in matches.windows(2) {
+        let prev = window[0]["rank_score"].as_f64().unwrap_or(0.0);
+        let next = window[1]["rank_score"].as_f64().unwrap_or(0.0);
+        assert!(
+            prev >= next,
+            "matches must be sorted by rank_score desc: prev={prev} next={next}: {window:?}"
+        );
+    }
+
+    // `hub`'s match (defined LAST in the file, late in scan order) must
+    // appear in the returned set despite the response budget — this is
+    // the load-bearing assertion for pool/budget decoupling. If the
+    // scan truncated to the budget in scan order before ranking, hub
+    // would never make the cut.
+    let hub_idx = matches.iter().position(|m| {
+        m["enclosing_qualified_name"].as_str() == Some("hub")
+    });
+    let hub_idx = hub_idx.expect("hub's high-rank match must survive into the ranked response");
+    let hub_rank = matches[hub_idx]["rank_score"].as_f64().unwrap_or(0.0);
+    assert!(
+        hub_rank > 0.0,
+        "hub must have a real (>0) PageRank: got {hub_rank}"
+    );
+    // hub must outrank (and thus be positioned before) any `lonely`
+    // match if it is present.
+    if let Some(l) = matches
+        .iter()
+        .position(|m| m["enclosing_qualified_name"].as_str() == Some("lonely"))
+    {
+        let lonely_rank = matches[l]["rank_score"].as_f64().unwrap_or(0.0);
+        assert!(
+            hub_rank >= lonely_rank && hub_idx <= l,
+            "hub (called 12x) must outrank/precede lonely: hub_rank={hub_rank}@{hub_idx} lonely_rank={lonely_rank}@{l}"
+        );
+    }
+
+    Ok(())
+}
+
+/// Task 4: with `limit` unset, a workspace holding far more than the
+/// default budget of matches must return exactly `GREP_DEFAULT_BUDGET`
+/// (40), flag `truncated: true`, report `shown == 40`, and a
+/// `total_matches` that honestly counts every hit seen (> 40).
+#[tokio::test(flavor = "current_thread")]
+async fn default_budget_bounds_to_40() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // 200 functions, each body containing the search term TWICE (the
+    // `let widget_marker = …` binding and the bare return) => 400
+    // matches. This deliberately EXCEEDS the 256 rank pool so the
+    // handler must keep counting `total_matches` past the pool (without
+    // growing the returned set) — exercising the decoupling of all
+    // three budget numbers: returned (40), pool (256), counted (400).
+    let mut lib = String::new();
+    for i in 0..200 {
+        lib.push_str(&format!(
+            "pub fn f_{i}() -> i32 {{\n    let widget_marker = {i};\n    widget_marker\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "f_0").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "60",
+        "Index.Grep",
+        json!({ "text": "widget_marker" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    assert_eq!(
+        matches.len(),
+        40,
+        "default budget must cap returned matches at 40: got {}",
+        matches.len()
+    );
+    assert_eq!(
+        result["shown"].as_u64(),
+        Some(40),
+        "`shown` must equal returned length (40): {result}"
+    );
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(true),
+        "`truncated` must be true when more matches exist than shown: {result}"
+    );
+    let total = result["total_matches"].as_u64().unwrap_or(0);
+    assert!(
+        total > 40,
+        "`total_matches` must honestly count all hits (>40): got {total}: {result}"
+    );
+    assert_eq!(
+        total, 400,
+        "`total_matches` must count every match past the pool (2 per fn x 200): got {total}"
+    );
+
+    Ok(())
+}

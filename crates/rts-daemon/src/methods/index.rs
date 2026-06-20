@@ -1390,9 +1390,19 @@ pub async fn grep(
     state: &Arc<DaemonState>,
     token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
-    /// Default cap on returned matches when `limit` is unset.
-    /// Matches `find_symbol`'s default — same agent-context budget.
-    const DEFAULT_LIMIT: usize = 256;
+    /// Response cap (matches RETURNED) when `limit` is unset and `all`
+    /// is false. Deliberately small: a ranked top-40 keeps agent
+    /// context lean while still drawing from a real candidate pool
+    /// (`RANK_POOL`). Distinct from `RANK_POOL` (what we rank FROM) and
+    /// from `total_matches` (what we count). Mirrored by the compose
+    /// validator's unset-`limit` default so a bare grep returns 40.
+    const GREP_DEFAULT_BUDGET: usize = 40;
+    /// Ranking candidate pool: normal mode collects up to this many
+    /// matches to rank FROM, so the returned top-`limit` is chosen from
+    /// a meaningful population rather than an arbitrary scan-order
+    /// prefix. The effective pool is `max(RANK_POOL, limit)` so an
+    /// explicit `--limit 500` still ranks from >=500 candidates.
+    const RANK_POOL: usize = 256;
     /// Hard ceiling on `limit`. Same shape as `find_symbol`.
     const MAX_LIMIT: usize = 4096;
     /// Max body bytes we'll scan per file. Above this, the file is
@@ -1488,7 +1498,16 @@ pub async fn grep(
             "`limit` must be >= 1",
         ));
     }
+    // Response budget: how many ranked matches we RETURN. The compose
+    // validator already resolved unset `limit` to GREP_DEFAULT_BUDGET,
+    // so this is either that default or the caller's explicit value.
+    // The debug_assert keeps the two default sites from silently
+    // drifting apart.
     let limit = shared_filters.limit as usize;
+    debug_assert!(
+        shared_filters.limit != 0,
+        "validator guarantees limit >= 1; GREP_DEFAULT_BUDGET={GREP_DEFAULT_BUDGET}"
+    );
 
     let (text_for_response, case_insensitive, multiline, scanner, matched_kind) = match validated {
         super::grep_v2::ValidatedGrepCall::Literal {
@@ -1923,11 +1942,31 @@ pub async fn grep(
         )
     })?;
 
+    // BUDGET MODEL (see the GREP_DEFAULT_BUDGET / RANK_POOL consts).
+    // Three distinct numbers, deliberately decoupled:
+    //   * `limit`        — response budget: how many ranked matches we
+    //                      RETURN. Applied AFTER ranking.
+    //   * `pool_cap`     — collection ceiling: how many matches we
+    //                      gather into `matches` to rank FROM. We must
+    //                      collect a real pool (>= RANK_POOL) so the
+    //                      returned top-`limit` is chosen from a
+    //                      meaningful population, not an arbitrary
+    //                      scan-order prefix. `max(RANK_POOL, limit)`
+    //                      keeps an explicit large `--limit` honest.
+    //   * `total_matches`— honest counter of every hit encountered up
+    //                      to the hard scan ceiling (MAX_LIMIT), even
+    //                      past the pool, so the footer can say
+    //                      "40 of 918".
+    // CRITICAL: collection is bounded by `pool_cap`, NOT `limit`. If we
+    // truncated to `limit` in scan order before ranking, a high-rank
+    // match late in scan order would be lost and the feature would be
+    // silently broken.
+    let pool_cap = RANK_POOL.max(limit).min(MAX_LIMIT);
     let mut matches: Vec<serde_json::Value> = Vec::new();
     let mut files_scanned: usize = 0;
     let mut files_with_matches: usize = 0;
-    let mut total_pre_truncate: usize = 0;
-    let mut truncated_hit_cap = false;
+    // Every match seen, capped at MAX_LIMIT (the hard scan ceiling).
+    let mut total_matches: usize = 0;
 
     'files: for rel in &files {
         // Cooperative cancellation: per-file boundary. Covers both the
@@ -2010,9 +2049,9 @@ pub async fn grep(
             if token.is_cancelled() {
                 return Err(cancelled());
             }
-            total_pre_truncate += 1;
+            total_matches += 1;
 
-            if matches.len() < limit {
+            if matches.len() < pool_cap {
                 let (line_no, line_start, line_end) = find_line_bounds(&bytes, m_start);
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
@@ -2093,13 +2132,17 @@ pub async fn grep(
                 }));
                 file_recorded = true;
             } else {
-                truncated_hit_cap = true;
-                // We've filled `matches`; further hits in this file
-                // count toward `total_pre_truncate` (so `truncated`
-                // reflects reality) but contribute no payload.
-                // Stop scanning entirely — agents should narrow the
-                // search instead of asking for more pages.
-                break 'files;
+                // The rank pool (`pool_cap`) is full: we have enough
+                // candidates to rank from and won't grow `matches` any
+                // further. But we KEEP counting `total_matches` (already
+                // incremented above) past the pool so the footer can
+                // honestly report "shown of total" — e.g. "40 of 918".
+                // Only the hard scan ceiling (MAX_LIMIT) stops the walk
+                // entirely; that bounds worst-case CPU on pathological
+                // patterns while keeping the count meaningful.
+                if total_matches >= MAX_LIMIT {
+                    break 'files;
+                }
             }
         }
         if file_recorded {
@@ -2156,38 +2199,64 @@ pub async fn grep(
         let surviving_files: HashSet<&str> =
             matches.iter().filter_map(|m| m["file"].as_str()).collect();
         files_with_matches = surviving_files.len();
-        // Reflect the post-filter drop in the `truncated` accounting:
-        // `total_pre_truncate` was counted pre-filter, so if the
-        // filter dropped any rows we want the existing
-        // `total_pre_truncate > matches.len()` clause to keep firing.
-        // No mutation needed; just note the invariant.
+        // `total_matches` was counted pre-filter, so dropped rows keep
+        // the `total_matches > shown` truncation clause firing — no
+        // mutation needed.
         let _ = dropped_count;
     }
 
-    let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
+    // Normal mode (`!all`): rank the collected POOL by enclosing-def
+    // PageRank (descending), THEN truncate to the response budget.
+    // Ranking before truncation is the whole point — the returned
+    // top-`limit` is chosen from up to `pool_cap` candidates, so a
+    // high-rank match late in scan order still surfaces. `all` mode
+    // (Task 5) wants scan-order + unbounded, so it skips both the sort
+    // and the truncate here.
+    //
+    // Comparator mirrors `find_symbol`'s SortMode::Rank (index.rs):
+    // rank DESC, then (file, start_byte) ASC for deterministic ties.
+    // File-scope / cold-start matches carry `rank_score == 0.0` and
+    // sort last.
+    if !shared_filters.all {
+        matches.sort_by(|a, b| {
+            let ra = a["rank_score"].as_f64().unwrap_or(0.0);
+            let rb = b["rank_score"].as_f64().unwrap_or(0.0);
+            // total_cmp handles NaN safely; partial_cmp would panic on
+            // NaN inputs (which shouldn't happen here, but defending in
+            // depth is cheap).
+            rb.total_cmp(&ra).then_with(|| {
+                let af = a["file"].as_str().unwrap_or("");
+                let bf = b["file"].as_str().unwrap_or("");
+                let ab = a["range"]["start_byte"].as_u64().unwrap_or(0);
+                let bb = b["range"]["start_byte"].as_u64().unwrap_or(0);
+                af.cmp(bf).then(ab.cmp(&bb))
+            })
+        });
+        matches.truncate(limit);
+    }
 
-    // v0.5.5: sort by enclosing-def PageRank, descending. Ties broken
-    // by `(file, start_byte)` for stable cross-call ordering — same
-    // shape `find_callers` uses. Matches without enclosing (file-scope
-    // or cold-start) carry `rank_score == 0.0` and fall to the bottom.
-    matches.sort_by(|a, b| {
-        let ra = a["rank_score"].as_f64().unwrap_or(0.0);
-        let rb = b["rank_score"].as_f64().unwrap_or(0.0);
-        // total_cmp handles NaN safely; partial_cmp would panic on
-        // NaN inputs (which shouldn't happen here, but defending in
-        // depth is cheap).
-        rb.total_cmp(&ra).then_with(|| {
-            let af = a["file"].as_str().unwrap_or("");
-            let bf = b["file"].as_str().unwrap_or("");
-            let ab = a["range"]["start_byte"].as_u64().unwrap_or(0);
-            let bb = b["range"]["start_byte"].as_u64().unwrap_or(0);
-            af.cmp(bf).then(ab.cmp(&bb))
-        })
-    });
+    // `files_with_matches` was computed during collection over the full
+    // pool; after truncating to the response budget it can overcount.
+    // Recompute from the FINAL returned matches so it reflects exactly
+    // what the caller receives.
+    {
+        use std::collections::HashSet;
+        let final_files: HashSet<&str> =
+            matches.iter().filter_map(|m| m["file"].as_str()).collect();
+        files_with_matches = final_files.len();
+    }
+
+    // `shown` = matches actually returned; `total_matches` = every hit
+    // encountered (up to MAX_LIMIT). `truncated` is honest: true iff we
+    // counted more matches than we returned.
+    let shown = matches.len();
+    let truncated = total_matches > shown;
 
     Ok(serde_json::json!({
         "matches":            matches,
         "truncated":          truncated,
+        "total_matches":      total_matches,
+        "shown":              shown,
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
         "matched":            matched_kind.as_str(),
