@@ -1472,7 +1472,7 @@ pub async fn grep(
     }
     let limit = shared_filters.limit as usize;
 
-    let (text_for_response, case_insensitive, multiline, scanner) = match validated {
+    let (text_for_response, case_insensitive, multiline, scanner, matched_kind) = match validated {
         super::grep_v2::ValidatedGrepCall::Literal {
             text,
             case_insensitive,
@@ -1481,7 +1481,7 @@ pub async fn grep(
                 needle: text.clone(),
                 case_insensitive,
             };
-            (text, case_insensitive, false, scanner)
+            (text, case_insensitive, false, scanner, "literal")
         }
         super::grep_v2::ValidatedGrepCall::Regex {
             pattern,
@@ -1494,20 +1494,46 @@ pub async fn grep(
             // generic INVALID_PARAMS envelope. Single-line path keeps
             // v1 semantics (regex crate defaults; INVALID_PARAMS on
             // syntax errors) so v1 callers see byte-identical errors.
-            let re = if multiline {
-                super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
-                    .map_err(|e| e.into_protocol_error())?
+            //
+            // Task 2: single-line regex compile failure falls back to
+            // literal search rather than returning INVALID_PARAMS.
+            // Multiline compile failure is NOT eligible for fallback —
+            // the multiline scanner uses a different DFA model and the
+            // error is returned to the caller as-is.
+            let (scanner, matched_kind) = if multiline {
+                let re =
+                    super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
+                        .map_err(|e| e.into_protocol_error())?;
+                (GrepScanner::Regex(re), "regex")
             } else {
                 let mut builder = regex::bytes::RegexBuilder::new(&pattern);
                 builder.case_insensitive(case_insensitive);
-                builder.build().map_err(|e| {
-                    ProtocolError::new(
-                        ErrorCode::InvalidParams,
-                        format!("`text` failed to compile as regex: {e}"),
-                    )
-                })?
+                match builder.build() {
+                    Ok(re) => (GrepScanner::Regex(re), "regex"),
+                    Err(e) => {
+                        // When the caller explicitly opted into regex mode
+                        // (`"regex": true`), a compile failure is a caller
+                        // error — surface it as INVALID_PARAMS so the agent
+                        // gets the compiler diagnostic. When regex mode was
+                        // the validator default (no explicit flag), fall back
+                        // to literal search transparently.
+                        if p.regex == Some(true) {
+                            return Err(ProtocolError::new(
+                                ErrorCode::InvalidParams,
+                                format!("`text` failed to compile as regex: {e}"),
+                            ));
+                        }
+                        (
+                            GrepScanner::Literal {
+                                needle: pattern.clone(),
+                                case_insensitive,
+                            },
+                            "literal",
+                        )
+                    }
+                }
             };
-            (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
+            (pattern, case_insensitive, multiline, scanner, matched_kind)
         }
         super::grep_v2::ValidatedGrepCall::Structural {
             query,
@@ -2155,6 +2181,7 @@ pub async fn grep(
         "truncated":          truncated,
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
+        "matched":            matched_kind,
     }))
 }
 

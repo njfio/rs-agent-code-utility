@@ -542,3 +542,182 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// Case Q (Task 2): regex alternation (`astroid|tomlkit`) must match
+// both lines; response must carry `matched: "regex"`.
+#[tokio::test(flavor = "current_thread")]
+async fn grep_regex_alternation_and_matched_field() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Use a .rs file so the daemon indexes it.
+    std::fs::write(
+        workspace.path().join("deps.rs"),
+        "// astroid>=2.0\n// tomlkit>=0.11\n// other\npub fn placeholder() {}\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = std::process::Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = tokio::net::UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    // Poll until the workspace is indexed.
+    let _ = poll_for_match(&mut stream, "placeholder", Duration::from_secs(5)).await?;
+
+    let resp = round_trip(
+        &mut stream,
+        "50",
+        "Index.Grep",
+        json!({ "text": "astroid|tomlkit" }),
+    )
+    .await?;
+
+    assert!(
+        resp["error"].is_null(),
+        "regex alternation must not error: {resp:?}"
+    );
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let lines: Vec<&str> = matches
+        .iter()
+        .map(|m| m["line_text"].as_str().unwrap_or(""))
+        .collect();
+    assert!(
+        lines.iter().any(|l| l.contains("astroid")),
+        "must find astroid line: {resp:?}"
+    );
+    assert!(
+        lines.iter().any(|l| l.contains("tomlkit")),
+        "must find tomlkit line: {resp:?}"
+    );
+    assert_eq!(
+        resp["result"]["matched"].as_str(),
+        Some("regex"),
+        "matched field must be 'regex': {resp:?}"
+    );
+
+    Ok(())
+}
+
+// Case R (Task 2): a pattern that is invalid as a regex (`def foo(`)
+// must fall back to literal search and return `matched: "literal"`.
+#[tokio::test(flavor = "current_thread")]
+async fn grep_regex_compile_failure_falls_back_to_literal() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    std::fs::write(
+        workspace.path().join("sample.py"),
+        "def foo(x, y):\n    return x + y\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = std::process::Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = tokio::net::UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    // Poll until the workspace is indexed (using symbol name "foo").
+    let _ = poll_for_match(&mut stream, "foo", Duration::from_secs(5)).await?;
+
+    // `def foo(` is an invalid regex (unclosed paren) — must fall back
+    // to literal and find the line.
+    let resp = round_trip(
+        &mut stream,
+        "60",
+        "Index.Grep",
+        json!({ "text": "def foo(" }),
+    )
+    .await?;
+
+    assert!(
+        resp["error"].is_null(),
+        "literal fallback must not error: {resp:?}"
+    );
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        !matches.is_empty(),
+        "literal fallback must find the line containing 'def foo(': {resp:?}"
+    );
+    assert_eq!(
+        resp["result"]["matched"].as_str(),
+        Some("literal"),
+        "matched field must be 'literal' when fallback fires: {resp:?}"
+    );
+
+    Ok(())
+}
