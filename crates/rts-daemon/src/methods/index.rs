@@ -2199,9 +2199,17 @@ pub async fn grep(
         let surviving_files: HashSet<&str> =
             matches.iter().filter_map(|m| m["file"].as_str()).collect();
         files_with_matches = surviving_files.len();
-        // `total_matches` was counted pre-filter, so dropped rows keep
-        // the `total_matches > shown` truncation clause firing — no
-        // mutation needed.
+        // Make `total_matches` honest for the within_symbol path. It was
+        // counted PRE-filter over every pattern hit, so leaving it would
+        // report e.g. "3 of 400, truncated" even when all in-symbol
+        // matches are returned — telling the agent to narrow a result
+        // that is already COMPLETE. `truncated` is a contract field
+        // agents act on, so it must be honest. Reset `total_matches` to
+        // the count of hits that fall INSIDE the target symbol (i.e. the
+        // surviving rows), BEFORE the rank-truncate to `limit` below. The
+        // downstream `truncated = total_matches > shown` then fires only
+        // when the in-symbol matches genuinely overflow the budget.
+        total_matches = matches.len();
         let _ = dropped_count;
     }
 

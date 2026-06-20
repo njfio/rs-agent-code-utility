@@ -121,13 +121,22 @@ pub struct ValidationInput {
     pub all: Option<bool>,
 }
 
-/// Default RESPONSE budget when `params.limit` is unset: how many
-/// ranked matches a bare grep returns. Mirrors
-/// `GREP_DEFAULT_BUDGET` in `methods/index.rs`. This caps the RETURNED
-/// set only — the handler still collects a larger ranking pool
-/// (`RANK_POOL`) to rank from, so the top-40 is drawn from a real
-/// candidate population rather than the first 40 in scan order.
-const DEFAULT_LIMIT: u32 = 40;
+/// Default RESPONSE budget when `params.limit` is unset for the RANKED
+/// text path (literal / regex): how many ranked matches a bare grep
+/// returns. Mirrors `GREP_DEFAULT_BUDGET` in `methods/index.rs`. This
+/// caps the RETURNED set only — the handler still collects a larger
+/// ranking pool (`RANK_POOL`) to rank from, so the top-40 is drawn from
+/// a real candidate population rather than the first 40 in scan order.
+const GREP_DEFAULT_BUDGET: u32 = 40;
+
+/// Default RESPONSE budget when `params.limit` is unset for the
+/// STRUCTURAL path. Higher than the ranked-text budget on purpose:
+/// structural results are NOT rank-sorted — they truncate in scan
+/// order — so there is no ranking pool to compensate for a tight cap.
+/// A small default would be a pure recall loss, so structural keeps the
+/// historical 256 default. An explicit `--limit N` overrides regardless
+/// of mode.
+const STRUCTURAL_DEFAULT_LIMIT: u32 = 256;
 
 /// Maximum allowed `text` length (chars). Mirrors v1.
 const MAX_TEXT_LEN: usize = 1024;
@@ -195,15 +204,6 @@ pub fn validate(
     }
 
     // 5. Resolve which scan mode this maps to.
-    let shared = SharedFilters {
-        limit: input.limit.unwrap_or(DEFAULT_LIMIT),
-        file_glob: input.file_glob.clone(),
-        language: input.language.clone(),
-        within_symbol: input.within_symbol.clone(),
-        within_symbol_allow_overload: input.within_symbol_allow_overload.unwrap_or(false),
-        all: input.all.unwrap_or(false),
-    };
-
     let call = if has_structural {
         // Structural mode (alone or composed with literal/regex).
         let query = input.structural_query.clone().unwrap();
@@ -236,6 +236,28 @@ pub fn validate(
             case_insensitive,
             multiline,
         }
+    };
+
+    // 6. Resolve the unset-limit default by MODE. The ranked text path
+    //    (literal/regex) caps at the small `GREP_DEFAULT_BUDGET` because
+    //    it draws the returned top-N from a larger ranking pool, so a
+    //    tight return cap loses no recall it can't compensate for.
+    //    Structural is unranked (truncates in scan order) so it keeps a
+    //    higher default to avoid a pure recall loss. An explicit
+    //    `input.limit` always wins regardless of mode.
+    let default_limit = match &call {
+        ValidatedGrepCall::Structural { .. } => STRUCTURAL_DEFAULT_LIMIT,
+        ValidatedGrepCall::Literal { .. } | ValidatedGrepCall::Regex { .. } => {
+            GREP_DEFAULT_BUDGET
+        }
+    };
+    let shared = SharedFilters {
+        limit: input.limit.unwrap_or(default_limit),
+        file_glob: input.file_glob.clone(),
+        language: input.language.clone(),
+        within_symbol: input.within_symbol.clone(),
+        within_symbol_allow_overload: input.within_symbol_allow_overload.unwrap_or(false),
+        all: input.all.unwrap_or(false),
     };
 
     Ok((call, shared))
@@ -503,7 +525,7 @@ mod tests {
     #[test]
     fn default_limit_when_unset() {
         let (_, shared) = validate(&input_text("hello")).unwrap();
-        assert_eq!(shared.limit, DEFAULT_LIMIT);
+        assert_eq!(shared.limit, GREP_DEFAULT_BUDGET);
     }
 
     #[test]
@@ -514,6 +536,56 @@ mod tests {
         // budget default.
         let (_, shared) = validate(&input_text("x")).unwrap();
         assert_eq!(shared.limit, 40);
+    }
+
+    // ----- Mode-dependent unset-limit default (Task 4 Fix B) -----
+
+    #[test]
+    fn unset_limit_literal_defaults_to_40() {
+        // Ranked text path → GREP_DEFAULT_BUDGET (40).
+        let mut i = input_text("foo");
+        i.literal = Some(true);
+        let (call, shared) = validate(&i).unwrap();
+        assert!(matches!(call, ValidatedGrepCall::Literal { .. }));
+        assert_eq!(shared.limit, 40);
+    }
+
+    #[test]
+    fn unset_limit_regex_defaults_to_40() {
+        // Ranked text path → GREP_DEFAULT_BUDGET (40).
+        let (call, shared) = validate(&input_text("a|b")).unwrap();
+        assert!(matches!(call, ValidatedGrepCall::Regex { .. }));
+        assert_eq!(shared.limit, 40);
+    }
+
+    #[test]
+    fn unset_limit_structural_defaults_to_256() {
+        // Structural is unranked, so it keeps the higher recall default
+        // (256) rather than the ranked-text budget of 40.
+        let input = ValidationInput {
+            structural_query: Some("(function_item) @fn".into()),
+            language: Some(vec!["rust".into()]),
+            ..Default::default()
+        };
+        let (call, shared) = validate(&input).unwrap();
+        assert!(matches!(call, ValidatedGrepCall::Structural { .. }));
+        assert_eq!(shared.limit, 256);
+    }
+
+    #[test]
+    fn explicit_limit_overrides_mode_default_for_both_paths() {
+        // An explicit `--limit N` wins regardless of mode.
+        let mut lit = input_text("foo");
+        lit.limit = Some(7);
+        assert_eq!(validate(&lit).unwrap().1.limit, 7);
+
+        let structural = ValidationInput {
+            structural_query: Some("(function_item) @fn".into()),
+            language: Some(vec!["rust".into()]),
+            limit: Some(7),
+            ..Default::default()
+        };
+        assert_eq!(validate(&structural).unwrap().1.limit, 7);
     }
 
     // ----- New regex-default + literal/all inputs -----

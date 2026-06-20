@@ -985,3 +985,84 @@ async fn default_budget_bounds_to_40() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Task 4 Fix A: a `within_symbol` query whose in-symbol matches ALL
+/// fit under the budget must report `truncated == false` and
+/// `total_matches == shown`. Pre-fix, `total_matches` was counted over
+/// every pattern hit in the file (including the hundreds outside the
+/// target symbol), so a COMPLETE within_symbol result still reported a
+/// huge `total_matches` and `truncated: true` — telling the agent to
+/// narrow a result that is already complete.
+#[tokio::test(flavor = "current_thread")]
+async fn within_symbol_truncation_is_honest_when_complete() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // One target function `target_fn` with exactly THREE in-symbol hits
+    // of `needle_marker`, then 200 OTHER functions each with the same
+    // marker (400 out-of-symbol hits). Total file hits (403) far exceed
+    // both the budget (40) and the rank pool (256). With
+    // `within_symbol: "target_fn"`, only the 3 in-symbol matches
+    // survive — well under the budget — so the result is COMPLETE and
+    // must report `truncated == false`, `total_matches == shown == 3`.
+    let mut lib = String::new();
+    lib.push_str(
+        "pub fn target_fn() -> i32 {\n    \
+         let needle_marker = 1;\n    \
+         let _x = needle_marker + 1;\n    \
+         needle_marker\n}\n\n",
+    );
+    for i in 0..200 {
+        lib.push_str(&format!(
+            "pub fn other_{i}() -> i32 {{\n    let needle_marker = {i};\n    needle_marker\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) = spawn_and_mount(
+        workspace.path(),
+        &runtime_dir,
+        &state_dir,
+        &home_dir,
+        "target_fn",
+    )
+    .await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "70",
+        "Index.Grep",
+        json!({ "text": "needle_marker", "within_symbol": "target_fn" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    assert_eq!(
+        matches.len(),
+        3,
+        "within_symbol should keep exactly the 3 in-symbol matches: {result}"
+    );
+    assert_eq!(
+        result["shown"].as_u64(),
+        Some(3),
+        "`shown` must equal the surviving in-symbol count (3): {result}"
+    );
+    assert_eq!(
+        result["total_matches"].as_u64(),
+        Some(3),
+        "`total_matches` must reflect the POST-filter in-symbol count (3), \
+         not every pattern hit in the file: {result}"
+    );
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(false),
+        "`truncated` must be false when all in-symbol matches are returned: {result}"
+    );
+
+    Ok(())
+}
