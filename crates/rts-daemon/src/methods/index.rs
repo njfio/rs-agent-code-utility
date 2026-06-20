@@ -133,9 +133,9 @@ struct ReadRangeParams {
 #[derive(Debug, Deserialize)]
 struct GrepParams {
     /// The pattern to search for. 1..=1024 chars. By default
-    /// interpreted as a literal substring; set `regex: true` to
-    /// interpret as a regex (Rust `regex` crate syntax, byte-level
-    /// matching).
+    /// interpreted as a regex (Rust `regex` crate syntax, byte-level
+    /// matching). Use `literal: true` to force plain substring matching
+    /// instead.
     ///
     /// v0.6: now `Option<String>` to allow `structural_query` alone
     /// (no literal/regex source). At least one of `text` or
@@ -154,10 +154,11 @@ struct GrepParams {
     /// `RegexBuilder::case_insensitive(true)`).
     #[serde(default)]
     case_insensitive: Option<bool>,
-    /// v0.5.5+ opt-in regex mode. When `true`, `text` is compiled as
-    /// a `regex::bytes::Regex` pattern. Compilation failures surface
-    /// as `INVALID_PARAMS` with the compiler's error message so the
-    /// agent can self-correct. Defaults to `false` (literal mode).
+    /// v0.5.5+ regex mode flag. Accepted for backward compatibility but
+    /// now a no-op: regex is the default mode regardless of this value.
+    /// To force literal (non-regex) matching, use `literal: true`.
+    /// Compilation failures for invalid regex patterns surface as
+    /// `INVALID_PARAMS` with the compiler's error message.
     #[serde(default)]
     regex: Option<bool>,
     /// v0.5.5+ file-path glob filter. When set, only files whose
@@ -168,9 +169,10 @@ struct GrepParams {
     #[serde(default)]
     file_glob: Option<String>,
     /// v0.6 multi-line regex mode. See `GrepArgs::multiline` (MCP
-    /// side) for the user-facing doc. Only meaningful when
-    /// `regex: true`; rejected with `MULTILINE_REQUIRES_REGEX` on
-    /// the literal `text` path.
+    /// side) for the user-facing doc. Enables `^`/`$` to match
+    /// per-line rather than per-buffer. Rejected with
+    /// `MULTILINE_REQUIRES_REGEX` only when combined with
+    /// `literal: true` (the literal path has no anchor semantics).
     #[serde(default)]
     multiline: Option<bool>,
     /// v0.6 raw tree-sitter S-expression structural query. Requires
@@ -190,6 +192,14 @@ struct GrepParams {
     /// Accepted values match the indexed-language identifiers.
     #[serde(default)]
     language: Option<Vec<String>>,
+    /// Force literal (non-regex) matching. When `true`, `text` is
+    /// treated as a plain substring regardless of the `regex` flag.
+    #[serde(default)]
+    literal: Option<bool>,
+    /// Pass-through for result-set expansion; reserved for a later
+    /// task (returns all matches rather than stopping at `limit`).
+    #[serde(default)]
+    all: Option<bool>,
 }
 
 /// Per-mode search strategy. Compiled once in `grep()` and reused
@@ -1396,12 +1406,14 @@ pub async fn grep(
         limit: p.limit,
         case_insensitive: p.case_insensitive,
         regex: p.regex,
+        literal: p.literal,
         file_glob: p.file_glob.clone(),
         multiline: p.multiline,
         structural_query: p.structural_query.clone(),
         within_symbol: p.within_symbol.clone(),
         within_symbol_allow_overload: p.within_symbol_allow_overload,
         language: p.language.clone(),
+        all: p.all,
     };
     let (validated, shared_filters) =
         super::grep_v2::validate(&validation_input).map_err(|e| e.into_protocol_error())?;
