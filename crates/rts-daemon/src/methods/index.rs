@@ -157,8 +157,9 @@ struct GrepParams {
     /// v0.5.5+ regex mode flag. Accepted for backward compatibility but
     /// now a no-op: regex is the default mode regardless of this value.
     /// To force literal (non-regex) matching, use `literal: true`.
-    /// Compilation failures for invalid regex patterns surface as
-    /// `INVALID_PARAMS` with the compiler's error message.
+    /// Invalid single-line patterns fall back to literal matching
+    /// transparently — they do NOT surface as `INVALID_PARAMS`. Only
+    /// multiline (`multiline: true`) compile failures return an error.
     #[serde(default)]
     regex: Option<bool>,
     /// v0.5.5+ file-path glob filter. When set, only files whose
@@ -1367,6 +1368,23 @@ pub async fn find_symbol(
 ///
 /// Errors: `INVALID_PARAMS` for empty `text`, `text` over 1024
 /// chars, `limit` outside `1..=4096`.
+/// Whether the grep scanner ultimately ran as regex or fell back to literal.
+/// Emitted as `"matched"` in the response so callers know which path fired.
+#[derive(Clone, Copy)]
+enum MatchedKind {
+    Regex,
+    Literal,
+}
+
+impl MatchedKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Regex => "regex",
+            Self::Literal => "literal",
+        }
+    }
+}
+
 pub async fn grep(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
@@ -1481,7 +1499,7 @@ pub async fn grep(
                 needle: text.clone(),
                 case_insensitive,
             };
-            (text, case_insensitive, false, scanner, "literal")
+            (text, case_insensitive, false, scanner, MatchedKind::Literal)
         }
         super::grep_v2::ValidatedGrepCall::Regex {
             pattern,
@@ -1491,11 +1509,8 @@ pub async fn grep(
             // U3: multiline path runs through `grep_v2::multiline` so
             // the DFA/NFA size budgets are explicit and compile
             // failures surface as `REGEX_TOO_COMPLEX` rather than a
-            // generic INVALID_PARAMS envelope. Single-line path keeps
-            // v1 semantics (regex crate defaults; INVALID_PARAMS on
-            // syntax errors) so v1 callers see byte-identical errors.
-            //
-            // Task 2: single-line regex compile failure falls back to
+            // generic INVALID_PARAMS envelope. Single-line regex
+            // compile failure falls back to
             // literal search rather than returning INVALID_PARAMS.
             // Multiline compile failure is NOT eligible for fallback —
             // the multiline scanner uses a different DFA model and the
@@ -1504,31 +1519,25 @@ pub async fn grep(
                 let re =
                     super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
                         .map_err(|e| e.into_protocol_error())?;
-                (GrepScanner::Regex(re), "regex")
+                (GrepScanner::Regex(re), MatchedKind::Regex)
             } else {
                 let mut builder = regex::bytes::RegexBuilder::new(&pattern);
                 builder.case_insensitive(case_insensitive);
                 match builder.build() {
-                    Ok(re) => (GrepScanner::Regex(re), "regex"),
-                    Err(e) => {
-                        // When the caller explicitly opted into regex mode
-                        // (`"regex": true`), a compile failure is a caller
-                        // error — surface it as INVALID_PARAMS so the agent
-                        // gets the compiler diagnostic. When regex mode was
-                        // the validator default (no explicit flag), fall back
-                        // to literal search transparently.
-                        if p.regex == Some(true) {
-                            return Err(ProtocolError::new(
-                                ErrorCode::InvalidParams,
-                                format!("`text` failed to compile as regex: {e}"),
-                            ));
-                        }
+                    Ok(re) => (GrepScanner::Regex(re), MatchedKind::Regex),
+                    Err(_) => {
+                        // Single-line regex compile failure always falls back
+                        // to literal search — regardless of whether `regex:
+                        // true` was set. The `regex` flag is a no-op alias;
+                        // `regex: true` + bad pattern behaves identically to
+                        // no flag + bad pattern. Only multiline compile
+                        // failures (handled above) surface as INVALID_PARAMS.
                         (
                             GrepScanner::Literal {
                                 needle: pattern.clone(),
                                 case_insensitive,
                             },
-                            "literal",
+                            MatchedKind::Literal,
                         )
                     }
                 }
@@ -2181,7 +2190,7 @@ pub async fn grep(
         "truncated":          truncated,
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
-        "matched":            matched_kind,
+        "matched":            matched_kind.as_str(),
     }))
 }
 

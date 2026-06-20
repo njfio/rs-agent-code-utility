@@ -321,23 +321,67 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
         "case-sensitive regex must match only a.rs: {regex_cs:?}"
     );
 
-    // Case I (v0.5.5): regex compile failure → INVALID_PARAMS with
-    // the compiler's diagnostic surfaced for the agent.
-    let bad_regex = round_trip(
+    // Case I (v0.5.5 → updated): `regex: true` is a no-op alias.
+    // An invalid regex pattern with `regex: true` must fall back to
+    // literal search — IDENTICALLY to the same pattern without the
+    // flag. Neither call should error; both should report
+    // `matched == "literal"`. "[unclosed" does not appear in the test
+    // workspace, so both must return an empty matches array.
+    let bad_regex_with_flag = round_trip(
         &mut stream,
         "22",
         "Index.Grep",
         json!({ "text": "[unclosed", "regex": true }),
     )
     .await?;
-    assert_eq!(
-        bad_regex["error"]["code"], "INVALID_PARAMS",
-        "invalid regex must error with INVALID_PARAMS: {bad_regex:?}"
-    );
-    let msg = bad_regex["error"]["message"].as_str().unwrap_or("");
     assert!(
-        msg.contains("regex"),
-        "error message should mention regex compilation: {msg:?}"
+        bad_regex_with_flag["error"].is_null(),
+        "regex:true + bad pattern must NOT error: {bad_regex_with_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matched"].as_str(),
+        Some("literal"),
+        "regex:true + bad pattern must fall back to literal: {bad_regex_with_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matches"]
+            .as_array()
+            .map(|v| v.len()),
+        Some(0),
+        "literal '[unclosed' should not appear in test workspace: {bad_regex_with_flag:?}"
+    );
+
+    // Equivalence: same pattern without the flag must produce the same
+    // matched kind and same (empty) result.
+    let bad_regex_no_flag = round_trip(
+        &mut stream,
+        "22b",
+        "Index.Grep",
+        json!({ "text": "[unclosed" }),
+    )
+    .await?;
+    assert!(
+        bad_regex_no_flag["error"].is_null(),
+        "bad pattern without flag must NOT error: {bad_regex_no_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_no_flag["result"]["matched"].as_str(),
+        Some("literal"),
+        "bad pattern without flag must also fall back to literal: {bad_regex_no_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matched"],
+        bad_regex_no_flag["result"]["matched"],
+        "regex:true and no-flag must produce identical matched kind"
+    );
+    // Full result equality: the no-op claim is airtight only if the
+    // entire result object (matches, files_scanned, files_with_matches,
+    // matched) is byte-identical. Both calls run against the same
+    // workspace snapshot so the counts must agree.
+    assert_eq!(
+        bad_regex_with_flag["result"],
+        bad_regex_no_flag["result"],
+        "regex:true and no-flag must produce identical result objects"
     );
 
     // Case J (v0.5.5): file_glob scopes the scan. Restrict to a.rs
