@@ -321,23 +321,67 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
         "case-sensitive regex must match only a.rs: {regex_cs:?}"
     );
 
-    // Case I (v0.5.5): regex compile failure → INVALID_PARAMS with
-    // the compiler's diagnostic surfaced for the agent.
-    let bad_regex = round_trip(
+    // Case I (v0.5.5 → updated): `regex: true` is a no-op alias.
+    // An invalid regex pattern with `regex: true` must fall back to
+    // literal search — IDENTICALLY to the same pattern without the
+    // flag. Neither call should error; both should report
+    // `matched == "literal"`. "[unclosed" does not appear in the test
+    // workspace, so both must return an empty matches array.
+    let bad_regex_with_flag = round_trip(
         &mut stream,
         "22",
         "Index.Grep",
         json!({ "text": "[unclosed", "regex": true }),
     )
     .await?;
-    assert_eq!(
-        bad_regex["error"]["code"], "INVALID_PARAMS",
-        "invalid regex must error with INVALID_PARAMS: {bad_regex:?}"
-    );
-    let msg = bad_regex["error"]["message"].as_str().unwrap_or("");
     assert!(
-        msg.contains("regex"),
-        "error message should mention regex compilation: {msg:?}"
+        bad_regex_with_flag["error"].is_null(),
+        "regex:true + bad pattern must NOT error: {bad_regex_with_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matched"].as_str(),
+        Some("literal"),
+        "regex:true + bad pattern must fall back to literal: {bad_regex_with_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matches"]
+            .as_array()
+            .map(|v| v.len()),
+        Some(0),
+        "literal '[unclosed' should not appear in test workspace: {bad_regex_with_flag:?}"
+    );
+
+    // Equivalence: same pattern without the flag must produce the same
+    // matched kind and same (empty) result.
+    let bad_regex_no_flag = round_trip(
+        &mut stream,
+        "22b",
+        "Index.Grep",
+        json!({ "text": "[unclosed" }),
+    )
+    .await?;
+    assert!(
+        bad_regex_no_flag["error"].is_null(),
+        "bad pattern without flag must NOT error: {bad_regex_no_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_no_flag["result"]["matched"].as_str(),
+        Some("literal"),
+        "bad pattern without flag must also fall back to literal: {bad_regex_no_flag:?}"
+    );
+    assert_eq!(
+        bad_regex_with_flag["result"]["matched"],
+        bad_regex_no_flag["result"]["matched"],
+        "regex:true and no-flag must produce identical matched kind"
+    );
+    // Full result equality: the no-op claim is airtight only if the
+    // entire result object (matches, files_scanned, files_with_matches,
+    // matched) is byte-identical. Both calls run against the same
+    // workspace snapshot so the counts must agree.
+    assert_eq!(
+        bad_regex_with_flag["result"],
+        bad_regex_no_flag["result"],
+        "regex:true and no-flag must produce identical result objects"
     );
 
     // Case J (v0.5.5): file_glob scopes the scan. Restrict to a.rs
@@ -538,6 +582,604 @@ async fn grep_finds_string_literals_across_workspace() -> anyhow::Result<()> {
             prev >= next,
             "matches must be sorted by rank_score desc: prev={prev} next={next}, m={window:?}"
         );
+    }
+
+    Ok(())
+}
+
+// Case Q (Task 2): regex alternation (`astroid|tomlkit`) must match
+// both lines; response must carry `matched: "regex"`.
+#[tokio::test(flavor = "current_thread")]
+async fn grep_regex_alternation_and_matched_field() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    // Use a .rs file so the daemon indexes it.
+    std::fs::write(
+        workspace.path().join("deps.rs"),
+        "// astroid>=2.0\n// tomlkit>=0.11\n// other\npub fn placeholder() {}\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = std::process::Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = tokio::net::UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    // Poll until the workspace is indexed.
+    let _ = poll_for_match(&mut stream, "placeholder", Duration::from_secs(5)).await?;
+
+    let resp = round_trip(
+        &mut stream,
+        "50",
+        "Index.Grep",
+        json!({ "text": "astroid|tomlkit" }),
+    )
+    .await?;
+
+    assert!(
+        resp["error"].is_null(),
+        "regex alternation must not error: {resp:?}"
+    );
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let lines: Vec<&str> = matches
+        .iter()
+        .map(|m| m["line_text"].as_str().unwrap_or(""))
+        .collect();
+    assert!(
+        lines.iter().any(|l| l.contains("astroid")),
+        "must find astroid line: {resp:?}"
+    );
+    assert!(
+        lines.iter().any(|l| l.contains("tomlkit")),
+        "must find tomlkit line: {resp:?}"
+    );
+    assert_eq!(
+        resp["result"]["matched"].as_str(),
+        Some("regex"),
+        "matched field must be 'regex': {resp:?}"
+    );
+
+    Ok(())
+}
+
+// Case R (Task 2): a pattern that is invalid as a regex (`def foo(`)
+// must fall back to literal search and return `matched: "literal"`.
+#[tokio::test(flavor = "current_thread")]
+async fn grep_regex_compile_failure_falls_back_to_literal() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    std::fs::write(
+        workspace.path().join("sample.py"),
+        "def foo(x, y):\n    return x + y\n",
+    )?;
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = std::process::Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let mut child = cmd.spawn()?;
+    let _kill = KillOnDrop(&mut child);
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = tokio::net::UnixStream::connect(&socket_path).await?;
+
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace.path() }),
+    )
+    .await?;
+    assert!(mount["error"].is_null(), "mount: {mount:?}");
+
+    // Poll until the workspace is indexed (using symbol name "foo").
+    let _ = poll_for_match(&mut stream, "foo", Duration::from_secs(5)).await?;
+
+    // `def foo(` is an invalid regex (unclosed paren) — must fall back
+    // to literal and find the line.
+    let resp = round_trip(
+        &mut stream,
+        "60",
+        "Index.Grep",
+        json!({ "text": "def foo(" }),
+    )
+    .await?;
+
+    assert!(
+        resp["error"].is_null(),
+        "literal fallback must not error: {resp:?}"
+    );
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        !matches.is_empty(),
+        "literal fallback must find the line containing 'def foo(': {resp:?}"
+    );
+    assert_eq!(
+        resp["result"]["matched"].as_str(),
+        Some("literal"),
+        "matched field must be 'literal' when fallback fires: {resp:?}"
+    );
+
+    Ok(())
+}
+
+/// Spawn a daemon, mount `workspace`, and return the connected stream
+/// plus the kill guard. Mirrors the inline scaffolding used by the
+/// other tests in this file but keeps the Task-4 ranking/budget tests
+/// readable. `poll_name` is a symbol the writer is expected to commit
+/// so we know indexing has settled before grepping.
+async fn spawn_and_mount(
+    workspace: &std::path::Path,
+    runtime_dir: &tempfile::TempDir,
+    state_dir: &tempfile::TempDir,
+    home_dir: &tempfile::TempDir,
+    poll_name: &str,
+) -> anyhow::Result<(UnixStream, std::process::Child)> {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let socket_path = if cfg!(target_os = "macos") {
+        home_dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("rts")
+            .join("default.sock")
+    } else {
+        runtime_dir.path().join("rts").join("default.sock")
+    };
+
+    let mut cmd = Command::new(daemon_bin());
+    cmd.env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RUST_LOG", "warn")
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = cmd.spawn()?;
+
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let mut stream = UnixStream::connect(&socket_path).await?;
+    let mount = round_trip(
+        &mut stream,
+        "1",
+        "Workspace.Mount",
+        json!({ "root": workspace }),
+    )
+    .await?;
+    anyhow::ensure!(mount["error"].is_null(), "mount failed: {mount:?}");
+    let _ = poll_for_match(&mut stream, poll_name, Duration::from_secs(5)).await?;
+    Ok((stream, child))
+}
+
+/// Task 4: matches are returned in non-increasing `rank_score` order.
+/// The workspace gives `hub` a high PageRank (called from many sites)
+/// while `lonely` is uncalled (rank ~0). Both function bodies contain
+/// the common search term, so the ranked response must surface `hub`'s
+/// match before `lonely`'s.
+#[tokio::test(flavor = "current_thread")]
+async fn matches_are_ranked_by_rank_score_desc() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // `hub` is called by 12 distinct callers => high PageRank.
+    // `lonely` is never called => PageRank floor.
+    // Both bodies contain the literal "needle_token".
+    //
+    // CRUCIAL for the pool/budget decoupling: `hub`'s definition is
+    // emitted LAST, after 60 low-rank `noise_*` functions that each
+    // also contain "needle_token". In scan order hub's match sits well
+    // past position 40, so if the handler truncated to the response
+    // budget BEFORE ranking, hub's high-rank hit would be dropped and
+    // could never surface first. Its appearance at/near the top proves
+    // ranking drew from a real candidate pool, not the first-N.
+    let mut lib = String::new();
+    lib.push_str("pub fn lonely() -> i32 {\n    let needle_token = 2;\n    needle_token\n}\n");
+    for i in 0..60 {
+        lib.push_str(&format!(
+            "pub fn noise_{i}() -> i32 {{\n    let needle_token = {i};\n    needle_token\n}}\n"
+        ));
+    }
+    for i in 0..12 {
+        lib.push_str(&format!(
+            "pub fn caller_{i}() -> i32 {{\n    hub()\n}}\n"
+        ));
+    }
+    // hub defined last => its body's match is late in scan order.
+    lib.push_str("pub fn hub() -> i32 {\n    let needle_token = 1;\n    needle_token\n}\n");
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "hub").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "50",
+        "Index.Grep",
+        json!({ "text": "needle_token" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let matches = resp["result"]["matches"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    assert!(
+        matches.len() >= 2,
+        "expected at least two needle_token matches: {resp:?}"
+    );
+
+    // The rank_score sequence over returned matches is non-increasing.
+    for window in matches.windows(2) {
+        let prev = window[0]["rank_score"].as_f64().unwrap_or(0.0);
+        let next = window[1]["rank_score"].as_f64().unwrap_or(0.0);
+        assert!(
+            prev >= next,
+            "matches must be sorted by rank_score desc: prev={prev} next={next}: {window:?}"
+        );
+    }
+
+    // `hub`'s match (defined LAST in the file, late in scan order) must
+    // appear in the returned set despite the response budget — this is
+    // the load-bearing assertion for pool/budget decoupling. If the
+    // scan truncated to the budget in scan order before ranking, hub
+    // would never make the cut.
+    let hub_idx = matches.iter().position(|m| {
+        m["enclosing_qualified_name"].as_str() == Some("hub")
+    });
+    let hub_idx = hub_idx.expect("hub's high-rank match must survive into the ranked response");
+    let hub_rank = matches[hub_idx]["rank_score"].as_f64().unwrap_or(0.0);
+    assert!(
+        hub_rank > 0.0,
+        "hub must have a real (>0) PageRank: got {hub_rank}"
+    );
+    // hub must outrank (and thus be positioned before) any `lonely`
+    // match if it is present.
+    if let Some(l) = matches
+        .iter()
+        .position(|m| m["enclosing_qualified_name"].as_str() == Some("lonely"))
+    {
+        let lonely_rank = matches[l]["rank_score"].as_f64().unwrap_or(0.0);
+        assert!(
+            hub_rank >= lonely_rank && hub_idx <= l,
+            "hub (called 12x) must outrank/precede lonely: hub_rank={hub_rank}@{hub_idx} lonely_rank={lonely_rank}@{l}"
+        );
+    }
+
+    Ok(())
+}
+
+/// Task 4: with `limit` unset, a workspace holding far more than the
+/// default budget of matches must return exactly `GREP_DEFAULT_BUDGET`
+/// (40), flag `truncated: true`, report `shown == 40`, and a
+/// `total_matches` that honestly counts every hit seen (> 40).
+#[tokio::test(flavor = "current_thread")]
+async fn default_budget_bounds_to_40() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // 200 functions, each body containing the search term TWICE (the
+    // `let widget_marker = …` binding and the bare return) => 400
+    // matches. This deliberately EXCEEDS the 256 rank pool so the
+    // handler must keep counting `total_matches` past the pool (without
+    // growing the returned set) — exercising the decoupling of all
+    // three budget numbers: returned (40), pool (256), counted (400).
+    let mut lib = String::new();
+    for i in 0..200 {
+        lib.push_str(&format!(
+            "pub fn f_{i}() -> i32 {{\n    let widget_marker = {i};\n    widget_marker\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "f_0").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "60",
+        "Index.Grep",
+        json!({ "text": "widget_marker" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    assert_eq!(
+        matches.len(),
+        40,
+        "default budget must cap returned matches at 40: got {}",
+        matches.len()
+    );
+    assert_eq!(
+        result["shown"].as_u64(),
+        Some(40),
+        "`shown` must equal returned length (40): {result}"
+    );
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(true),
+        "`truncated` must be true when more matches exist than shown: {result}"
+    );
+    let total = result["total_matches"].as_u64().unwrap_or(0);
+    assert!(
+        total > 40,
+        "`total_matches` must honestly count all hits (>40): got {total}: {result}"
+    );
+    assert_eq!(
+        total, 400,
+        "`total_matches` must count every match past the pool (2 per fn x 200): got {total}"
+    );
+
+    Ok(())
+}
+
+/// Task 4 Fix A: a `within_symbol` query whose in-symbol matches ALL
+/// fit under the budget must report `truncated == false` and
+/// `total_matches == shown`. Pre-fix, `total_matches` was counted over
+/// every pattern hit in the file (including the hundreds outside the
+/// target symbol), so a COMPLETE within_symbol result still reported a
+/// huge `total_matches` and `truncated: true` — telling the agent to
+/// narrow a result that is already complete.
+#[tokio::test(flavor = "current_thread")]
+async fn within_symbol_truncation_is_honest_when_complete() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // One target function `target_fn` with exactly THREE in-symbol hits
+    // of `needle_marker`, then 200 OTHER functions each with the same
+    // marker (400 out-of-symbol hits). Total file hits (403) far exceed
+    // both the budget (40) and the rank pool (256). With
+    // `within_symbol: "target_fn"`, only the 3 in-symbol matches
+    // survive — well under the budget — so the result is COMPLETE and
+    // must report `truncated == false`, `total_matches == shown == 3`.
+    let mut lib = String::new();
+    lib.push_str(
+        "pub fn target_fn() -> i32 {\n    \
+         let needle_marker = 1;\n    \
+         let _x = needle_marker + 1;\n    \
+         needle_marker\n}\n\n",
+    );
+    for i in 0..200 {
+        lib.push_str(&format!(
+            "pub fn other_{i}() -> i32 {{\n    let needle_marker = {i};\n    needle_marker\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("lib.rs"), lib)?;
+
+    let (mut stream, mut child) = spawn_and_mount(
+        workspace.path(),
+        &runtime_dir,
+        &state_dir,
+        &home_dir,
+        "target_fn",
+    )
+    .await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "70",
+        "Index.Grep",
+        json!({ "text": "needle_marker", "within_symbol": "target_fn" }),
+    )
+    .await?;
+    assert!(resp["error"].is_null(), "grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    assert_eq!(
+        matches.len(),
+        3,
+        "within_symbol should keep exactly the 3 in-symbol matches: {result}"
+    );
+    assert_eq!(
+        result["shown"].as_u64(),
+        Some(3),
+        "`shown` must equal the surviving in-symbol count (3): {result}"
+    );
+    assert_eq!(
+        result["total_matches"].as_u64(),
+        Some(3),
+        "`total_matches` must reflect the POST-filter in-symbol count (3), \
+         not every pattern hit in the file: {result}"
+    );
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(false),
+        "`truncated` must be false when all in-symbol matches are returned: {result}"
+    );
+
+    Ok(())
+}
+
+/// Task 5: `all: true` bypasses the ranking budget and returns EVERY
+/// match in scan order (file asc, start_byte asc), unranked, with no
+/// truncation up to MAX_LIMIT (4096).
+///
+/// The workspace contains MORE than the default rank pool (256) and
+/// default budget (40): 60 functions each with 2 hits => 120 matches
+/// total. Under `all: true` the response must return all 120,
+/// `truncated` must be `false`, and the scan order (file, start_byte)
+/// must be non-decreasing across the entire match list.
+#[tokio::test(flavor = "current_thread")]
+async fn all_returns_every_match_in_scan_order() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // Build a workspace with 60 functions each containing the marker
+    // string TWICE (binding + bare return) => 120 matches total.
+    // 120 > default budget (40) AND > default rank pool (256 is the
+    // pool but 120 < 256 — so we use 60 fns x 2 matches = 120 which is
+    // > 40, well below 256). To force the pool-cap bug to manifest we
+    // need total_matches > pool_cap. Let's use 130 functions => 260
+    // matches, which exceeds the 256 rank pool boundary.
+    let mut lib = String::new();
+    for i in 0..130 {
+        lib.push_str(&format!(
+            "pub fn scan_fn_{i}() -> i32 {{\n    let scan_marker_{i} = {i};\n    scan_marker_{i}\n}}\n"
+        ));
+    }
+    // Write two files so we can also verify cross-file order is file-ascending.
+    // lib.rs has all 130 functions; aux.rs has 5 more.
+    std::fs::write(workspace.path().join("lib.rs"), &lib)?;
+    // Additional file with 10 more matches (5 functions x 2 hits each).
+    let mut aux = String::new();
+    for i in 130..135 {
+        aux.push_str(&format!(
+            "pub fn scan_fn_{i}() -> i32 {{\n    let scan_marker_{i} = {i};\n    scan_marker_{i}\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("aux.rs"), &aux)?;
+
+    // Total matches in the workspace:
+    // lib.rs: 130 fns * 2 hits = 260 matches (exceeds the 256 pool cap)
+    // aux.rs:   5 fns * 2 hits =  10 matches
+    // Grand total: 270 matches — well under MAX_LIMIT (4096).
+    // The pattern "scan_marker_" appears in both the variable binding and
+    // the return expression of every function. But we use the exact prefix
+    // "scan_marker_" which appears in every binding line AND every return line.
+    let expected_total: usize = 270;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "scan_fn_0").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "80",
+        "Index.Grep",
+        json!({ "text": "scan_marker_", "all": true, "literal": true }),
+    )
+    .await?;
+
+    assert!(resp["error"].is_null(), "all-mode grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    // 1. Must return ALL matches, not just 40 or 256.
+    assert_eq!(
+        matches.len(),
+        expected_total,
+        "`all: true` must return every match ({expected_total}), got {}: {result}",
+        matches.len()
+    );
+
+    // 2. `truncated` must be false (all matches were returned).
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(false),
+        "`truncated` must be false under `all: true` when total < MAX_LIMIT: {result}"
+    );
+
+    // 3. Matches must be in scan order: within each file, start_byte is
+    // non-decreasing. `all` bypasses the rank sort so matches stay in
+    // scan order — no file's matches interleave with another file's, and
+    // within each contiguous file block start_bytes only go up.
+    //
+    // We do NOT assume a specific inter-file order because list_indexed_files
+    // returns paths in storage order (not necessarily alphabetical).
+    // We DO assert that each file forms a contiguous, monotonically
+    // increasing block with no rank reordering.
+    let mut seen_files: Vec<String> = Vec::new();
+    let mut prev_byte: u64 = 0;
+    let mut prev_file = String::new();
+    for m in &matches {
+        let f = m["file"].as_str().unwrap_or("").to_string();
+        let b = m["range"]["start_byte"].as_u64().unwrap_or(0);
+        if f == prev_file {
+            // Same file: byte offset must be non-decreasing.
+            assert!(
+                b >= prev_byte,
+                "`all: true` matches within the same file must be in start_byte order: \
+                 got {b} after {prev_byte} in {f}"
+            );
+        } else {
+            // New file: must not have appeared before (no interleaving).
+            assert!(
+                !seen_files.contains(&f),
+                "`all: true` must not interleave files: {f} appeared again after another file"
+            );
+            seen_files.push(f.clone());
+            prev_file = f;
+        }
+        prev_byte = b;
     }
 
     Ok(())

@@ -122,6 +122,12 @@ enum Cmd {
         /// is set.
         #[arg(long)]
         language: Vec<String>,
+        /// Force literal-substring matching (disable the default regex).
+        #[arg(long, visible_alias = "fixed")]
+        literal: bool,
+        /// Return every match in scan order, unranked and unbounded.
+        #[arg(long)]
+        all: bool,
     },
     /// Show direct callers of a symbol.
     Callers {
@@ -494,55 +500,13 @@ async fn run_command(
             stdout.flush().map_err(io_to_anyhow)?;
             Ok(if n == 0 { exit::NO_RESULTS } else { exit::OK })
         }
-        Cmd::Grep {
-            pattern,
-            regex,
-            case_sensitive,
-            glob,
-            limit,
-            multiline,
-            structural_query,
-            within_symbol,
-            within_symbol_allow_overload,
-            language,
-        } => {
-            let mut params = serde_json::Map::new();
-            // `text` is optional when `--structural-query` is the search
-            // source; pass it through only when present so the daemon's
-            // validator sees the same shape the caller emitted.
-            if let Some(p) = pattern {
-                params.insert("text".into(), Value::String(p.clone()));
-            }
-            if *regex {
-                params.insert("regex".into(), Value::Bool(true));
-            }
-            if *case_sensitive {
-                params.insert("case_insensitive".into(), Value::Bool(false));
-            }
-            if let Some(g) = glob {
-                params.insert("file_glob".into(), Value::String(g.clone()));
-            }
-            if let Some(n) = limit {
-                params.insert("limit".into(), Value::Number((*n).into()));
-            }
-            if *multiline {
-                params.insert("multiline".into(), Value::Bool(true));
-            }
-            if let Some(q) = structural_query {
-                params.insert("structural_query".into(), Value::String(q.clone()));
-            }
-            if let Some(s) = within_symbol {
-                params.insert("within_symbol".into(), Value::String(s.clone()));
-            }
-            if *within_symbol_allow_overload {
-                params.insert("within_symbol_allow_overload".into(), Value::Bool(true));
-            }
-            if !language.is_empty() {
-                params.insert(
-                    "language".into(),
-                    Value::Array(language.iter().cloned().map(Value::String).collect()),
-                );
-            }
+        Cmd::Grep { .. } => {
+            let params = build_grep_params(&cli.cmd);
+            let grep_pattern = params
+                .get("text")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned();
             let body =
                 match cli::call_method(&client, workspace, "Index.Grep", Value::Object(params))
                     .await
@@ -564,7 +528,7 @@ async fn run_command(
             }
             let mut stdout = std::io::stdout().lock();
             let n =
-                cli::render_grep_lines(&body, pattern.as_deref().unwrap_or(""), &mut stdout, style)
+                cli::render_grep_lines(&body, &grep_pattern, &mut stdout, style)
                     .map_err(io_to_anyhow)?;
             stdout.flush().map_err(io_to_anyhow)?;
             Ok(if n == 0 { exit::NO_RESULTS } else { exit::OK })
@@ -1340,6 +1304,76 @@ fn run_doctor(output: Option<&str>) -> ExitCode {
     }
 }
 
+/// Build the JSON-RPC params map for `Index.Grep` from the parsed `Cmd::Grep`
+/// variant. Extracted so it can be unit-tested without a live daemon.
+///
+/// Convention (mirrors the rest of `run_command`): boolean flags are only
+/// inserted when `true`; optional string/int fields only when `Some`.
+fn build_grep_params(cmd: &Cmd) -> serde_json::Map<String, Value> {
+    let Cmd::Grep {
+        pattern,
+        regex,
+        case_sensitive,
+        glob,
+        limit,
+        multiline,
+        structural_query,
+        within_symbol,
+        within_symbol_allow_overload,
+        language,
+        literal,
+        all,
+    } = cmd
+    else {
+        return serde_json::Map::new();
+    };
+
+    let mut params = serde_json::Map::new();
+    // `text` is optional when `--structural-query` is the search source;
+    // pass it through only when present so the daemon's validator sees the
+    // same shape the caller emitted.
+    if let Some(p) = pattern {
+        params.insert("text".into(), Value::String(p.clone()));
+    }
+    if *regex {
+        params.insert("regex".into(), Value::Bool(true));
+    }
+    if *case_sensitive {
+        params.insert("case_insensitive".into(), Value::Bool(false));
+    }
+    if let Some(g) = glob {
+        params.insert("file_glob".into(), Value::String(g.clone()));
+    }
+    if let Some(n) = limit {
+        params.insert("limit".into(), Value::Number((*n).into()));
+    }
+    if *multiline {
+        params.insert("multiline".into(), Value::Bool(true));
+    }
+    if let Some(q) = structural_query {
+        params.insert("structural_query".into(), Value::String(q.clone()));
+    }
+    if let Some(s) = within_symbol {
+        params.insert("within_symbol".into(), Value::String(s.clone()));
+    }
+    if *within_symbol_allow_overload {
+        params.insert("within_symbol_allow_overload".into(), Value::Bool(true));
+    }
+    if !language.is_empty() {
+        params.insert(
+            "language".into(),
+            Value::Array(language.iter().cloned().map(Value::String).collect()),
+        );
+    }
+    if *literal {
+        params.insert("literal".into(), Value::Bool(true));
+    }
+    if *all {
+        params.insert("all".into(), Value::Bool(true));
+    }
+    params
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1368,5 +1402,54 @@ mod tests {
         assert_eq!(FailOn::None.exit_for("warn"), exit::OK);
         assert_eq!(FailOn::None.exit_for("fail"), exit::OK);
         assert_eq!(FailOn::None.exit_for("wat"), exit::OK);
+    }
+
+    // ── build_grep_params tests ───────────────────────────────────────────
+
+    /// Parse a `rts grep` invocation from a slice of args and return the
+    /// params map produced by `build_grep_params`.
+    fn parse_grep_params(args: &[&str]) -> serde_json::Map<String, Value> {
+        let cli = Cli::try_parse_from(args).expect("parse failed");
+        build_grep_params(&cli.cmd)
+    }
+
+    #[test]
+    fn literal_and_all_flags_map_into_params() {
+        let p = parse_grep_params(&["rts", "grep", "--literal", "--all", "a|b"]);
+        assert_eq!(p.get("literal"), Some(&json!(true)));
+        assert_eq!(p.get("all"), Some(&json!(true)));
+        assert_eq!(p.get("text"), Some(&json!("a|b")));
+    }
+
+    #[test]
+    fn fixed_alias_sets_literal() {
+        let p = parse_grep_params(&["rts", "grep", "--fixed", "hello"]);
+        assert_eq!(p.get("literal"), Some(&json!(true)));
+        assert_eq!(p.get("text"), Some(&json!("hello")));
+    }
+
+    #[test]
+    fn regex_flag_is_accepted_as_noop() {
+        // --regex is back-compat: it must parse without error and must NOT
+        // set "literal": true (regex is the default mode).
+        let p = parse_grep_params(&["rts", "grep", "--regex", "a|b"]);
+        assert_eq!(p.get("literal"), None);
+        // --regex still sets "regex": true for the daemon (kept as is).
+        assert_eq!(p.get("regex"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn all_alone_sets_only_all() {
+        let p = parse_grep_params(&["rts", "grep", "--all", "foo"]);
+        assert_eq!(p.get("all"), Some(&json!(true)));
+        assert_eq!(p.get("literal"), None);
+    }
+
+    #[test]
+    fn neither_literal_nor_all_omits_both_keys() {
+        let p = parse_grep_params(&["rts", "grep", "foo"]);
+        assert_eq!(p.get("literal"), None);
+        assert_eq!(p.get("all"), None);
+        assert_eq!(p.get("text"), Some(&json!("foo")));
     }
 }

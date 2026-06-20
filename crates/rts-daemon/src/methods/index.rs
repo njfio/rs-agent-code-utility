@@ -133,9 +133,9 @@ struct ReadRangeParams {
 #[derive(Debug, Deserialize)]
 struct GrepParams {
     /// The pattern to search for. 1..=1024 chars. By default
-    /// interpreted as a literal substring; set `regex: true` to
-    /// interpret as a regex (Rust `regex` crate syntax, byte-level
-    /// matching).
+    /// interpreted as a regex (Rust `regex` crate syntax, byte-level
+    /// matching). Use `literal: true` to force plain substring matching
+    /// instead.
     ///
     /// v0.6: now `Option<String>` to allow `structural_query` alone
     /// (no literal/regex source). At least one of `text` or
@@ -154,10 +154,12 @@ struct GrepParams {
     /// `RegexBuilder::case_insensitive(true)`).
     #[serde(default)]
     case_insensitive: Option<bool>,
-    /// v0.5.5+ opt-in regex mode. When `true`, `text` is compiled as
-    /// a `regex::bytes::Regex` pattern. Compilation failures surface
-    /// as `INVALID_PARAMS` with the compiler's error message so the
-    /// agent can self-correct. Defaults to `false` (literal mode).
+    /// v0.5.5+ regex mode flag. Accepted for backward compatibility but
+    /// now a no-op: regex is the default mode regardless of this value.
+    /// To force literal (non-regex) matching, use `literal: true`.
+    /// Invalid single-line patterns fall back to literal matching
+    /// transparently — they do NOT surface as `INVALID_PARAMS`. Only
+    /// multiline (`multiline: true`) compile failures return an error.
     #[serde(default)]
     regex: Option<bool>,
     /// v0.5.5+ file-path glob filter. When set, only files whose
@@ -168,9 +170,10 @@ struct GrepParams {
     #[serde(default)]
     file_glob: Option<String>,
     /// v0.6 multi-line regex mode. See `GrepArgs::multiline` (MCP
-    /// side) for the user-facing doc. Only meaningful when
-    /// `regex: true`; rejected with `MULTILINE_REQUIRES_REGEX` on
-    /// the literal `text` path.
+    /// side) for the user-facing doc. Enables `^`/`$` to match
+    /// per-line rather than per-buffer. Rejected with
+    /// `MULTILINE_REQUIRES_REGEX` only when combined with
+    /// `literal: true` (the literal path has no anchor semantics).
     #[serde(default)]
     multiline: Option<bool>,
     /// v0.6 raw tree-sitter S-expression structural query. Requires
@@ -190,6 +193,14 @@ struct GrepParams {
     /// Accepted values match the indexed-language identifiers.
     #[serde(default)]
     language: Option<Vec<String>>,
+    /// Force literal (non-regex) matching. When `true`, `text` is
+    /// treated as a plain substring regardless of the `regex` flag.
+    #[serde(default)]
+    literal: Option<bool>,
+    /// Pass-through for result-set expansion; reserved for a later
+    /// task (returns all matches rather than stopping at `limit`).
+    #[serde(default)]
+    all: Option<bool>,
 }
 
 /// Per-mode search strategy. Compiled once in `grep()` and reused
@@ -1351,20 +1362,43 @@ pub async fn find_symbol(
 /// }
 /// ```
 ///
-/// MVP: literal substring, case-insensitive default, no regex, no
-/// `file_glob`, no `context_lines`, no enclosing-symbol resolution.
-/// Each of those is a separate iteration filed in the CHANGELOG.
+/// Supports literal substring and regex matching, case-insensitive by
+/// default, with `file_glob`, `context_lines`, and enclosing-symbol
+/// resolution.
 ///
 /// Errors: `INVALID_PARAMS` for empty `text`, `text` over 1024
-/// chars, `limit` outside `1..=4096`.
+/// chars, `limit` outside `1..=4096`. A single-line pattern that fails
+/// to compile as a regex falls back to literal matching rather than
+/// erroring; only a multiline (`multiline: true`) compile failure
+/// returns `INVALID_PARAMS`.
+/// Whether the grep scanner ultimately ran as regex or fell back to literal.
+/// Emitted as `"matched"` in the response so callers know which path fired.
+#[derive(Clone, Copy)]
+enum MatchedKind {
+    Regex,
+    Literal,
+}
+
+impl MatchedKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Regex => "regex",
+            Self::Literal => "literal",
+        }
+    }
+}
+
 pub async fn grep(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
     token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
-    /// Default cap on returned matches when `limit` is unset.
-    /// Matches `find_symbol`'s default — same agent-context budget.
-    const DEFAULT_LIMIT: usize = 256;
+    /// Ranking candidate pool: normal mode collects up to this many
+    /// matches to rank FROM, so the returned top-`limit` is chosen from
+    /// a meaningful population rather than an arbitrary scan-order
+    /// prefix. The effective pool is `max(RANK_POOL, limit)` so an
+    /// explicit `--limit 500` still ranks from >=500 candidates.
+    const RANK_POOL: usize = 256;
     /// Hard ceiling on `limit`. Same shape as `find_symbol`.
     const MAX_LIMIT: usize = 4096;
     /// Max body bytes we'll scan per file. Above this, the file is
@@ -1396,12 +1430,14 @@ pub async fn grep(
         limit: p.limit,
         case_insensitive: p.case_insensitive,
         regex: p.regex,
+        literal: p.literal,
         file_glob: p.file_glob.clone(),
         multiline: p.multiline,
         structural_query: p.structural_query.clone(),
         within_symbol: p.within_symbol.clone(),
         within_symbol_allow_overload: p.within_symbol_allow_overload,
         language: p.language.clone(),
+        all: p.all,
     };
     let (validated, shared_filters) =
         super::grep_v2::validate(&validation_input).map_err(|e| e.into_protocol_error())?;
@@ -1458,9 +1494,13 @@ pub async fn grep(
             "`limit` must be >= 1",
         ));
     }
+    // Response budget: how many ranked matches we RETURN. The compose
+    // validator already resolved unset `limit` to `GREP_DEFAULT_BUDGET`
+    // (see `grep_v2::limits`), so this is either that default (40) or
+    // the caller's explicit value.
     let limit = shared_filters.limit as usize;
 
-    let (text_for_response, case_insensitive, multiline, scanner) = match validated {
+    let (text_for_response, case_insensitive, multiline, scanner, matched_kind) = match validated {
         super::grep_v2::ValidatedGrepCall::Literal {
             text,
             case_insensitive,
@@ -1469,7 +1509,7 @@ pub async fn grep(
                 needle: text.clone(),
                 case_insensitive,
             };
-            (text, case_insensitive, false, scanner)
+            (text, case_insensitive, false, scanner, MatchedKind::Literal)
         }
         super::grep_v2::ValidatedGrepCall::Regex {
             pattern,
@@ -1479,23 +1519,40 @@ pub async fn grep(
             // U3: multiline path runs through `grep_v2::multiline` so
             // the DFA/NFA size budgets are explicit and compile
             // failures surface as `REGEX_TOO_COMPLEX` rather than a
-            // generic INVALID_PARAMS envelope. Single-line path keeps
-            // v1 semantics (regex crate defaults; INVALID_PARAMS on
-            // syntax errors) so v1 callers see byte-identical errors.
-            let re = if multiline {
-                super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
-                    .map_err(|e| e.into_protocol_error())?
+            // generic INVALID_PARAMS envelope. Single-line regex
+            // compile failure falls back to
+            // literal search rather than returning INVALID_PARAMS.
+            // Multiline compile failure is NOT eligible for fallback —
+            // the multiline scanner uses a different DFA model and the
+            // error is returned to the caller as-is.
+            let (scanner, matched_kind) = if multiline {
+                let re =
+                    super::grep_v2::multiline::compile_multiline_regex(&pattern, case_insensitive)
+                        .map_err(|e| e.into_protocol_error())?;
+                (GrepScanner::Regex(re), MatchedKind::Regex)
             } else {
                 let mut builder = regex::bytes::RegexBuilder::new(&pattern);
                 builder.case_insensitive(case_insensitive);
-                builder.build().map_err(|e| {
-                    ProtocolError::new(
-                        ErrorCode::InvalidParams,
-                        format!("`text` failed to compile as regex: {e}"),
-                    )
-                })?
+                match builder.build() {
+                    Ok(re) => (GrepScanner::Regex(re), MatchedKind::Regex),
+                    Err(_) => {
+                        // Single-line regex compile failure always falls back
+                        // to literal search — regardless of whether `regex:
+                        // true` was set. The `regex` flag is a no-op alias;
+                        // `regex: true` + bad pattern behaves identically to
+                        // no flag + bad pattern. Only multiline compile
+                        // failures (handled above) surface as INVALID_PARAMS.
+                        (
+                            GrepScanner::Literal {
+                                needle: pattern.clone(),
+                                case_insensitive,
+                            },
+                            MatchedKind::Literal,
+                        )
+                    }
+                }
             };
-            (pattern, case_insensitive, multiline, GrepScanner::Regex(re))
+            (pattern, case_insensitive, multiline, scanner, matched_kind)
         }
         super::grep_v2::ValidatedGrepCall::Structural {
             query,
@@ -1818,6 +1875,12 @@ pub async fn grep(
                 "truncated": truncated,
                 "rows_seen": result.rows_seen,
                 "rows_returned": final_matches.len(),
+                // Unify the wire contract with the TEXT grep path so the CLI
+                // truncation footer (cli.rs `render_grep_lines`) reads the
+                // same keys for both paths. `shown` = rows returned in this
+                // page; `total_matches` = total rows seen before truncation.
+                "shown": final_matches.len(),
+                "total_matches": result.rows_seen,
                 "files_scanned": result.files_scanned,
                 "files_with_matches": files_with_matches,
                 "partial_failures": pfs_json,
@@ -1876,11 +1939,43 @@ pub async fn grep(
         )
     })?;
 
+    // BUDGET MODEL (see `grep_v2::limits::GREP_DEFAULT_BUDGET` and `RANK_POOL` below).
+    // Three distinct numbers, deliberately decoupled:
+    //   * `limit`        — response budget: how many ranked matches we
+    //                      RETURN. Applied AFTER ranking.
+    //   * `pool_cap`     — collection ceiling: how many matches we
+    //                      gather into `matches` to rank FROM. We must
+    //                      collect a real pool (>= RANK_POOL) so the
+    //                      returned top-`limit` is chosen from a
+    //                      meaningful population, not an arbitrary
+    //                      scan-order prefix. `max(RANK_POOL, limit)`
+    //                      keeps an explicit large `--limit` honest.
+    //                      e.g. limit=40 → pool_cap=256; limit=500 → pool_cap=500.
+    //   * `total_matches`— honest counter of every hit encountered up
+    //                      to the hard scan ceiling (MAX_LIMIT), even
+    //                      past the pool, so the footer can say
+    //                      "40 of 918".
+    // CRITICAL: collection is bounded by `pool_cap`, NOT `limit`. If we
+    // truncated to `limit` in scan order before ranking, a high-rank
+    // match late in scan order would be lost and the feature would be
+    // silently broken.
+    // Under `all` we collect EVERY hit up to the hard ceiling; under
+    // normal mode we collect a meaningful ranking pool (>= RANK_POOL)
+    // and truncate to `limit` after ranking.
+    // `pool_cap` is the collection ceiling in BOTH modes. Under `all`
+    // we raise it to the hard scan ceiling (MAX_LIMIT) to gather every
+    // hit; under normal mode it's the ranking pool — at least RANK_POOL,
+    // grown to honor an explicit large `--limit`, and clamped to MAX_LIMIT.
+    let pool_cap = if shared_filters.all {
+        MAX_LIMIT
+    } else {
+        RANK_POOL.max(limit).min(MAX_LIMIT)
+    };
     let mut matches: Vec<serde_json::Value> = Vec::new();
     let mut files_scanned: usize = 0;
     let mut files_with_matches: usize = 0;
-    let mut total_pre_truncate: usize = 0;
-    let mut truncated_hit_cap = false;
+    // Every match seen, capped at MAX_LIMIT (the hard scan ceiling).
+    let mut total_matches: usize = 0;
 
     'files: for rel in &files {
         // Cooperative cancellation: per-file boundary. Covers both the
@@ -1963,9 +2058,9 @@ pub async fn grep(
             if token.is_cancelled() {
                 return Err(cancelled());
             }
-            total_pre_truncate += 1;
+            total_matches += 1;
 
-            if matches.len() < limit {
+            if matches.len() < pool_cap {
                 let (line_no, line_start, line_end) = find_line_bounds(&bytes, m_start);
                 let raw_line = &bytes[line_start..line_end];
                 let line_text = bytes_to_truncated_utf8(raw_line, MAX_LINE_BYTES);
@@ -2046,13 +2141,17 @@ pub async fn grep(
                 }));
                 file_recorded = true;
             } else {
-                truncated_hit_cap = true;
-                // We've filled `matches`; further hits in this file
-                // count toward `total_pre_truncate` (so `truncated`
-                // reflects reality) but contribute no payload.
-                // Stop scanning entirely — agents should narrow the
-                // search instead of asking for more pages.
-                break 'files;
+                // The rank pool (`pool_cap`) is full: we have enough
+                // candidates to rank from and won't grow `matches` any
+                // further. But we KEEP counting `total_matches` (already
+                // incremented above) past the pool so the footer can
+                // honestly report "shown of total" — e.g. "40 of 918".
+                // Only the hard scan ceiling (MAX_LIMIT) stops the walk
+                // entirely; that bounds worst-case CPU on pathological
+                // patterns while keeping the count meaningful.
+                if total_matches >= MAX_LIMIT {
+                    break 'files;
+                }
             }
         }
         if file_recorded {
@@ -2096,7 +2195,6 @@ pub async fn grep(
             .into_iter()
             .map(|r| (r.file, r.start_byte, r.end_byte))
             .collect();
-        let dropped_count = matches.len();
         matches.retain(|m| {
             let f = m["file"].as_str().unwrap_or("").to_string();
             let s = m["range"]["start_byte"].as_u64().unwrap_or(0) as u32;
@@ -2109,40 +2207,75 @@ pub async fn grep(
         let surviving_files: HashSet<&str> =
             matches.iter().filter_map(|m| m["file"].as_str()).collect();
         files_with_matches = surviving_files.len();
-        // Reflect the post-filter drop in the `truncated` accounting:
-        // `total_pre_truncate` was counted pre-filter, so if the
-        // filter dropped any rows we want the existing
-        // `total_pre_truncate > matches.len()` clause to keep firing.
-        // No mutation needed; just note the invariant.
-        let _ = dropped_count;
+        // Make `total_matches` honest for the within_symbol path. It was
+        // counted PRE-filter over every pattern hit, so leaving it would
+        // report e.g. "3 of 400, truncated" even when all in-symbol
+        // matches are returned — telling the agent to narrow a result
+        // that is already COMPLETE. `truncated` is a contract field
+        // agents act on, so it must be honest. Reset `total_matches` to
+        // the count of hits that fall INSIDE the target symbol (i.e. the
+        // surviving rows), BEFORE the rank-truncate to `limit` below. The
+        // downstream `truncated = total_matches > shown` then fires only
+        // when the in-symbol matches genuinely overflow the budget.
+        total_matches = matches.len();
     }
 
-    let truncated = truncated_hit_cap || total_pre_truncate > matches.len();
+    // Normal mode (`!all`): rank the collected POOL by enclosing-def
+    // PageRank (descending), THEN truncate to the response budget.
+    // Ranking before truncation is the whole point — the returned
+    // top-`limit` is chosen from up to `pool_cap` candidates, so a
+    // high-rank match late in scan order still surfaces. `all` mode
+    // (Task 5) wants scan-order + unbounded, so it skips both the sort
+    // and the truncate here.
+    //
+    // Comparator mirrors `find_symbol`'s SortMode::Rank (index.rs):
+    // rank DESC, then (file, start_byte) ASC for deterministic ties.
+    // File-scope / cold-start matches carry `rank_score == 0.0` and
+    // sort last.
+    if !shared_filters.all {
+        matches.sort_by(|a, b| {
+            let ra = a["rank_score"].as_f64().unwrap_or(0.0);
+            let rb = b["rank_score"].as_f64().unwrap_or(0.0);
+            // total_cmp handles NaN safely; partial_cmp would panic on
+            // NaN inputs (which shouldn't happen here, but defending in
+            // depth is cheap).
+            rb.total_cmp(&ra).then_with(|| {
+                let af = a["file"].as_str().unwrap_or("");
+                let bf = b["file"].as_str().unwrap_or("");
+                let ab = a["range"]["start_byte"].as_u64().unwrap_or(0);
+                let bb = b["range"]["start_byte"].as_u64().unwrap_or(0);
+                af.cmp(bf).then(ab.cmp(&bb))
+            })
+        });
+        matches.truncate(limit);
+    }
 
-    // v0.5.5: sort by enclosing-def PageRank, descending. Ties broken
-    // by `(file, start_byte)` for stable cross-call ordering — same
-    // shape `find_callers` uses. Matches without enclosing (file-scope
-    // or cold-start) carry `rank_score == 0.0` and fall to the bottom.
-    matches.sort_by(|a, b| {
-        let ra = a["rank_score"].as_f64().unwrap_or(0.0);
-        let rb = b["rank_score"].as_f64().unwrap_or(0.0);
-        // total_cmp handles NaN safely; partial_cmp would panic on
-        // NaN inputs (which shouldn't happen here, but defending in
-        // depth is cheap).
-        rb.total_cmp(&ra).then_with(|| {
-            let af = a["file"].as_str().unwrap_or("");
-            let bf = b["file"].as_str().unwrap_or("");
-            let ab = a["range"]["start_byte"].as_u64().unwrap_or(0);
-            let bb = b["range"]["start_byte"].as_u64().unwrap_or(0);
-            af.cmp(bf).then(ab.cmp(&bb))
-        })
-    });
+    // `files_with_matches` was maintained incrementally during collection
+    // but is now stale after the rank-truncate above (some files may have
+    // had all their matches cut). Recompute from the FINAL returned
+    // matches — this replaces the incrementally-maintained value with an
+    // exact count of what the caller actually receives.
+    {
+        use std::collections::HashSet;
+        let final_files: HashSet<&str> =
+            matches.iter().filter_map(|m| m["file"].as_str()).collect();
+        files_with_matches = final_files.len();
+    }
+
+    // `shown` = matches actually returned; `total_matches` = every hit
+    // encountered (up to MAX_LIMIT). `truncated` is honest: true iff we
+    // counted more matches than we returned.
+    let shown = matches.len();
+    let truncated = total_matches > shown;
 
     Ok(serde_json::json!({
         "matches":            matches,
         "truncated":          truncated,
+        "total_matches":      total_matches,
+        "shown":              shown,
         "files_scanned":      files_scanned,
         "files_with_matches": files_with_matches,
+        "matched":            matched_kind.as_str(),
     }))
 }
 

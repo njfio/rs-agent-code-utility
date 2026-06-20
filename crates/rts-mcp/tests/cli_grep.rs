@@ -212,10 +212,46 @@ async fn grep_structural_limit_caps_returned_matches() {
         code, 0,
         "expected matches; stdout={stdout:?} stderr={stderr:?}"
     );
+    // Count only match lines (not the truncation-summary footer line,
+    // which starts with '…' and is added when the daemon sets truncated=true).
+    let match_lines: Vec<&str> = stdout.lines().filter(|l| !l.starts_with('…')).collect();
     assert_eq!(
-        stdout.lines().count(),
+        match_lines.len(),
         2,
         "limit=2 must cap returned matches to 2; got {stdout:?}"
+    );
+
+    // Regression: the structural truncation footer must report coherent
+    // counts. The structural response builder emits `shown`/`total_matches`
+    // (unified with the text path) so the footer reads them correctly —
+    // before the fix it emitted `rows_seen`/`rows_returned` only, so the
+    // footer printed "showing 0 of 0 matches" for a truncated structural
+    // query. With `--limit 2` the footer must show `shown=2` of the total
+    // rows seen, NOT "0 of 0".
+    let footer = stdout
+        .lines()
+        .find(|l| l.starts_with('…'))
+        .unwrap_or_else(|| panic!("expected a truncation footer line; got {stdout:?}"));
+    // shown==2 (== limit) must appear; the total is workspace-dependent so we
+    // only assert it's a real number ≥ 2, NOT the pre-fix "0 of 0".
+    assert!(
+        footer.contains("showing 2 of "),
+        "footer must show shown=2 (the limit); got {footer:?}"
+    );
+    assert!(
+        !footer.contains("showing 0 of 0"),
+        "footer must not show the pre-fix incoherent 0-of-0 counts; got {footer:?}"
+    );
+    // Parse the total from "showing 2 of <N> matches" and verify N >= 2.
+    let total: u64 = footer
+        .split("showing 2 of ")
+        .nth(1)
+        .and_then(|s| s.split_whitespace().next())
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(|| panic!("could not parse total from footer {footer:?}"));
+    assert!(
+        total >= 2,
+        "footer total ({total}) must be >= shown (2); got {footer:?}"
     );
 }
 
