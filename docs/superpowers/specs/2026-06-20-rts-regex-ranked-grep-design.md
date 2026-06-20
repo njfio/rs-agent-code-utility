@@ -143,6 +143,24 @@ Replace the flat scan-order, `limit`-capped default output with:
     ratio (was 1.04) does not increase; bounded output never *adds* tokens vs the
     pre-change flat output for the same hit set.
 
+## 5b. Re-measurement results (2026-06-20, release build, pylint workspace)
+
+Measured with the new `rts`/`rts-daemon` against the same patterns the original
+token study used (tiktoken o200k_base). All success criteria met:
+
+| Criterion | Baseline | Result |
+|---|---|---|
+| Alternation hit-rate | 0/4 (literal mode returned nothing) | **4/4 recovered** (`tomlkit\|astroid\|pytest`, `__version__\|2\.`, `towncrier\|bugfix\|feature`, `socket.error\|SocketError\|ProtocolError`) |
+| Broad search `astroid` tokens | ~24,333 (unbounded, 870 hits) | **1,123 tokens** (40 ranked hits + footer) — **95% reduction** |
+| Enclosing context per hit | absent (despite tool desc) | shown, e.g. `register(): def register(self):` |
+| Paren pattern `def run(` | n/a | falls back to literal, finds the defs |
+
+The 40 shown on a broad search are the PageRank-central hits (ranked from the
+256-pool), not an arbitrary first-40. Narrow searches are bounded identically
+(nothing balloons); the only per-line cost is the short `enclosing():` prefix
+(~2–4 tokens/line), an acceptable trade for the context it adds. `--all` returns
+the full unbounded set (24,333 tokens for `astroid`) when the agent wants it.
+
 ## 6. Open follow-ups (not blocking implementation)
 
 - **Default budget tuning.** ~40 hits / ~2k tokens was flagged at design time as
