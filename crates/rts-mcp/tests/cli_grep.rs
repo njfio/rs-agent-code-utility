@@ -212,8 +212,11 @@ async fn grep_structural_limit_caps_returned_matches() {
         code, 0,
         "expected matches; stdout={stdout:?} stderr={stderr:?}"
     );
+    // Count only match lines (not the optional truncation-summary footer
+    // which starts with '…' and is added when the daemon sets truncated=true).
+    let match_lines: Vec<&str> = stdout.lines().filter(|l| !l.starts_with('…')).collect();
     assert_eq!(
-        stdout.lines().count(),
+        match_lines.len(),
         2,
         "limit=2 must cap returned matches to 2; got {stdout:?}"
     );
