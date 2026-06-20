@@ -1950,7 +1950,18 @@ pub async fn grep(
     // truncated to `limit` in scan order before ranking, a high-rank
     // match late in scan order would be lost and the feature would be
     // silently broken.
-    let pool_cap = RANK_POOL.max(limit).min(MAX_LIMIT);
+    // Under `all` we collect EVERY hit up to the hard ceiling; under
+    // normal mode we collect a meaningful ranking pool (>= RANK_POOL)
+    // and truncate to `limit` after ranking.
+    let collect_cap = if shared_filters.all {
+        MAX_LIMIT
+    } else {
+        RANK_POOL.max(limit).min(MAX_LIMIT)
+    };
+    // Keep the old name available so the `else` branch comment below
+    // reads naturally. Both variables alias to the same semantics in
+    // their respective modes.
+    let pool_cap = collect_cap;
     let mut matches: Vec<serde_json::Value> = Vec::new();
     let mut files_scanned: usize = 0;
     let mut files_with_matches: usize = 0;

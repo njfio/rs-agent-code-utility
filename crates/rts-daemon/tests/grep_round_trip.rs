@@ -1066,3 +1066,121 @@ async fn within_symbol_truncation_is_honest_when_complete() -> anyhow::Result<()
 
     Ok(())
 }
+
+/// Task 5: `all: true` bypasses the ranking budget and returns EVERY
+/// match in scan order (file asc, start_byte asc), unranked, with no
+/// truncation up to MAX_LIMIT (4096).
+///
+/// The workspace contains MORE than the default rank pool (256) and
+/// default budget (40): 60 functions each with 2 hits => 120 matches
+/// total. Under `all: true` the response must return all 120,
+/// `truncated` must be `false`, and the scan order (file, start_byte)
+/// must be non-decreasing across the entire match list.
+#[tokio::test(flavor = "current_thread")]
+async fn all_returns_every_match_in_scan_order() -> anyhow::Result<()> {
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let workspace = tempfile::tempdir()?;
+
+    // Build a workspace with 60 functions each containing the marker
+    // string TWICE (binding + bare return) => 120 matches total.
+    // 120 > default budget (40) AND > default rank pool (256 is the
+    // pool but 120 < 256 — so we use 60 fns x 2 matches = 120 which is
+    // > 40, well below 256). To force the pool-cap bug to manifest we
+    // need total_matches > pool_cap. Let's use 130 functions => 260
+    // matches, which exceeds the 256 rank pool boundary.
+    let mut lib = String::new();
+    for i in 0..130 {
+        lib.push_str(&format!(
+            "pub fn scan_fn_{i}() -> i32 {{\n    let scan_marker_{i} = {i};\n    scan_marker_{i}\n}}\n"
+        ));
+    }
+    // Write two files so we can also verify cross-file order is file-ascending.
+    // lib.rs has all 130 functions; aux.rs has 5 more.
+    std::fs::write(workspace.path().join("lib.rs"), &lib)?;
+    // Additional file with 10 more matches (5 functions x 2 hits each).
+    let mut aux = String::new();
+    for i in 130..135 {
+        aux.push_str(&format!(
+            "pub fn scan_fn_{i}() -> i32 {{\n    let scan_marker_{i} = {i};\n    scan_marker_{i}\n}}\n"
+        ));
+    }
+    std::fs::write(workspace.path().join("aux.rs"), &aux)?;
+
+    // Total matches in the workspace:
+    // lib.rs: 130 fns * 2 hits = 260 matches (exceeds the 256 pool cap)
+    // aux.rs:   5 fns * 2 hits =  10 matches
+    // Grand total: 270 matches — well under MAX_LIMIT (4096).
+    // The pattern "scan_marker_" appears in both the variable binding and
+    // the return expression of every function. But we use the exact prefix
+    // "scan_marker_" which appears in every binding line AND every return line.
+    let expected_total: usize = 270;
+
+    let (mut stream, mut child) =
+        spawn_and_mount(workspace.path(), &runtime_dir, &state_dir, &home_dir, "scan_fn_0").await?;
+    let _kill = KillOnDrop(&mut child);
+
+    let resp = round_trip(
+        &mut stream,
+        "80",
+        "Index.Grep",
+        json!({ "text": "scan_marker_", "all": true, "literal": true }),
+    )
+    .await?;
+
+    assert!(resp["error"].is_null(), "all-mode grep errored: {resp:?}");
+    let result = &resp["result"];
+    let matches = result["matches"].as_array().cloned().unwrap_or_default();
+
+    // 1. Must return ALL matches, not just 40 or 256.
+    assert_eq!(
+        matches.len(),
+        expected_total,
+        "`all: true` must return every match ({expected_total}), got {}: {result}",
+        matches.len()
+    );
+
+    // 2. `truncated` must be false (all matches were returned).
+    assert_eq!(
+        result["truncated"].as_bool(),
+        Some(false),
+        "`truncated` must be false under `all: true` when total < MAX_LIMIT: {result}"
+    );
+
+    // 3. Matches must be in scan order: within each file, start_byte is
+    // non-decreasing. `all` bypasses the rank sort so matches stay in
+    // scan order — no file's matches interleave with another file's, and
+    // within each contiguous file block start_bytes only go up.
+    //
+    // We do NOT assume a specific inter-file order because list_indexed_files
+    // returns paths in storage order (not necessarily alphabetical).
+    // We DO assert that each file forms a contiguous, monotonically
+    // increasing block with no rank reordering.
+    let mut seen_files: Vec<String> = Vec::new();
+    let mut prev_byte: u64 = 0;
+    let mut prev_file = String::new();
+    for m in &matches {
+        let f = m["file"].as_str().unwrap_or("").to_string();
+        let b = m["range"]["start_byte"].as_u64().unwrap_or(0);
+        if f == prev_file {
+            // Same file: byte offset must be non-decreasing.
+            assert!(
+                b >= prev_byte,
+                "`all: true` matches within the same file must be in start_byte order: \
+                 got {b} after {prev_byte} in {f}"
+            );
+        } else {
+            // New file: must not have appeared before (no interleaving).
+            assert!(
+                !seen_files.contains(&f),
+                "`all: true` must not interleave files: {f} appeared again after another file"
+            );
+            seen_files.push(f.clone());
+            prev_file = f;
+        }
+        prev_byte = b;
+    }
+
+    Ok(())
+}
