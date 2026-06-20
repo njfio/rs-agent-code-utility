@@ -1362,12 +1362,15 @@ pub async fn find_symbol(
 /// }
 /// ```
 ///
-/// MVP: literal substring, case-insensitive default, no regex, no
-/// `file_glob`, no `context_lines`, no enclosing-symbol resolution.
-/// Each of those is a separate iteration filed in the CHANGELOG.
+/// Supports literal substring and regex matching, case-insensitive by
+/// default, with `file_glob`, `context_lines`, and enclosing-symbol
+/// resolution.
 ///
 /// Errors: `INVALID_PARAMS` for empty `text`, `text` over 1024
-/// chars, `limit` outside `1..=4096`.
+/// chars, `limit` outside `1..=4096`. A single-line pattern that fails
+/// to compile as a regex falls back to literal matching rather than
+/// erroring; only a multiline (`multiline: true`) compile failure
+/// returns `INVALID_PARAMS`.
 /// Whether the grep scanner ultimately ran as regex or fell back to literal.
 /// Emitted as `"matched"` in the response so callers know which path fired.
 #[derive(Clone, Copy)]
@@ -1872,6 +1875,12 @@ pub async fn grep(
                 "truncated": truncated,
                 "rows_seen": result.rows_seen,
                 "rows_returned": final_matches.len(),
+                // Unify the wire contract with the TEXT grep path so the CLI
+                // truncation footer (cli.rs `render_grep_lines`) reads the
+                // same keys for both paths. `shown` = rows returned in this
+                // page; `total_matches` = total rows seen before truncation.
+                "shown": final_matches.len(),
+                "total_matches": result.rows_seen,
                 "files_scanned": result.files_scanned,
                 "files_with_matches": files_with_matches,
                 "partial_failures": pfs_json,
@@ -1953,15 +1962,15 @@ pub async fn grep(
     // Under `all` we collect EVERY hit up to the hard ceiling; under
     // normal mode we collect a meaningful ranking pool (>= RANK_POOL)
     // and truncate to `limit` after ranking.
-    let collect_cap = if shared_filters.all {
+    // `pool_cap` is the collection ceiling in BOTH modes. Under `all`
+    // we raise it to the hard scan ceiling (MAX_LIMIT) to gather every
+    // hit; under normal mode it's the ranking pool — at least RANK_POOL,
+    // grown to honor an explicit large `--limit`, and clamped to MAX_LIMIT.
+    let pool_cap = if shared_filters.all {
         MAX_LIMIT
     } else {
         RANK_POOL.max(limit).min(MAX_LIMIT)
     };
-    // Keep the old name available so the `else` branch comment below
-    // reads naturally. Both variables alias to the same semantics in
-    // their respective modes.
-    let pool_cap = collect_cap;
     let mut matches: Vec<serde_json::Value> = Vec::new();
     let mut files_scanned: usize = 0;
     let mut files_with_matches: usize = 0;
