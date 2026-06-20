@@ -232,13 +232,26 @@ async fn grep_structural_limit_caps_returned_matches() {
         .lines()
         .find(|l| l.starts_with('…'))
         .unwrap_or_else(|| panic!("expected a truncation footer line; got {stdout:?}"));
+    // shown==2 (== limit) must appear; the total is workspace-dependent so we
+    // only assert it's a real number ≥ 2, NOT the pre-fix "0 of 0".
     assert!(
-        footer.contains("showing 2 of 6 matches"),
-        "footer must show correct structural truncation counts; got {footer:?}"
+        footer.contains("showing 2 of "),
+        "footer must show shown=2 (the limit); got {footer:?}"
     );
     assert!(
         !footer.contains("showing 0 of 0"),
         "footer must not show the pre-fix incoherent 0-of-0 counts; got {footer:?}"
+    );
+    // Parse the total from "showing 2 of <N> matches" and verify N >= 2.
+    let total: u64 = footer
+        .split("showing 2 of ")
+        .nth(1)
+        .and_then(|s| s.split_whitespace().next())
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(|| panic!("could not parse total from footer {footer:?}"));
+    assert!(
+        total >= 2,
+        "footer total ({total}) must be >= shown (2); got {footer:?}"
     );
 }
 
