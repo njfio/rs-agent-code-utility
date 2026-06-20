@@ -1390,13 +1390,6 @@ pub async fn grep(
     state: &Arc<DaemonState>,
     token: CancelToken,
 ) -> Result<serde_json::Value, ProtocolError> {
-    /// Response cap (matches RETURNED) when `limit` is unset and `all`
-    /// is false. Deliberately small: a ranked top-40 keeps agent
-    /// context lean while still drawing from a real candidate pool
-    /// (`RANK_POOL`). Distinct from `RANK_POOL` (what we rank FROM) and
-    /// from `total_matches` (what we count). Mirrored by the compose
-    /// validator's unset-`limit` default so a bare grep returns 40.
-    const GREP_DEFAULT_BUDGET: usize = 40;
     /// Ranking candidate pool: normal mode collects up to this many
     /// matches to rank FROM, so the returned top-`limit` is chosen from
     /// a meaningful population rather than an arbitrary scan-order
@@ -1499,15 +1492,10 @@ pub async fn grep(
         ));
     }
     // Response budget: how many ranked matches we RETURN. The compose
-    // validator already resolved unset `limit` to GREP_DEFAULT_BUDGET,
-    // so this is either that default or the caller's explicit value.
-    // The debug_assert keeps the two default sites from silently
-    // drifting apart.
+    // validator already resolved unset `limit` to `GREP_DEFAULT_BUDGET`
+    // (see `grep_v2::limits`), so this is either that default (40) or
+    // the caller's explicit value.
     let limit = shared_filters.limit as usize;
-    debug_assert!(
-        shared_filters.limit != 0,
-        "validator guarantees limit >= 1; GREP_DEFAULT_BUDGET={GREP_DEFAULT_BUDGET}"
-    );
 
     let (text_for_response, case_insensitive, multiline, scanner, matched_kind) = match validated {
         super::grep_v2::ValidatedGrepCall::Literal {
@@ -1942,7 +1930,7 @@ pub async fn grep(
         )
     })?;
 
-    // BUDGET MODEL (see the GREP_DEFAULT_BUDGET / RANK_POOL consts).
+    // BUDGET MODEL (see `grep_v2::limits::GREP_DEFAULT_BUDGET` and `RANK_POOL` below).
     // Three distinct numbers, deliberately decoupled:
     //   * `limit`        — response budget: how many ranked matches we
     //                      RETURN. Applied AFTER ranking.
@@ -1953,6 +1941,7 @@ pub async fn grep(
     //                      meaningful population, not an arbitrary
     //                      scan-order prefix. `max(RANK_POOL, limit)`
     //                      keeps an explicit large `--limit` honest.
+    //                      e.g. limit=40 → pool_cap=256; limit=500 → pool_cap=500.
     //   * `total_matches`— honest counter of every hit encountered up
     //                      to the hard scan ceiling (MAX_LIMIT), even
     //                      past the pool, so the footer can say
@@ -2186,7 +2175,6 @@ pub async fn grep(
             .into_iter()
             .map(|r| (r.file, r.start_byte, r.end_byte))
             .collect();
-        let dropped_count = matches.len();
         matches.retain(|m| {
             let f = m["file"].as_str().unwrap_or("").to_string();
             let s = m["range"]["start_byte"].as_u64().unwrap_or(0) as u32;
@@ -2210,7 +2198,6 @@ pub async fn grep(
         // downstream `truncated = total_matches > shown` then fires only
         // when the in-symbol matches genuinely overflow the budget.
         total_matches = matches.len();
-        let _ = dropped_count;
     }
 
     // Normal mode (`!all`): rank the collected POOL by enclosing-def
@@ -2243,10 +2230,11 @@ pub async fn grep(
         matches.truncate(limit);
     }
 
-    // `files_with_matches` was computed during collection over the full
-    // pool; after truncating to the response budget it can overcount.
-    // Recompute from the FINAL returned matches so it reflects exactly
-    // what the caller receives.
+    // `files_with_matches` was maintained incrementally during collection
+    // but is now stale after the rank-truncate above (some files may have
+    // had all their matches cut). Recompute from the FINAL returned
+    // matches — this replaces the incrementally-maintained value with an
+    // exact count of what the caller actually receives.
     {
         use std::collections::HashSet;
         let final_files: HashSet<&str> =

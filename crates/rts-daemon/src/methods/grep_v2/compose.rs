@@ -35,6 +35,7 @@
 //! grammars. Everything else is pure-input validation and lives here.
 
 use super::errors::{GrepValidationCode, GrepValidationError};
+use super::limits::GREP_DEFAULT_BUDGET;
 
 /// Outcome of validating a `GrepParams`. Each variant carries the
 /// resolved (param-shape) data the downstream scan path needs; the
@@ -120,14 +121,6 @@ pub struct ValidationInput {
     /// Pass-through for result-set expansion; consumed by a later task.
     pub all: Option<bool>,
 }
-
-/// Default RESPONSE budget when `params.limit` is unset for the RANKED
-/// text path (literal / regex): how many ranked matches a bare grep
-/// returns. Mirrors `GREP_DEFAULT_BUDGET` in `methods/index.rs`. This
-/// caps the RETURNED set only — the handler still collects a larger
-/// ranking pool (`RANK_POOL`) to rank from, so the top-40 is drawn from
-/// a real candidate population rather than the first 40 in scan order.
-const GREP_DEFAULT_BUDGET: u32 = 40;
 
 /// Default RESPONSE budget when `params.limit` is unset for the
 /// STRUCTURAL path. Higher than the ranked-text budget on purpose:
@@ -520,12 +513,6 @@ mod tests {
         assert_eq!(shared.language.as_deref(), Some(&["rust".to_string()][..]));
         assert_eq!(shared.within_symbol.as_deref(), Some("foo"));
         assert!(shared.within_symbol_allow_overload);
-    }
-
-    #[test]
-    fn default_limit_when_unset() {
-        let (_, shared) = validate(&input_text("hello")).unwrap();
-        assert_eq!(shared.limit, GREP_DEFAULT_BUDGET);
     }
 
     #[test]
