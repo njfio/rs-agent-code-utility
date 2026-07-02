@@ -164,3 +164,5 @@ crates/rts-daemon/fuzz/target/
 crates/rts-daemon/fuzz/artifacts/
 crates/rts-daemon/fuzz/coverage/
 crates/rts-daemon/fuzz/Cargo.lock
+.entropy/ledger.db
+.entropy/session/

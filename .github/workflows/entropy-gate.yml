@@ -1,0 +1,21 @@
+name: entropy-gate
+on:
+  pull_request:
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: fetch base
+        run: git fetch origin ${{ github.base_ref }}
+      - name: run gate
+        env:
+          ENTROPY_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'entropy-override') && 'label entropy-override' || '' }}"
+        run: |
+          git branch --set-upstream-to=origin/${{ github.base_ref }} || true
+          MODE=gate
+          if ${{ contains(github.event.pull_request.labels.*.name, 'consolidation') }}; then
+            MODE=require-negative
+          fi
+          bash scripts/entropy/gate.sh "$MODE"

@@ -1,8 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-
   "_comment": "Project-scoped Claude Code settings, committed to repo (vs settings.local.json which is per-user). Configures two rts hooks: (1) the rts-nudge PreToolUse hook intercepts Bash grep/rg/find calls on workspace paths and suggests the AST-precise mcp__rts__* equivalent — its 'if' clause is the load-bearing optimization (Claude Code evaluates it BEFORE forking the hook, so it doesn't run for cargo/git/etc.); (2) the rts-verify PostToolUse hook runs `rts verify` after each Write/Edit/MultiEdit and feeds any hallucinated symbol/import references back to the agent (annotate-only, never blocks). Disable both via env: RTS_HOOK_DISABLED=1.",
-
   "hooks": {
     "PreToolUse": [
       {
@@ -25,6 +23,37 @@
             "type": "command",
             "command": ".claude/hooks/rts-verify.sh",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/entropy/session_start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 5,
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/entropy/inject_context.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/entropy/session_end.sh"
           }
         ]
       }
