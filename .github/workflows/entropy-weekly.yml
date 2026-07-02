@@ -1,0 +1,65 @@
+name: entropy-weekly
+on:
+  schedule: [ { cron: "0 6 * * 1" } ]
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install rts (fall back gracefully)
+        run: cargo install --git https://github.com/njfio/rs-agent-code-utility --locked || true
+      - name: snapshot + clones
+        id: scan
+        run: |
+          WEEK=$(date -u +%G-W%V)
+          if command -v rts >/dev/null; then
+            SNAP=$(rts snapshot --format json)
+            rts clones --min-mass-tokens 40 --format json > clusters.json
+          else
+            LOC=$(git ls-files -z | xargs -0 wc -l 2>/dev/null | tail -1 | awk '{print $1+0}')
+            npx --yes jscpd --min-tokens 40 --reporters json --output .jscpd . || true
+            python3 scripts/entropy/jscpd_to_clusters.py .jscpd/jscpd-report.json > clusters.json
+            DUP=$(jq '.dup_pct' clusters.json); N=$(jq '.clusters | length' clusters.json)
+            SNAP=$(jq -n --argjson loc "$LOC" --argjson dup "$DUP" --argjson n "$N" \
+              '{loc:$loc, symbols:null, dup_pct:$dup, clone_clusters:$n,
+                mean_fan_in:null, mean_fan_out:null, deps_direct:null, deps_transitive:null}')
+          fi
+          mkdir -p .entropy/events
+          jq -cn --arg t snapshot --arg week "$WEEK" --arg month "$(date -u +%Y-%m)" \
+                 --arg rev "$GITHUB_SHA" --argjson s "$SNAP" \
+            '{t:$t, week:$week, month:$month, rev:$rev} + $s' >> ".entropy/events/$(date -u +%Y-%m).jsonl"
+      - name: update rolling consolidation issue
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          TOP=$(python3 -c 'import sys,tomllib;print(tomllib.load(open(".entropy/config.toml","rb"))["clones"]["top_n_issue"])' 2>/dev/null || echo 10)
+          {
+            echo "# Consolidation candidates (rolling)"
+            echo ""
+            echo "Auto-updated weekly. Ranked by \`mass_tokens x spread_files\`. See spec §9.1 for extraction rules."
+            echo ""
+            echo "| # | score | mass | files | first site |"
+            echo "|---|-------|------|-------|------------|"
+            jq -r --argjson n "$TOP" \
+              '.clusters | sort_by(-.score) | .[:$n] | to_entries[] |
+               "| \(.key+1) | \(.value.score) | \(.value.mass_tokens) | \(.value.spread_files) | \(.value.sites[0].path):\(.value.sites[0].start_line) |"' \
+              clusters.json
+          } > issue_body.md
+          NUM=$(gh issue list --label "entropy:consolidation" --state open --json number -q '.[0].number' || true)
+          if [ -z "$NUM" ]; then
+            gh label create "entropy:consolidation" --color 5319e7 || true
+            NUM=$(gh issue create --title "Consolidation candidates (rolling)" \
+                  --label "entropy:consolidation" --body-file issue_body.md \
+                  | awk -F/ 'END{print $NF}')   # gh issue create prints the URL; no --json support
+          else
+            gh issue edit "$NUM" --body-file issue_body.md
+          fi
+      - name: commit snapshot event
+        run: |
+          git config user.name "entropy-bot"; git config user.email "bot@users.noreply.github.com"
+          git add .entropy/events
+          git commit -m "entropy: weekly snapshot [skip ci]" || echo "nothing to commit"
+          git push

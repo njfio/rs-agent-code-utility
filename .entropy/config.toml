@@ -1,0 +1,27 @@
+[gate]
+warn_net_lines  = 200
+block_net_lines = 400
+default_base    = "origin/main"     # range base when no upstream is set
+exempt = [
+  ".entropy/**",                      # the ledger must not consume its own budget
+  "vendor/**",
+  "**/generated/**",
+  "*.lock",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "Cargo.lock",
+  "**/*.min.*",
+  "**/snapshots/**",
+]
+# v0 decision: tests COUNT toward the budget. Revisit with data (§10).
+
+[retrieval]
+k            = 12
+token_budget = 1500
+timeout_secs = 2                    # ambient must be ~free; fail open past this
+
+[clones]
+min_mass_tokens = 40
+languages       = ["rust"]
+fallback        = "jscpd"
+top_n_issue     = 10
