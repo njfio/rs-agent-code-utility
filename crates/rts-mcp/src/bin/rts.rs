@@ -239,6 +239,74 @@ enum Cmd {
         #[command(subcommand)]
         action: TelemetryCmd,
     },
+    /// Rank workspace symbols against a task description and emit
+    /// signatures + first doc lines (never bodies) under a token budget.
+    /// Entropy-v0 contract; runs in-process over the workspace, no daemon.
+    #[cfg(feature = "experimental")]
+    Context {
+        /// Task text to rank symbols against.
+        #[arg(long = "for")]
+        for_text: String,
+        /// Maximum number of symbols to offer.
+        #[arg(long, default_value_t = 12)]
+        k: usize,
+        /// Token budget for the rendered block (lowest-ranked dropped first).
+        #[arg(long, default_value_t = 1500)]
+        token_budget: usize,
+        /// Output format. Only `hook-json` is supported.
+        #[arg(long, value_enum, default_value_t = ContextFormat::HookJson)]
+        format: ContextFormat,
+    },
+    /// Type-1/Type-2 clone detection via normalized AST-subtree hashing
+    /// (identifiers/literals normalized, comments stripped). Entropy-v0
+    /// contract; runs in-process over the workspace, no daemon.
+    #[cfg(feature = "experimental")]
+    Clones {
+        /// Minimum normalized-token mass for a subtree to count as a clone.
+        #[arg(long, default_value_t = 40)]
+        min_mass_tokens: usize,
+        /// `json` (full clusters) or `summary` (dup_pct + cluster count).
+        #[arg(long, value_enum, default_value_t = ClonesFormat::Json)]
+        format: ClonesFormat,
+    },
+    /// Repo-level entropy snapshot: rev, loc, symbols, dup_pct,
+    /// clone_clusters (+ nullable fan-in/out and dependency counts).
+    /// Entropy-v0 contract; runs in-process over the workspace, no daemon.
+    #[cfg(feature = "experimental")]
+    Snapshot {
+        /// Output format. Only `json` is supported.
+        #[arg(long, value_enum, default_value_t = SnapshotFormat::Json)]
+        format: SnapshotFormat,
+        /// Clone-mass threshold feeding dup_pct / clone_clusters.
+        #[arg(long, default_value_t = 40)]
+        min_mass_tokens: usize,
+    },
+}
+
+/// `rts context` output formats (entropy-v0 §7 hook contract).
+#[cfg(feature = "experimental")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum ContextFormat {
+    /// The `{"offered":[…],"rendered":"…"}` hook payload.
+    #[value(name = "hook-json")]
+    HookJson,
+}
+
+/// `rts clones` output formats.
+#[cfg(feature = "experimental")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum ClonesFormat {
+    /// Full cluster list, score-descending.
+    Json,
+    /// `{"dup_pct":…,"clusters":…}` roll-up.
+    Summary,
+}
+
+/// `rts snapshot` output formats.
+#[cfg(feature = "experimental")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum SnapshotFormat {
+    Json,
 }
 
 /// The verdict severity at (or above) which `rts verify-edit` fails the
@@ -344,6 +412,44 @@ fn main() -> ExitCode {
             return ExitCode::from(exit::WORKSPACE_ERROR as u8);
         }
     };
+
+    // Entropy-v0 contract subcommands run in-process over the workspace
+    // (rts-core parse + extract) — no daemon connection, no runtime. They
+    // must stay daemon-free: callers wrap them in `timeout 2` hooks where
+    // an auto-spawn round-trip is a liability.
+    #[cfg(feature = "experimental")]
+    {
+        use rts_mcp::entropy;
+        match &cli.cmd {
+            Cmd::Context {
+                for_text,
+                k,
+                token_budget,
+                format: ContextFormat::HookJson,
+            } => {
+                return ExitCode::from(
+                    entropy::run_context(&workspace, for_text, *k, *token_budget) as u8,
+                );
+            }
+            Cmd::Clones {
+                min_mass_tokens,
+                format,
+            } => {
+                return ExitCode::from(entropy::run_clones(
+                    &workspace,
+                    *min_mass_tokens,
+                    *format == ClonesFormat::Summary,
+                ) as u8);
+            }
+            Cmd::Snapshot {
+                format: SnapshotFormat::Json,
+                min_mass_tokens,
+            } => {
+                return ExitCode::from(entropy::run_snapshot(&workspace, *min_mass_tokens) as u8);
+            }
+            _ => {}
+        }
+    }
 
     // Daemon-talking commands run on a current-thread Tokio runtime
     // (the JSON-RPC stream is inherently sequential per connection).
@@ -746,6 +852,9 @@ async fn run_command(
         }
         // Handled before reaching here.
         Cmd::Doctor { .. } | Cmd::Completions { .. } | Cmd::Telemetry { .. } => Ok(exit::OK),
+        // Entropy-v0 subcommands are handled synchronously in main().
+        #[cfg(feature = "experimental")]
+        Cmd::Context { .. } | Cmd::Clones { .. } | Cmd::Snapshot { .. } => Ok(exit::OK),
     }
 }
 

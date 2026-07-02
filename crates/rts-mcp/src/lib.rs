@@ -17,10 +17,14 @@
 //!   (`dep:ureq`) plus the `rts telemetry flush` send path. Off by default.
 //! - `experimental` — gates unstable MCP tools / `rts` CLI subcommands
 //!   behind `#[cfg(feature = "experimental")]` until they're promoted to
-//!   the frozen surface in a release. Off by default; empty today.
+//!   the frozen surface in a release. Off by default. Currently gates the
+//!   entropy-v0 contract subcommands (`context --format hook-json`,
+//!   `clones`, `snapshot`) in `entropy`.
 
 pub mod cli;
 pub mod connection;
 pub mod daemon_client;
+#[cfg(feature = "experimental")]
+pub mod entropy;
 pub mod socket;
 pub mod telemetry;
