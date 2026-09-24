@@ -18,16 +18,22 @@ mod server;
 use rts_mcp::connection::{ConnectionManager, ResilienceConfig};
 use rts_mcp::daemon_client::DaemonClient;
 use rts_mcp::socket;
+use rts_mcp::surface::Surface;
 use server::RtsServer;
 
-/// CLI flags, parsed manually so we don't pull in `clap` for two flags.
+/// CLI flags, parsed manually so we don't pull in `clap` for a handful of flags.
 struct Args {
     /// Workspace root to `Workspace.Mount` against. Defaults to `$PWD`.
     workspace: Option<PathBuf>,
+    /// Which tools to advertise: `all` (default), `core`, `verify`, or a comma-separated list
+    /// of tool names. `RTS_MCP_TOOLS` is the same setting for harnesses that launch us without
+    /// arguments; the flag wins.
+    tools: Option<String>,
 }
 
 fn parse_args() -> Result<Args> {
     let mut workspace: Option<PathBuf> = None;
+    let mut tools: Option<String> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -37,18 +43,33 @@ fn parse_args() -> Result<Args> {
                         anyhow::anyhow!("--workspace requires a value")
                     })?));
             }
+            "--tools" | "-t" => {
+                tools = Some(
+                    args.next()
+                        .ok_or_else(|| anyhow::anyhow!("--tools requires a value"))?,
+                );
+            }
             "--help" | "-h" => {
                 eprintln!("rts-mcp — MCP server bridging Claude Code/Cursor/etc. to rts-daemon.");
                 eprintln!();
-                eprintln!("Usage: rts-mcp [--workspace PATH]");
+                eprintln!("Usage: rts-mcp [--workspace PATH] [--tools SURFACE]");
                 eprintln!();
                 eprintln!("If --workspace is omitted, the current working directory is used.");
+                eprintln!();
+                eprintln!("Surfaces (--tools):");
+                eprintln!("  all      every tool, with its full description (default)");
+                eprintln!("  core     the eight lookup tools, one-line descriptions (~120 tokens)");
+                eprintln!("  verify   core plus the five check_*/verify_* gates");
+                eprintln!("  <list>   a comma-separated list of tool names");
                 eprintln!();
                 eprintln!("Env:");
                 eprintln!(
                     "  RTS_DAEMON_BIN  path to the rts-daemon binary (default: sibling of this exe)"
                 );
                 eprintln!("  RTS_LOG         tracing filter; defaults to `rts_mcp=info,warn`.");
+                eprintln!(
+                    "  RTS_MCP_TOOLS   the same as --tools, when a harness cannot pass a flag."
+                );
                 std::process::exit(0);
             }
             "--version" | "-V" => {
@@ -63,7 +84,7 @@ fn parse_args() -> Result<Args> {
             }
         }
     }
-    Ok(Args { workspace })
+    Ok(Args { workspace, tools })
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -132,12 +153,21 @@ async fn main() -> Result<()> {
     // typing their first question, so Mount is effectively free.
 
     let instructions = format!(
-        "rts-mcp serves four read-only retrieval tools for the workspace at {}. \
+        "rts-mcp serves read-only retrieval tools for the workspace at {}. \
          Tools are deterministic and offline; no LLM in the server. Use `outline_workspace` \
          first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
         workspace.display()
     );
-    let server = RtsServer::new(connection.clone(), instructions);
+    let surface = match args.tools.or_else(|| std::env::var("RTS_MCP_TOOLS").ok()) {
+        Some(spec) => match Surface::parse(&spec) {
+            Ok(surface) => surface,
+            // A typo in a surface must be loud: a silently smaller surface would look like it
+            // worked, and the agent would spend the session wondering where its tools went.
+            Err(err) => anyhow::bail!("--tools: {err}"),
+        },
+        None => Surface::all(),
+    };
+    let server = RtsServer::new(connection.clone(), instructions, surface);
     // v0.5.8: hold a clone of the connection so we can issue one
     // last `Daemon.Stats` after `service.waiting()` returns —
     // `serve()` consumes the server, so this is the only window we
