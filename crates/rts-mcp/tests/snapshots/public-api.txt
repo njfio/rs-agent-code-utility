@@ -369,6 +369,59 @@ pub fn rts_mcp::socket::default_socket_path() -> anyhow::Result<std::path::PathB
 pub fn rts_mcp::socket::resolve_daemon_bin() -> anyhow::Result<std::path::PathBuf>
 pub async fn rts_mcp::socket::try_connect(path: &std::path::Path) -> core::option::Option<tokio::net::unix::stream::UnixStream>
 pub fn rts_mcp::socket::workspace_socket_path(canonical_workspace: &std::path::Path) -> anyhow::Result<std::path::PathBuf>
+pub mod rts_mcp::surface
+pub struct rts_mcp::surface::Surface
+impl rts_mcp::surface::Surface
+pub fn rts_mcp::surface::Surface::all() -> Self
+pub fn rts_mcp::surface::Surface::disabled(&self, tools: impl core::iter::traits::collect::IntoIterator<Item = alloc::string::String>) -> alloc::vec::Vec<alloc::string::String>
+pub fn rts_mcp::surface::Surface::is_subset(&self) -> bool
+pub fn rts_mcp::surface::Surface::keeps(&self, name: &str) -> bool
+pub fn rts_mcp::surface::Surface::parse(spec: &str) -> core::result::Result<Self, alloc::string::String>
+pub fn rts_mcp::surface::Surface::short(&self, name: &str) -> core::option::Option<&'static str>
+impl core::clone::Clone for rts_mcp::surface::Surface
+pub fn rts_mcp::surface::Surface::clone(&self) -> rts_mcp::surface::Surface
+impl core::cmp::Eq for rts_mcp::surface::Surface
+impl core::cmp::PartialEq for rts_mcp::surface::Surface
+pub fn rts_mcp::surface::Surface::eq(&self, other: &rts_mcp::surface::Surface) -> bool
+impl core::fmt::Debug for rts_mcp::surface::Surface
+pub fn rts_mcp::surface::Surface::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for rts_mcp::surface::Surface
+impl core::marker::Freeze for rts_mcp::surface::Surface
+impl core::marker::Send for rts_mcp::surface::Surface
+impl core::marker::Sync for rts_mcp::surface::Surface
+impl core::marker::Unpin for rts_mcp::surface::Surface
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::surface::Surface
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::surface::Surface
+impl<Q, K> equivalent::Equivalent<K> for rts_mcp::surface::Surface where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rts_mcp::surface::Surface::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for rts_mcp::surface::Surface where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rts_mcp::surface::Surface::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rts_mcp::surface::Surface where U: core::convert::From<T>
+pub fn rts_mcp::surface::Surface::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::surface::Surface where U: core::convert::Into<T>
+pub type rts_mcp::surface::Surface::Error = core::convert::Infallible
+pub fn rts_mcp::surface::Surface::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::surface::Surface where U: core::convert::TryFrom<T>
+pub type rts_mcp::surface::Surface::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::surface::Surface::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::surface::Surface where T: core::clone::Clone
+pub type rts_mcp::surface::Surface::Owned = T
+pub fn rts_mcp::surface::Surface::clone_into(&self, target: &mut T)
+pub fn rts_mcp::surface::Surface::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::surface::Surface where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::surface::Surface::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::surface::Surface where T: ?core::marker::Sized
+pub fn rts_mcp::surface::Surface::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::surface::Surface where T: ?core::marker::Sized
+pub fn rts_mcp::surface::Surface::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::surface::Surface where T: core::clone::Clone
+pub unsafe fn rts_mcp::surface::Surface::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::surface::Surface
+pub fn rts_mcp::surface::Surface::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::surface::Surface
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::surface::Surface
+pub const rts_mcp::surface::CORE: &[&str]
+pub const rts_mcp::surface::VERIFY: &[&str]
 pub mod rts_mcp::telemetry
 pub struct rts_mcp::telemetry::LocalConfig
 pub rts_mcp::telemetry::LocalConfig::enabled: bool

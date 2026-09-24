@@ -92,6 +92,24 @@ Or via the project-scoped `.mcp.json`:
 (`rts_mcp=debug,rts_daemon=info` for more detail). All logs go to
 stderr; stdout is reserved for JSON-RPC frames.
 
+### Sizing the surface to the harness
+
+Every tool declaration is sent with every request, so a harness with a tight context budget
+should say what it wants:
+
+```sh
+# Eight lookup tools with one-line descriptions (~3.8k tokens instead of ~7.7k):
+claude mcp add rts -- /path/to/target/release/rts-mcp --workspace "$PWD" --tools core
+
+# Or name exactly the tools you will use (~1.4k for three):
+claude mcp add rts -- /path/to/target/release/rts-mcp --workspace "$PWD" \
+  --tools find_symbol,read_symbol,find_callers
+```
+
+`--tools` takes `all` (default), `core`, `verify`, or a comma-separated list of tool names;
+`RTS_MCP_TOOLS` carries the same value for harnesses that cannot pass a flag. Tools outside the
+surface are refused rather than silently listed, and an unknown name fails at startup.
+
 ## Wiring into Cursor
 
 `~/.cursor/mcp.json`:

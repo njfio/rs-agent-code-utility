@@ -6,9 +6,10 @@
 //! Unix-socket connection held by the server.
 
 use rmcp::{
-    ErrorData as McpError, ServerHandler,
+    ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
-    model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
+    model::{CallToolResult, Content, ListToolsResult, ServerCapabilities, ServerInfo},
+    service::RequestContext,
     tool, tool_handler, tool_router,
 };
 use schemars::JsonSchema;
@@ -16,6 +17,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use rts_mcp::connection::{ConnectionError, ConnectionManager};
+use rts_mcp::surface::Surface;
 
 // Built-in tool descriptions are pinned inline (the `#[tool(description = ...)]`
 // macro expects a literal string and does not accept const-path expressions).
@@ -466,6 +468,9 @@ pub struct RtsServer {
     /// is mid-reconnect rather than blocking on the daemon mutex.
     connection: ConnectionManager,
     instructions: String,
+    /// Which tools this process advertises. `all` keeps every tool and its pinned description;
+    /// a profile advertises a subset with one-line descriptions (see `surface.rs`).
+    surface: Surface,
 }
 
 #[tool_router]
@@ -474,11 +479,29 @@ impl RtsServer {
     /// manager owns the socket and the background heartbeat /
     /// reconnect tasks; this struct is the rmcp tool-router shim that
     /// translates between MCP `tools/call` envelopes and daemon RPCs.
-    pub fn new(connection: ConnectionManager, instructions: String) -> Self {
+    pub fn new(connection: ConnectionManager, instructions: String, surface: Surface) -> Self {
+        let mut tool_router = Self::tool_router();
+        let disabled = surface.disabled(
+            tool_router
+                .list_all()
+                .iter()
+                .map(|tool| tool.name.to_string()),
+        );
+        for name in &disabled {
+            tool_router.disable_route(name.clone());
+        }
+        if !disabled.is_empty() {
+            tracing::info!(
+                tools = disabled.len(),
+                "tool surface restricted; these tools are neither advertised nor callable: {}",
+                disabled.join(", ")
+            );
+        }
         Self {
-            tool_router: Self::tool_router(),
+            tool_router,
             connection,
             instructions,
+            surface,
         }
     }
 
@@ -982,6 +1005,74 @@ impl ServerHandler for RtsServer {
         info.instructions = Some(self.instructions.clone());
         info
     }
+
+    /// The advertised surface, with the subset's one-line descriptions.
+    ///
+    /// `#[tool_handler]` would generate this as `list_all()` unchanged; defining it here (the
+    /// macro skips a method the impl already has) is what lets a profile replace the pinned
+    /// paragraphs. The pinned text is there to steer a model that can see all sixteen tools;
+    /// under a profile of eight, the surface itself is the steer and 2.8k tokens of prose is
+    /// the cost.
+    async fn list_tools(
+        &self,
+        _request: Option<rmcp::model::PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListToolsResult, McpError> {
+        let tools = self
+            .tool_router
+            .list_all()
+            .into_iter()
+            .map(|tool| self.with_surface_description(tool))
+            .collect();
+        Ok(ListToolsResult {
+            tools,
+            meta: None,
+            next_cursor: None,
+        })
+    }
+
+    /// The same view for a single tool, so `get_tool` cannot disagree with `list_tools`.
+    fn get_tool(&self, name: &str) -> Option<rmcp::model::Tool> {
+        self.tool_router
+            .get(name)
+            .cloned()
+            .map(|tool| self.with_surface_description(tool))
+    }
+
+    /// A tool outside the surface is not callable, not merely unlisted.
+    ///
+    /// `ToolRouter::disable_route` hides a tool from `list_all` and from `get`, and its
+    /// documentation says `call` rejects it too — but dispatch in this rmcp version reaches
+    /// the tool anyway (measured: a `grep` call under `--tools find_symbol` returned matches).
+    /// The check is therefore explicit here, which is also where it belongs: the surface is a
+    /// policy the server enforces, not a hint it hopes the client respects.
+    async fn call_tool(
+        &self,
+        request: rmcp::model::CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        if !self.surface.keeps(&request.name) {
+            return Err(McpError::invalid_params(
+                format!(
+                    "tool `{}` is not in this server's tool surface; call tools/list to see what is",
+                    request.name
+                ),
+                None,
+            ));
+        }
+        let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
+        self.tool_router.call(call).await
+    }
+}
+
+impl RtsServer {
+    /// Applies the surface's one-line description, if it has one for this tool.
+    fn with_surface_description(&self, mut tool: rmcp::model::Tool) -> rmcp::model::Tool {
+        if let Some(short) = self.surface.short(&tool.name) {
+            tool.description = Some(std::borrow::Cow::Borrowed(short));
+        }
+        tool
+    }
 }
 
 /// Format a daemon JSON result as MCP text content. Agents parse JSON out of
@@ -1016,4 +1107,54 @@ fn connection_error_to_call_result(e: &ConnectionError) -> CallToolResult {
     });
     let text = serde_json::to_string(&body).unwrap_or_else(|_| e.to_string());
     CallToolResult::error(vec![Content::text(text)])
+}
+
+#[cfg(test)]
+mod surface_tests {
+    use super::*;
+    use rts_mcp::surface::{CORE, Surface, VERIFY};
+
+    /// Every name a profile lists must be a tool that exists. A profile that names a tool the
+    /// router does not have would silently advertise a smaller surface — which is exactly how
+    /// this file came to name four tools that do not exist until a live `tools/list` caught it.
+    #[test]
+    fn every_profile_name_is_a_real_tool() {
+        let all = RtsServer::tool_router()
+            .list_all()
+            .into_iter()
+            .map(|tool| tool.name.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(all.len(), 16, "the router's tool count: {all:?}");
+        for name in CORE.iter().chain(VERIFY.iter()) {
+            assert!(
+                all.contains(&name.to_string()),
+                "{name} is not a tool: {all:?}"
+            );
+        }
+    }
+
+    /// The measured point of a profile: fewer tools, and far fewer bytes of description.
+    /// (The schemas are the larger half and do not shrink — the descriptions do.)
+    #[test]
+    fn a_profile_advertises_less_than_everything() {
+        let all = RtsServer::tool_router().list_all();
+        let core = Surface::parse("core").expect("core");
+        let kept = all
+            .iter()
+            .filter(|tool| core.keeps(&tool.name))
+            .collect::<Vec<_>>();
+        assert_eq!(kept.len(), CORE.len(), "core keeps exactly its profile");
+        let everything = all
+            .iter()
+            .map(|tool| tool.description.as_deref().unwrap_or("").len())
+            .sum::<usize>();
+        let short = kept
+            .iter()
+            .map(|tool| core.short(&tool.name).unwrap_or("").len())
+            .sum::<usize>();
+        assert!(
+            short * 10 < everything,
+            "core's descriptions should be an order of magnitude smaller: {short} vs {everything}"
+        );
+    }
 }

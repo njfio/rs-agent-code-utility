@@ -98,6 +98,42 @@ Ten tools, all read-only. Eight are AST-precise query tools (below); two are obs
 
 The MCP server also exposes two observability tools — `daemon_stats` (per-method call counts) and `daemon_telemetry` (latency percentiles + cache-hit snapshot) — so you (and your agent) can see actual usage rather than guess.
 
+### The tool surface is a choice: `--tools`
+
+`tools/list` travels in the context of every request, and all sixteen tools with their pinned
+descriptions and schemas come to roughly **7,700 tokens per call** — more than some harnesses
+budget for their entire tool surface. So the surface is selectable:
+
+```sh
+rts-mcp --workspace "$PWD" --tools core      # or: RTS_MCP_TOOLS=core
+rts-mcp --workspace "$PWD" --tools find_symbol,read_symbol,find_callers
+```
+
+| surface | tools | descriptions | schemas | ≈ tokens/call |
+|---|---|---|---|---|
+| `all` (default) | 16 | 11.1 KB | 19.8 KB | 7,723 |
+| `verify` | 14 | 1.2 KB | 19.6 KB | 5,214 |
+| `core` | 8 | 0.7 KB | 14.3 KB | 3,764 |
+| a three-tool list | 3 | 0.3 KB | 5.2 KB | 1,374 |
+
+Measured with `tools/list` against this repository as the workspace.
+
+`core` is the eight lookup tools — `outline_workspace`, `find_symbol`, `read_symbol`,
+`read_symbol_at`, `read_range`, `find_callers`, `impact_of`, `grep` — for an agent that reads
+and reasons. `verify` adds the six `verify_*` gates for an agent that edits. A comma-separated
+list names exactly what you want.
+
+Under a profile the descriptions become one line each (0.7 KB instead of 11.1 KB), because the
+pinned paragraphs exist to win the tool-selection moment against `Bash(grep)` — and when the
+surface itself is the steering, eight tools each named for its job, the paragraphs are overhead.
+The schemas do not shrink: they are most of what is left, and knowing that is why the numbers
+above are per-surface rather than per-description.
+
+A tool outside the surface is **not callable**, not merely unlisted: the server refuses it with
+`tool X is not in this server's tool surface`, so a harness that caches an older `tools/list`
+cannot keep calling what you turned off. A typo in a surface stops the server at startup and
+lists the names that exist, rather than quietly serving a smaller surface.
+
 ## How it's built
 
 ```
