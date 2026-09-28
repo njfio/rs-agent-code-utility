@@ -48,6 +48,17 @@ pub struct OutlineArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+// The daemon enforces "exactly one of `name` | `pattern`" (`Index.FindSymbol`
+// rejects both-present and neither-present with INVALID_PARAMS). Every field
+// here is `Option`, so schemars alone emits no `required` at all and a
+// schema-legal call could still be refused. `oneOf` states the rule the daemon
+// already documents in `schemas/v0/methods/Index.FindSymbol.req.schema.json`
+// (that file guards each branch with `not`; for two branches, bare `oneOf` is
+// the same predicate). Clients now see it before they call.
+#[schemars(extend("oneOf" = [
+    {"required": ["name"]},
+    {"required": ["pattern"]},
+]))]
 pub struct FindSymbolArgs {
     /// Exact name to find. Mutually exclusive with `pattern`. Use this
     /// when you know the symbol's name.
@@ -337,6 +348,15 @@ pub struct ReadRangeArgs {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+// `Index.Grep` requires at least one search source: it rejects a call with
+// neither `text` nor a non-blank `structural_query` with INVALID_PARAMS
+// (`data.code: NO_SEARCH_SOURCE_PROVIDED`). Both sources may be supplied
+// (they intersect), so this is `anyOf`, not `oneOf` — the same clause, word for
+// word, that `schemas/v0/methods/Index.Grep.req.schema.json` already carries.
+#[schemars(extend("anyOf" = [
+    {"required": ["text"]},
+    {"required": ["structural_query"]},
+]))]
 pub struct GrepArgs {
     /// Pattern to search for across indexed file bytes.
     /// 1..=1024 characters. **By default this is a LITERAL substring
