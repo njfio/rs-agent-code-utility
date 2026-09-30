@@ -61,3 +61,14 @@ pub const PREDICATE_REGEX_DFA_LIMIT: usize = 256 * 1024;
 /// Capacity of the per-daemon compiled-`Query` LRU. Keyed on
 /// `(Language, query_text)`; eviction is recency-ordered.
 pub const QUERY_CACHE_CAPACITY: usize = 64;
+
+/// Default RESPONSE budget when `params.limit` is unset for the RANKED
+/// text path (literal / regex): how many ranked matches a bare grep
+/// returns. The handler still collects a larger ranking pool
+/// (`RANK_POOL` in the grep handler) to rank FROM, so the top-40 is
+/// drawn from a real candidate population rather than the first 40 in
+/// scan order.
+///
+/// Single source of truth — referenced from both the compose validator
+/// (as `u32`) and the grep handler (cast `as usize`).
+pub(crate) const GREP_DEFAULT_BUDGET: u32 = 40;
