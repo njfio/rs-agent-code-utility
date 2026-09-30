@@ -85,7 +85,8 @@ Each connection is full-duplex. Multiple in-flight requests on a single connecti
   "method":    "Index.LookupSymbol",              // required
   "params":    { ... },                           // required (may be {} for verbs that take no args)
   "cancel_id": "<opaque client-chosen string>",   // optional; v0.6+ (capability `cancellable_queries`)
-  "deadline_ms": 30000                            // optional; v0.7+ (capability `request_deadlines`)
+  "deadline_ms": 30000,                           // optional; v0.7+ (capability `request_deadlines`)
+  "workspace_id": "a7b0c1d2e3f40516"              // optional; v0.8+ (capability `multi_root`)
 }
 ```
 
@@ -108,6 +109,28 @@ deadline; an out-of-range value (`0` or `> 600000`) is rejected with
 `CancelToken` and returns `DEADLINE_EXCEEDED` (§14, §10), distinct from
 the `CANCELLED` an explicit `Daemon.Cancel` produces. Pre-v0.7 daemons
 ignore the field; clients that omit it see unchanged behavior.
+
+#### 3.4b Multi-root routing (`workspace_id`)
+
+A daemon serves **one or more workspace roots** (§5.3a). Every `Index.*`
+request is answered from exactly one of them:
+
+- `workspace_id` names the mounted root (the id `Workspace.Mount` /
+  `Workspace.Status` return). A value that names no mounted root is
+  `WORKSPACE_MISMATCH` — the daemon never substitutes another root's
+  answer, because answering about a different tree is the failure this
+  routing exists to prevent.
+- Absent (or `null`) → the daemon's **default root**: the oldest root
+  still mounted. This is what every single-root client, and any client
+  that predates multi-root, gets — byte-identical behaviour.
+
+Like `cancel_id` and `deadline_ms` it lives in the request envelope, not
+`params`: it is a routing field, and no method's param schema declares
+it. Clients are not expected to make a human choose a root — `rts-mcp`
+infers it from the call's own paths (an absolute path under a mounted
+root routes there) and reports the decision back to the model in the
+response's `_root` block. Direct clients (tests, benches, `rts`) may
+either set it explicitly or rely on the default root.
 
 ```jsonc
 // Response (success)
@@ -296,6 +319,28 @@ The `default.sock` bootstrap path is kept for the no-workspace case (daemons sta
 
 Linux MUST refuse to start if `XDG_RUNTIME_DIR` is unset. There is **no `/tmp/rts-$UID/` fallback** — the symlink-attack surface on `/tmp` is too large (security-review F2).
 
+### 5.3a One daemon, several roots (v0.8+)
+
+The socket path above keys a daemon to the root it was **started** for. That
+daemon may then serve additional roots: `Workspace.Mount` for a second path
+adds it rather than failing with `WORKSPACE_MISMATCH`, and each root keeps its
+own index (`${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`), file watcher,
+writer task, and persisted-cold-mount decision. Roots are addressed by their
+`workspace_id` in the request envelope (§3.4b).
+
+This is what lets one `rts-mcp` process serve a swarm of agents working in
+separate git worktrees: the shim mounts the start-up root plus the worktrees
+it was told about (`--workspace` repeated, or `RTS_MCP_ROOTS`), infers which
+root each call concerns from the call's own paths, and reports the choice back
+in the response. The first root mounted is the daemon's **default root** — the
+one a request that names no root is served by.
+
+`Workspace.Unmount` releases one root: the one named by its `root` param (a
+`workspace_id` or a path), else the default root. A root's watcher, writer,
+index handle, and table entry are dropped when its last reference goes away;
+the daemon keeps serving its other roots and exits only once nothing is
+mounted and the idle window (§15.2) elapses.
+
 ### 5.4 redb file path
 
 ```text
@@ -443,7 +488,10 @@ silently — `Daemon.Cancel` against their ids returns
 
 ### 7.2 `Workspace.Mount`
 
-Establish (or join) the workspace this connection will operate on.
+Establish (or join) a workspace root on this daemon. A daemon may serve
+several roots (§5.3a); mounting a path that is already mounted joins it
+(same `workspace_id`, one more reference) and mounting a new path adds a
+root. The **first** root mounted is the daemon's default root.
 
 **`params`**:
 ```jsonc
@@ -453,43 +501,60 @@ Establish (or join) the workspace this connection will operate on.
 **`result`**:
 ```jsonc
 {
-  "workspace_id":  "a7b0c1d2e3f40516",
+  "workspace_id":  "a7b0c1d2e3f40516",   // this root's mount id — name it in
+                                         // the request envelope (§3.4b)
   "state":         "indexing",       // "indexing" | "ready"
   "progress":      { "files_done": 0, "files_total": 0, "phase": "walking" },
   "index_generation": 0,             // monotonic; bumps on every committed write
   "languages":     ["rust","javascript","typescript","python","c","cpp",
-                    "go","java","php","ruby","swift"]   // 11 in v1; Kotlin v1.1
+                    "go","java","php","ruby","swift"],  // 11 in v1; Kotlin v1.1
+  "mounted_roots": [                 // every root this daemon serves, in mount order
+    { "workspace_id": "a7b0c1d2e3f40516", "path": "/absolute/path/to/workspace" }
+  ]
 }
 ```
 
-Errors: `INVALID_WORKSPACE_PATH`, `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, **`WORKSPACE_MISMATCH`** (alpha.36+), `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable).
+Errors: `INVALID_WORKSPACE_PATH`, `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable). **`WORKSPACE_MISMATCH` is no longer returned for a second root** (v0.8+) — it is reserved for `Index.*` calls naming a root that isn't mounted.
 
-After `Workspace.Mount` returns, the connection is bound to that workspace; subsequent `Index.*` calls operate on it. A connection MUST `Mount` exactly once.
+After `Workspace.Mount` returns, `Index.*` calls naming that `workspace_id` are served by it; calls naming no root are served by the default root.
 
 ### 7.3 `Workspace.Unmount`
 
-Tell the daemon this client is done with the workspace. Last-unmount triggers the daemon's idle-shutdown timer (10 min default).
+Tell the daemon this client is done with one workspace root.
 
-**`params`**: `{}`
-**`result`**: `{ "drained": true }`
+**`params`**: `{ "root": "<workspace_id | path>" }` — `root` selects which
+mounted root to release; absent, the daemon's default root. A request that
+names no mounted root is a no-op rather than an error (`unmounted: null`),
+preserving the pre-multi-root behaviour of a duplicate unmount.
+
+**`result`**: `{ "drained": true, "unmounted": "a7b0c1d2e3f40516", "workspace_root": "/abs/path", "mounted_roots": [ … ] }`
+
+A root's watcher, writer task, index handle, and mount-table entry are dropped
+when its last reference goes away. The daemon keeps serving its other roots;
+the idle-shutdown timer (§15.2) only ends the process once nothing is mounted.
 
 ### 7.4 `Workspace.Status`
 
-Poll the indexing state. Cheap; safe to call between every other request.
+Poll the indexing state of one mounted root. Cheap; safe to call between every other request.
 
-**`params`**: `{}`
+**`params`**: `{ "root": "<workspace_id | path>" }` (optional; absent = the
+default root)
 **`result`**:
 ```jsonc
 {
+  "workspace_id":     "a7b0c1d2e3f40516",   // the root this payload describes
   "state":            "indexing",                       // "indexing" | "ready" | "degraded"
   "progress":         { "files_done": 1234, "files_total": 5000, "phase": "parsing" },
   "index_generation": 47,
   "parse_failed_files": 3,                              // parses that returned ERROR; queryable
   "watcher_status":   "ok",                             // "ok" | "polling_fallback" | "overflowed_rewalking"
   "uptime_ms":        123456,
-  "memory_rss_bytes": 156_000_000                       // best-effort; for visibility
+  "memory_rss_bytes": 156_000_000,                      // best-effort; for visibility
+  "mounted_roots":    [ { "workspace_id": "a7b0…", "path": "/abs/path" } ]
 }
 ```
+
+With no root mounted, `state` is `"no_workspace"` and `mounted_roots` is empty.
 
 `state="degraded"` means the daemon is up but operating on a stale index (e.g. `redb` write backpressure, watcher fallback). Reads still answer; writes may lag.
 
@@ -1242,7 +1307,7 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `INVALID_WORKSPACE_PATH` | non-UTF-8 / non-existent / non-canonicalisable path | No |
 | `MOUNT_HAS_SYMLINK` | any path component was a symlink | No (resolve outside, pass canonical) |
 | `WORKSPACE_VANISHED` | `(dev, inode)` mismatch on remount — symlink swap, mount move, or dir replaced under the daemon | No (workspace went away) |
-| `WORKSPACE_MISMATCH` (alpha.36+) | second `Workspace.Mount` from the same connection asked for a different canonical path than this daemon is already pinned to. Use a fresh daemon socket for the other path (auto-spawn handles this if the path hash differs) | No (connect via the correct socket) |
+| `WORKSPACE_MISMATCH` | an `Index.*` call named a `workspace_id` (envelope, §3.4b) that is not mounted — the root was never mounted here, or it was released. `error.data.mounted_roots` lists what the daemon does serve | Yes (mount the root, or name one that is mounted) |
 | `WORKSPACE_ON_NETWORK_MOUNT` | path is on NFS/SMB/etc. | No |
 | `OUT_OF_ROOT` | path resolved outside the mounted workspace | No |
 | `PATH_TRAVERSAL` | `..` segment in a client-provided path | No |

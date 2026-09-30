@@ -369,9 +369,18 @@ struct Inner {
     state: Arc<RwLock<ConnectionState>>,
     /// Path to `rts-daemon` for re-auto-spawn on reconnect.
     daemon_bin: PathBuf,
-    /// Canonical workspace path — required for per-workspace socket
-    /// resolution + Mount on the reconnected daemon.
+    /// Canonical path of the root this manager's plain `call()` routes to —
+    /// the workspace the process was started for. Also the identity used for
+    /// socket resolution and re-spawn on reconnect.
     workspace: PathBuf,
+    /// Mounted roots: canonical path → the daemon's `workspace_id` for it.
+    /// Multi-root: one daemon serves N roots, and each call names the root it
+    /// concerns on the wire. A missing key means "not mounted yet"; the whole
+    /// map is cleared on reconnect because a fresh daemon has no mounts.
+    /// `std::sync::Mutex` (never held across an `await`) — the critical
+    /// sections are a map lookup and a clone. Deliberately *not* the tokio
+    /// `Mutex` this module otherwise uses for the socket.
+    mounts: std::sync::Mutex<std::collections::HashMap<PathBuf, String>>,
     /// Heartbeat / reconnect knobs.
     config: ResilienceConfig,
     /// `true` when the background tasks have been spawned. Set in
@@ -383,12 +392,6 @@ struct Inner {
     /// manager.
     heartbeat_handle: Mutex<Option<tokio::task::JoinHandle<()>>>,
     reconnect_handle: Mutex<Option<tokio::task::JoinHandle<()>>>,
-    /// `Workspace.Mount` sentinel — cleared on reconnect, set on first
-    /// successful Mount. Mirrors `RtsServer.mounted` but lives here so
-    /// the CLI can reuse the manager without re-implementing the
-    /// lazy-mount handshake. v0.6 keeps Mount idempotent on the
-    /// daemon, so multiple sets across reconnects are safe.
-    mounted: std::sync::atomic::AtomicBool,
     /// Wakes the reconnect task when a foreground tool call observes
     /// a transport error and demotes the state. Without this, the
     /// reconnect loop would sleep through the heartbeat interval
@@ -417,11 +420,11 @@ impl ConnectionManager {
             state: Arc::new(RwLock::new(ConnectionState::new_connected())),
             daemon_bin,
             workspace,
+            mounts: std::sync::Mutex::new(std::collections::HashMap::new()),
             config,
             background_started: std::sync::atomic::AtomicBool::new(false),
             heartbeat_handle: Mutex::new(None),
             reconnect_handle: Mutex::new(None),
-            mounted: std::sync::atomic::AtomicBool::new(false),
             reconnect_signal: tokio::sync::Notify::new(),
         });
         let mgr = Self { inner };
@@ -465,9 +468,19 @@ impl ConnectionManager {
         self.inner.state.read().await.is_connected()
     }
 
-    /// Forward a daemon RPC, transparently handling the
-    /// `Workspace.Mount` lazy handshake. Returns the JSON result on
-    /// success, a structured `ConnectionError` on failure.
+    /// Forward a daemon RPC for the workspace this manager was built for.
+    ///
+    /// Equivalent to [`Self::call_routed`] with the start-up root; kept as the
+    /// simple entry point for the CLI and tests.
+    pub async fn call(&self, method: &str, params: Value) -> Result<Value, ConnectionError> {
+        let workspace = self.inner.workspace.clone();
+        self.call_routed(method, params, &workspace)
+            .await
+            .map(|(value, _)| value)
+    }
+
+    /// Forward a daemon RPC **against one mounted root**, returning the
+    /// response and the root's `workspace_id`.
     ///
     /// **Behavior:**
     /// 1. If state is `Reconnecting` or `Down`, returns the matching
@@ -475,14 +488,21 @@ impl ConnectionManager {
     ///    (no thundering-herd on the daemon-mutex during a known
     ///    disconnect window).
     /// 2. If state is `Connected`, acquires the daemon mutex, ensures
-    ///    `Workspace.Mount` has been called (lazy), forwards the call.
+    ///    `root` has been mounted on this daemon (lazily — the first call
+    ///    routed to a root pays its mount), then forwards the call with that
+    ///    root's `workspace_id` in the request envelope.
     /// 3. On a transport-shaped `DaemonError`, demotes state to
     ///    `Reconnecting` and returns `DaemonUnavailable`. The
     ///    background reconnect task picks it up. The caller does NOT
     ///    retry here — pre-resilience the retry was bounded inline,
     ///    but the new design uses the manager's state machine
     ///    explicitly so concurrent callers all see consistent state.
-    pub async fn call(&self, method: &str, params: Value) -> Result<Value, ConnectionError> {
+    pub async fn call_routed(
+        &self,
+        method: &str,
+        params: Value,
+        root: &std::path::Path,
+    ) -> Result<(Value, String), ConnectionError> {
         // 1. Fast-path state check. If we're not Connected, return the
         //    structured error without acquiring the daemon mutex.
         {
@@ -518,45 +538,31 @@ impl ConnectionManager {
             }
         }
 
-        // 2. Connected path. Acquire daemon, ensure Mount, forward call.
+        // 2. Connected path. Acquire daemon, ensure the root is mounted,
+        //    forward the call.
         let mut guard = self.inner.daemon.lock().await;
-        if !self
-            .inner
-            .mounted
-            .load(std::sync::atomic::Ordering::Acquire)
-        {
-            match guard
-                .call("Workspace.Mount", json!({ "root": self.inner.workspace }))
-                .await
-            {
-                Ok(_) => {
-                    self.inner
-                        .mounted
-                        .store(true, std::sync::atomic::Ordering::Release);
-                }
-                Err(e) if e.is_disconnect() => {
+        let workspace_id = match self.mounted_id(root) {
+            Some(id) => id,
+            None => match self.mount_root(&mut guard, root).await {
+                Ok(id) => id,
+                Err(e) => {
                     drop(guard);
-                    self.demote_to_reconnecting(format!(
-                        "Workspace.Mount transport error: {}",
-                        e.message
-                    ))
-                    .await;
-                    return Err(self
-                        .unavailable_now(format!("Mount failed: {}", e.message))
-                        .await);
+                    return Err(e);
                 }
-                Err(e) => return Err(ConnectionError::Daemon(e)),
-            }
-        }
+            },
+        };
 
-        match guard.call(method, params).await {
+        match guard
+            .call_with_root(method, params, Some(&workspace_id))
+            .await
+        {
             Ok(v) => {
                 // Successful call counts as a fresh heartbeat — bump
                 // last_pong_at so we don't waste a ping on a known-live
                 // socket. Take write-lock briefly.
                 drop(guard);
                 self.bump_pong().await;
-                Ok(v)
+                Ok((v, workspace_id))
             }
             Err(e) if e.is_disconnect() => {
                 drop(guard);
@@ -567,6 +573,71 @@ impl ConnectionManager {
                     .await)
             }
             Err(e) => Err(ConnectionError::Daemon(e)),
+        }
+    }
+
+    /// The daemon's `workspace_id` for `root`, when this manager has already
+    /// mounted it on the current daemon.
+    fn mounted_id(&self, root: &std::path::Path) -> Option<String> {
+        self.inner
+            .mounts
+            .lock()
+            .ok()
+            .and_then(|map| map.get(root).cloned())
+    }
+
+    /// `Workspace.Mount { root }` on the live daemon, remembering the
+    /// `workspace_id` it returns. Idempotent daemon-side: mounting a root that
+    /// is already mounted joins it and returns the same id.
+    async fn mount_root(
+        &self,
+        guard: &mut DaemonClient,
+        root: &std::path::Path,
+    ) -> Result<String, ConnectionError> {
+        match guard.call("Workspace.Mount", json!({ "root": root })).await {
+            Ok(v) => {
+                let id = v
+                    .get("workspace_id")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                if id.is_empty() {
+                    // A Mount response without an id means we cannot address
+                    // this root on subsequent calls — refuse rather than
+                    // route blindly.
+                    return Err(ConnectionError::Daemon(DaemonError {
+                        code: "INTERNAL_ERROR".to_string(),
+                        message: format!(
+                            "Workspace.Mount for {} returned no workspace_id",
+                            root.display()
+                        ),
+                        data: None,
+                    }));
+                }
+                if let Ok(mut map) = self.inner.mounts.lock() {
+                    map.insert(root.to_path_buf(), id.clone());
+                }
+                Ok(id)
+            }
+            Err(e) if e.is_disconnect() => {
+                self.demote_to_reconnecting(format!(
+                    "Workspace.Mount transport error: {}",
+                    e.message
+                ))
+                .await;
+                Err(self
+                    .unavailable_now(format!("Mount failed: {}", e.message))
+                    .await)
+            }
+            Err(e) => Err(ConnectionError::Daemon(e)),
+        }
+    }
+
+    /// Drop every remembered mount. Called when the socket is demoted: the
+    /// next call mounts its root against whatever daemon answers next.
+    fn forget_mounts(&self) {
+        if let Ok(mut map) = self.inner.mounts.lock() {
+            map.clear();
         }
     }
 
@@ -598,11 +669,9 @@ impl ConnectionManager {
                     target: "rts_mcp::connection",
                     "daemon disconnect detected; entering reconnect ({reason})"
                 );
-                // Clear the Mount sentinel — the next successful
-                // reconnect will need a fresh Mount on the new daemon.
-                self.inner
-                    .mounted
-                    .store(false, std::sync::atomic::Ordering::Release);
+                // Clear the mount bookkeeping — the next successful
+                // reconnect mounts each root against the fresh daemon.
+                self.forget_mounts();
                 *st = ConnectionState::Reconnecting {
                     attempt: 1,
                     next_retry_at: Instant::now() + Duration::from_secs(1),
@@ -860,9 +929,9 @@ async fn reconnect_loop(inner: Arc<Inner>) {
 async fn demote_inner(inner: &Inner, reason: String) {
     let mut st = inner.state.write().await;
     if let ConnectionState::Connected { .. } = &*st {
-        inner
-            .mounted
-            .store(false, std::sync::atomic::Ordering::Release);
+        if let Ok(mut map) = inner.mounts.lock() {
+            map.clear();
+        }
         *st = ConnectionState::Reconnecting {
             attempt: 1,
             next_retry_at: Instant::now() + Duration::from_secs(1),

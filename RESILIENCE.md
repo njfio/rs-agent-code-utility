@@ -29,13 +29,23 @@ Out of scope (separate workstreams):
   path via `std::fs::canonicalize` and refuses any `..` segments
   outright (`PATH_TRAVERSAL`) and any symlinked workspace root
   (`MOUNT_HAS_SYMLINK`). Canonicalisation failures map to
-  `INVALID_WORKSPACE_PATH`. The daemon is workspace-pinned for the
-  lifetime of the socket: a second `Workspace.Mount` from the same
-  connection asking for a different canonical path returns
-  `WORKSPACE_MISMATCH` rather than silently re-pointing the index.
+  `INVALID_WORKSPACE_PATH`. A daemon serves one or more roots; every
+  `Index.*` request is answered from exactly one of them — the root its
+  envelope `workspace_id` names, else the daemon's default root (the oldest
+  root still mounted). A `workspace_id` that names no mounted root returns
+  `WORKSPACE_MISMATCH`; the daemon never substitutes another root's answer,
+  because answering about a different tree is the failure multi-root routing
+  exists to prevent. Each root's index, watcher, and writer are separate, so
+  no root can observe or mutate another's indexed state.
 - **Validated by:** `adversarial_proptest::path_canonicalization_never_escapes_root`
   (32 random adversarial path shapes by default, 256 in nightly CI)
-  + corpus `crates/rts-daemon/fuzz/corpus/path_traversal/`.
+  + corpus `crates/rts-daemon/fuzz/corpus/path_traversal/` — mount validation
+  itself is unchanged; multi-root adds
+  `multi_root_round_trip::one_daemon_serves_two_roots_by_workspace_id`
+  (two roots, per-root answers, unmount of one leaving the other, refusal of a
+  released root) and
+  `multi_root_routing::mcp_routes_each_tool_call_to_the_root_its_paths_name`
+  (the shim's inference + `_root` report).
 - **Stable wire codes:** `PATH_TRAVERSAL`, `MOUNT_HAS_SYMLINK`,
   `INVALID_WORKSPACE_PATH`, `WORKSPACE_MISMATCH` —
   see `docs/protocol-v0.md` §14.

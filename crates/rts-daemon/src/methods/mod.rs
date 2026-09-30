@@ -69,15 +69,22 @@ pub async fn prewarm_mount(
 /// `Workspace.Mount`). The token
 /// is removed automatically via the RAII guard once the handler
 /// returns (or panics).
+///
+/// `workspace_id` is the optional mounted-root selector from the same
+/// envelope (multi-root). It is stamped into `params` (see
+/// [`stamp_root_hint`]) so handlers resolve their root through
+/// `state::RootHint` without a new argument in every signature.
 pub async fn dispatch(
     method: &str,
     params: serde_json::Value,
     state: &Arc<DaemonState>,
     cancel_id: Option<String>,
     deadline_ms: Option<u64>,
+    workspace_id: Option<String>,
 ) -> Result<serde_json::Value, ProtocolError> {
     use std::sync::atomic::Ordering::Relaxed;
     let counters = &state.call_counters;
+    let params = stamp_root_hint(params, workspace_id);
 
     // Register a cancellation token for cancellable handlers when the
     // client supplied a `cancel_id`. We do this *outside* the method
@@ -260,6 +267,27 @@ pub async fn dispatch(
     }
 
     result
+}
+
+/// Stamp the envelope's `workspace_id` into `params`.
+///
+/// Multi-root routing: the MCP layer infers which mounted root a call
+/// concerns from the call's own paths and names it in the envelope. Handlers
+/// take `(params, state, token)` and nothing else, so the dispatcher is the
+/// one place that can hand the hint down without touching fourteen
+/// signatures. Non-object `params` are passed through untouched — they fail
+/// validation in the handler exactly as they did before.
+fn stamp_root_hint(params: serde_json::Value, workspace_id: Option<String>) -> serde_json::Value {
+    let Some(id) = workspace_id else {
+        return params;
+    };
+    match params {
+        serde_json::Value::Object(mut map) => {
+            map.insert("workspace_id".to_string(), serde_json::Value::String(id));
+            serde_json::Value::Object(map)
+        }
+        other => other,
+    }
 }
 
 /// Which methods honor cooperative cancellation. The dispatcher only

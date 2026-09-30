@@ -5,11 +5,13 @@
 //! `docs/protocol-v0.md` §15.2).
 
 use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 
 use crate::cancel::CancelRegistry;
+use crate::error::{ErrorCode, ProtocolError};
 use crate::latency::MethodLatencyHistograms;
 use crate::outline::OutlineCache;
 use crate::store::Store;
@@ -101,6 +103,182 @@ impl WatcherStatus {
     }
 }
 
+/// One mounted workspace root and everything owned by it.
+///
+/// Multi-root: every field here used to live in a single slot on
+/// [`DaemonState`]. Keying them per root is what lets two roots answer
+/// independently — each owns its own index, watcher, writer task, and
+/// persisted-cold-mount decision, so a worktree is never answered from the
+/// index of the repo root it was branched from.
+#[derive(Debug)]
+pub struct MountedRoot {
+    /// Canonical path + `(dev, inode)` fingerprint. `fingerprint.id_str()` is
+    /// this mount's stable id — the `workspace_id` a caller addresses it by.
+    pub workspace: MountedWorkspace,
+    /// On-disk index for this root (`${XDG_STATE_HOME}/rts/<id>/db.redb`).
+    pub store: Arc<Store>,
+    /// Owning handle for this root's file watcher. Never read — held for its
+    /// `Drop`: dropping the entry on unmount is what stops the debouncer
+    /// thread.
+    #[allow(dead_code)]
+    pub watcher: Watcher,
+    /// Cancellation token that stops this root's writer task.
+    pub writer_cancel: tokio_util::sync::CancellationToken,
+    /// Persisted-cold-mount decision taken at this root's mount. Reported by
+    /// `Daemon.Stats.mount_source` for the default root.
+    pub mount_source: MountSource,
+    /// Live `Workspace.Mount` refs held on this root, across all connections.
+    /// The root is torn down when this reaches zero.
+    pub refcount: u32,
+}
+
+impl MountedRoot {
+    /// Stable id of this mount (`WorkspaceFingerprint::id_str`, hex chars).
+    pub fn id(&self) -> String {
+        self.workspace.fingerprint.id_str()
+    }
+
+    /// Canonical absolute path of this root.
+    pub fn root(&self) -> &Path {
+        &self.workspace.canonical.path
+    }
+}
+
+/// The daemon's mounted roots, keyed by `workspace_id`.
+///
+/// `order` records mount order so the **default root** — the one a call that
+/// names no root is served by — is the oldest root still mounted. Unmounting
+/// the oldest root promotes the next one rather than leaving the daemon
+/// without a default while other roots are still live.
+#[derive(Debug, Default)]
+pub struct MountTable {
+    roots: std::collections::BTreeMap<String, MountedRoot>,
+    order: Vec<String>,
+}
+
+impl MountTable {
+    pub fn len(&self) -> usize {
+        self.roots.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.roots.is_empty()
+    }
+
+    pub fn get(&self, id: &str) -> Option<&MountedRoot> {
+        self.roots.get(id)
+    }
+
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut MountedRoot> {
+        self.roots.get_mut(id)
+    }
+
+    /// Id of the default root: the oldest root still mounted.
+    pub fn default_id(&self) -> Option<&str> {
+        self.order
+            .iter()
+            .find(|id| self.roots.contains_key(*id))
+            .map(String::as_str)
+    }
+
+    /// The default root itself. See [`Self::default_id`].
+    pub fn default_root(&self) -> Option<&MountedRoot> {
+        self.default_id().and_then(|id| self.roots.get(id))
+    }
+
+    /// Insert a root, returning its `workspace_id`. Re-inserting the same id
+    /// (a remount after the entry was released) keeps its original place in
+    /// mount order, so the default root stays stable.
+    pub fn insert(&mut self, root: MountedRoot) -> String {
+        let id = root.id();
+        if !self.order.contains(&id) {
+            self.order.push(id.clone());
+        }
+        self.roots.insert(id.clone(), root);
+        id
+    }
+
+    /// Remove and return a root, dropping it from mount order too.
+    pub fn remove(&mut self, id: &str) -> Option<MountedRoot> {
+        let removed = self.roots.remove(id);
+        if removed.is_some() {
+            self.order.retain(|o| o != id);
+        }
+        removed
+    }
+
+    /// Id of the mounted root whose canonical path is exactly `canonical`.
+    pub fn id_for_path(&self, canonical: &Path) -> Option<String> {
+        self.roots
+            .iter()
+            .find(|(_, root)| root.root() == canonical)
+            .map(|(id, _)| id.clone())
+    }
+
+    /// Resolve a caller-supplied root reference — a `workspace_id` or a
+    /// workspace path — to a mounted id. `None` resolves to the default root.
+    /// An unrecognised reference resolves to `None`; callers turn that into
+    /// `WORKSPACE_MISMATCH` rather than substituting another root's answer.
+    pub fn resolve(&self, reference: Option<&str>) -> Option<String> {
+        match reference {
+            None => self.default_id().map(str::to_owned),
+            Some(id) if self.roots.contains_key(id) => Some(id.to_owned()),
+            Some(path) => {
+                let canonical = crate::workspace::canonicalize(Path::new(path)).ok()?;
+                self.id_for_path(&canonical.path)
+            }
+        }
+    }
+
+    /// `(workspace_id, canonical path)` for every mounted root, in mount
+    /// order. Surfaced as the `mounted_roots` array on
+    /// `Workspace.Mount` / `Workspace.Status`.
+    pub fn describe(&self) -> Vec<(String, String)> {
+        self.order
+            .iter()
+            .filter_map(|id| {
+                self.roots
+                    .get(id)
+                    .map(|root| (id.clone(), root.root().to_string_lossy().into_owned()))
+            })
+            .collect()
+    }
+}
+
+/// Which root a single RPC is served by.
+#[derive(Debug, Clone)]
+pub struct CallRoot {
+    /// `workspace_id` of the serving root (its mount id).
+    pub id: String,
+    /// Canonical absolute path of the serving root.
+    pub path: PathBuf,
+    /// The serving root's index.
+    pub store: Arc<Store>,
+}
+
+/// Optional per-call root selector.
+///
+/// Carried in the request **envelope** (`workspace_id`) and stamped into
+/// `params` by `methods::dispatch`, so handlers can resolve their root without
+/// a new argument in every handler signature. It is a routing field, exactly
+/// like the envelope's `cancel_id` / `deadline_ms`: no method's param schema
+/// declares it and no model ever supplies it — the MCP layer infers the root
+/// from the call's own paths and names it here.
+#[derive(Debug, Clone, Default)]
+pub struct RootHint(pub Option<String>);
+
+impl RootHint {
+    /// Read the hint the dispatcher stamped into `params`.
+    pub fn from_params(params: &serde_json::Value) -> Self {
+        Self(
+            params
+                .get("workspace_id")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned),
+        )
+    }
+}
+
 /// Process-wide daemon state. Cheap to `Arc`-share; everything inside is
 /// interior-mutable.
 #[derive(Debug)]
@@ -113,24 +291,27 @@ pub struct DaemonState {
     /// as a `Mutex<Instant>` rather than an atomic because `Instant` doesn't
     /// have a portable atomic representation; contention is negligible.
     pub last_activity: Mutex<Instant>,
-    /// The single workspace this daemon serves. A daemon is workspace-pinned —
-    /// the first `Workspace.Mount` decides; subsequent mounts on different
-    /// paths return `WorkspaceVanished`. Stored as `Mutex<Option<...>>` so the
-    /// accept loop and method handlers can both reach it.
-    pub workspace: Mutex<Option<MountedWorkspace>>,
-    /// Owning handle for the active file watcher. `None` until first Mount.
-    /// Dropped on Unmount (refcount → 0); dropping stops the debouncer thread.
-    pub watcher: Mutex<Option<Watcher>>,
-    /// On-disk index. `None` until first Mount; opened at
-    /// `${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`. Shared via `Arc` so the
-    /// writer task and read handlers can both reach it without cloning the
-    /// `DaemonState`'s big bag of state.
-    pub store: Mutex<Option<std::sync::Arc<Store>>>,
-    /// Cancellation token that stops the writer task on the last Unmount.
-    pub writer_cancel: Mutex<Option<tokio_util::sync::CancellationToken>>,
-    /// Refcount of `Workspace.Mount` minus `Workspace.Unmount` across all
-    /// currently-open connections. When this drops back to 0 with idle time
-    /// elapsed, the daemon exits.
+    /// Every workspace root this daemon serves, keyed by `workspace_id`.
+    ///
+    /// A daemon is **multi-root**: `Workspace.Mount` adds a root (idempotent
+    /// per canonical path — a repeat mount joins and holds a second ref), and
+    /// `Workspace.Unmount` releases one. Each root owns its own on-disk index
+    /// (`${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`), file watcher, writer
+    /// task, and persisted-cold-mount decision, so N worktrees of one repo
+    /// are served by one process without the index of one answering for
+    /// another.
+    ///
+    /// Which root serves a given `Index.*` call is decided by the caller
+    /// (`workspace_id` in the request envelope; see [`RootHint`]) and falls
+    /// back to the *default root* — the first root still mounted. Handlers
+    /// never guess from the filesystem: a call that names no root gets the
+    /// default root's answer, and a call that names an unmounted root is an
+    /// error, not a silent substitution.
+    pub mounts: Mutex<MountTable>,
+    /// Aggregate refcount of `Workspace.Mount` minus `Workspace.Unmount`
+    /// across all currently-open connections and all roots. Per-root
+    /// refcounts live in [`MountedRoot::refcount`]; this is the sum, kept for
+    /// `Daemon.Stats` and for the "nothing is mounted any more" signal.
     pub mount_refcount: AtomicU32,
     /// Process start time, used only for `Daemon.Ping.uptime_ms`.
     pub started_at: Instant,
@@ -150,14 +331,18 @@ pub struct DaemonState {
     /// File-watcher health for `Workspace.Status.watcher_status` (§7.4).
     watcher_status: AtomicU8,
     /// Single-slot memoization cache for `Index.Outline`. Keyed by
-    /// `(index_generation, params)` — writer commits bump the generation
-    /// and invalidate the entry implicitly on the next lookup. See
-    /// `outline.rs` module docs for the rationale.
+    /// `(workspace_id, index_generation, params)` — writer commits bump the
+    /// generation and invalidate the entry implicitly on the next lookup. The
+    /// `workspace_id` is part of the key because one daemon serves N roots:
+    /// without it, an outline computed for one root would be served for
+    /// another root sitting at the same generation. See `outline.rs` module
+    /// docs for the rationale.
     pub outline_cache: OutlineCache,
     /// Single-slot cache for symbol-level PageRank (v0.3 U4). Keyed by
-    /// `index_generation` — writer commits bump the generation and the
-    /// next `find_symbol` triggers a recompute. Mirrors `outline_cache`'s
-    /// shape; see `symbol_pagerank.rs` for the algorithm + Deepening §C3
+    /// `(workspace_id, index_generation)` — writer commits bump the generation
+    /// and the next `find_symbol` triggers a recompute. Mirrors
+    /// `outline_cache`'s shape (including the multi-root `workspace_id` key
+    /// component); see `symbol_pagerank.rs` for the algorithm + Deepening §C3
     /// for the perf budget.
     pub symbol_pagerank_cache: SymbolPagerankCache,
     /// LRU cache for rendered signatures, keyed by
@@ -222,14 +407,6 @@ pub struct DaemonState {
     /// time inside the QueryCache (see
     /// `methods/grep_v2/query_cache.rs`).
     pub query_cache: crate::methods::grep_v2::query_cache::QueryCache,
-    /// v0.6 persisted-cold-mount mount source. Set once per
-    /// `Workspace.Mount` after the fingerprint decision; surfaced via
-    /// `Daemon.Stats v2`'s `mount_source` field. None pre-mount.
-    /// `Mutex<Option<...>>` rather than atomic because the enum
-    /// carries a heap-allocated `InvalidationReason`; mount happens
-    /// once per daemon lifetime in practice, so the mutex cost is
-    /// negligible.
-    pub mount_source: Mutex<Option<MountSource>>,
     /// v0.6 persisted-cold-mount cumulative counters. Cache-
     /// effectiveness telemetry: without these we can't tell whether
     /// the rehydrate path is actually doing its job.
@@ -680,10 +857,7 @@ impl DaemonState {
         Self {
             active_connections: AtomicU32::new(0),
             last_activity: Mutex::new(Instant::now()),
-            workspace: Mutex::new(None),
-            watcher: Mutex::new(None),
-            store: Mutex::new(None),
-            writer_cancel: Mutex::new(None),
+            mounts: Mutex::new(MountTable::default()),
             mount_refcount: AtomicU32::new(0),
             started_at: Instant::now(),
             index_generation: AtomicU64::new(0),
@@ -698,7 +872,6 @@ impl DaemonState {
             mount_serialize: tokio::sync::Mutex::new(()),
             call_counters: CallCounters::default(),
             query_cache: crate::methods::grep_v2::query_cache::QueryCache::new(),
-            mount_source: Mutex::new(None),
             rehydrate_attempts: AtomicU64::new(0),
             rehydrate_successes: AtomicU64::new(0),
             rehydrate_invalidations: Mutex::new(std::collections::BTreeMap::new()),
@@ -714,6 +887,82 @@ impl DaemonState {
             unresolved_refs_gc_runs_total: AtomicU64::new(0),
             unresolved_refs_gc_dropped_total: AtomicU64::new(0),
         }
+    }
+
+    /// Resolve the root that serves a call carrying `hint`.
+    ///
+    /// - a `workspace_id` naming a mounted root → that root;
+    /// - no hint → the default root (oldest still mounted);
+    /// - a `workspace_id` naming nothing → `WORKSPACE_MISMATCH`, carrying the
+    ///   live `mounted_roots` list. Never a silent fallback: answering about a
+    ///   different tree is precisely the failure this routing exists to
+    ///   prevent;
+    /// - nothing mounted at all → `INDEX_NOT_READY` (unchanged from the
+    ///   single-root daemon).
+    pub fn root_for_call(&self, hint: &RootHint) -> Result<CallRoot, ProtocolError> {
+        let table = self.mounts.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("mounts poisoned: {e}"))
+        })?;
+        let id = match table.resolve(hint.0.as_deref()) {
+            Some(id) => id,
+            None => {
+                if let Some(requested) = hint.0.as_deref() {
+                    let mounted: Vec<serde_json::Value> = table
+                        .describe()
+                        .into_iter()
+                        .map(|(id, path)| serde_json::json!({ "workspace_id": id, "path": path }))
+                        .collect();
+                    return Err(ProtocolError::new(
+                        ErrorCode::WorkspaceMismatch,
+                        format!(
+                            "no mounted root with workspace_id `{requested}`; \
+                             call Workspace.Mount for it first"
+                        ),
+                    )
+                    .with_data(serde_json::json!({
+                        "requested": requested,
+                        "mounted_roots": mounted,
+                    })));
+                }
+                return Err(ProtocolError::new(
+                    ErrorCode::IndexNotReady,
+                    "no workspace mounted",
+                ));
+            }
+        };
+        let root = table.get(&id).ok_or_else(|| {
+            ProtocolError::new(
+                ErrorCode::InternalError,
+                "mount table lost a root between resolve and read",
+            )
+        })?;
+        Ok(CallRoot {
+            id,
+            path: root.root().to_path_buf(),
+            store: root.store.clone(),
+        })
+    }
+
+    /// `(workspace_id, canonical path, mount_source)` of the default root, for
+    /// the process-wide telemetry surfaces (`Daemon.Stats`, `Workspace.Status`).
+    /// `None` when nothing is mounted.
+    pub fn default_root_info(&self) -> Option<(String, String, MountSource)> {
+        let table = self.mounts.lock().ok()?;
+        let id = table.default_id()?.to_owned();
+        let root = table.get(&id)?;
+        Some((
+            id,
+            root.root().to_string_lossy().into_owned(),
+            root.mount_source.clone(),
+        ))
+    }
+
+    /// The default root's index handle. For process-wide telemetry that
+    /// reports a single root's totals (`Daemon.Stats` language tags). `None`
+    /// when nothing is mounted.
+    pub fn default_root_store(&self) -> Option<Arc<Store>> {
+        let table = self.mounts.lock().ok()?;
+        table.default_root().map(|root| root.store.clone())
     }
 
     /// Bump the per-error-code count. Called by the dispatcher when

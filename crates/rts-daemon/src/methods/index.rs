@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::cancel::CancelToken;
 use crate::error::{ErrorCode, ProtocolError};
 use crate::filter::BODY_ALLOWED_EXTENSIONS;
-use crate::state::DaemonState;
+use crate::state::{DaemonState, RootHint};
 use crate::store::{FoundSymbol, Store, SymbolKind};
 use crate::symbol_pagerank::{SymbolRanks, compute_symbol_ranks};
 
@@ -598,38 +598,21 @@ fn parse_params<T: for<'de> Deserialize<'de>>(
     })
 }
 
-/// Snapshot `(workspace_root, store)` under the `DaemonState` mutexes in one
-/// pass so each handler only holds the locks long enough to clone the `Arc`s.
-fn snapshot(state: &Arc<DaemonState>) -> Result<(PathBuf, Arc<Store>), ProtocolError> {
-    let root = {
-        let g = state.workspace.lock().map_err(|e| {
-            ProtocolError::new(ErrorCode::InternalError, format!("workspace poisoned: {e}"))
-        })?;
-        match g.as_ref() {
-            Some(w) => w.canonical.path.clone(),
-            None => {
-                return Err(ProtocolError::new(
-                    ErrorCode::IndexNotReady,
-                    "no workspace mounted",
-                ));
-            }
-        }
-    };
-    let store = {
-        let g = state.store.lock().map_err(|e| {
-            ProtocolError::new(ErrorCode::InternalError, format!("store poisoned: {e}"))
-        })?;
-        match g.as_ref() {
-            Some(s) => s.clone(),
-            None => {
-                return Err(ProtocolError::new(
-                    ErrorCode::IndexNotReady,
-                    "no workspace mounted",
-                ));
-            }
-        }
-    };
-    Ok((root, store))
+/// Snapshot `(workspace_root, store, workspace_id)` for the root this call
+/// concerns, holding the mount lock only long enough to clone the `Arc`s.
+///
+/// The root is the one named by the call's `workspace_id` hint — stamped into
+/// `params` by `methods::dispatch` from the request envelope — and otherwise
+/// the daemon's default root (the oldest root mounted). A hint naming an
+/// unmounted root is an error (`WORKSPACE_MISMATCH`), never a silent
+/// substitution: answering a worktree question from the repo root's index is
+/// exactly the failure multi-root routing exists to prevent.
+fn snapshot(
+    state: &Arc<DaemonState>,
+    hint: &RootHint,
+) -> Result<(PathBuf, Arc<Store>, String), ProtocolError> {
+    let call_root = state.root_for_call(hint)?;
+    Ok((call_root.path, call_root.store, call_root.id))
 }
 
 /// Validate `token_budget` against the 50..=200_000 window when present.
@@ -815,12 +798,18 @@ impl SortMode {
 /// `state.index_generation` *before* opening any read transaction
 /// against the store. Passing `generation` in (rather than reading
 /// it here) makes that ordering explicit.
+///
+/// `workspace_id` names the root the ranks describe. The cache is keyed by
+/// `(workspace_id, generation)` because one daemon serves N roots: a root
+/// that has not been written to since another root's commit sits at the same
+/// generation, so generation alone would hand one root's ranks to another.
 fn symbol_ranks_lazy(
     state: &Arc<DaemonState>,
     store: &Arc<Store>,
     generation: u64,
+    workspace_id: &str,
 ) -> Result<Option<Arc<SymbolRanks>>, ProtocolError> {
-    if let Some(hit) = state.symbol_pagerank_cache.get(generation) {
+    if let Some(hit) = state.symbol_pagerank_cache.get(workspace_id, generation) {
         return Ok(Some(hit));
     }
     // Miss: synchronously compute. First cut per the plan; the
@@ -835,12 +824,12 @@ fn symbol_ranks_lazy(
     if ranks.sid_to_rank.is_empty() {
         return Ok(None);
     }
-    state.symbol_pagerank_cache.put(ranks.clone());
+    state.symbol_pagerank_cache.put(workspace_id, ranks);
     // Re-fetch through the cache so callers get an `Arc<SymbolRanks>`
     // instead of cloning the map. The cache's mutex guarantees the
     // value we just put is the one we read back (no other writer
     // could race against this thread between put and get).
-    Ok(state.symbol_pagerank_cache.get(generation))
+    Ok(state.symbol_pagerank_cache.get(workspace_id, generation))
 }
 
 /// `Index.FindSymbol` — protocol-v0 §7.6.
@@ -888,6 +877,10 @@ pub async fn find_symbol(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: FindSymbolParams = parse_params(params)?;
     if p.name.is_some() && p.pattern.is_some() {
         return Err(ProtocolError::new(
@@ -966,14 +959,14 @@ pub async fn find_symbol(
         },
     };
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
 
     // Read the index generation BEFORE opening any read transaction
     // for rank lookup. Deepening §C invariant: the cache key must be
     // observed *before* the data the cache describes, never after,
     // to avoid storing pre-commit ranks under a post-commit key.
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
 
     // Resolve the candidate symbol names.
     let names: Vec<String> = if let Some(n) = &p.name {
@@ -1380,6 +1373,10 @@ pub async fn grep(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: GrepParams = parse_params(params)?;
 
     // v0.6 composition matrix: validate the param shape first, then
@@ -1539,7 +1536,7 @@ pub async fn grep(
                 None => None,
             };
 
-            let (root, store_arc) = snapshot(state)?;
+            let (root, store_arc, _workspace_id) = snapshot(state, &root_hint)?;
             let files = store_arc.list_indexed_files().map_err(|e| {
                 ProtocolError::new(
                     ErrorCode::InternalError,
@@ -1856,7 +1853,7 @@ pub async fn grep(
         None => None,
     };
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
 
     // v0.5.5: PageRank-based ranking. Same lazy-fetch shape
     // `find_callers` uses — `symbol_ranks_lazy` hits the cache
@@ -1866,7 +1863,8 @@ pub async fn grep(
     // observe a generation that's no newer than what the file walk
     // sees in subsequent `defs_in_file` reads.
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks: Option<Arc<SymbolRanks>> = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks: Option<Arc<SymbolRanks>> =
+        symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
 
     // Pull the workspace-relative paths the writer has committed.
     let files = store_arc.list_indexed_files().map_err(|e| {
@@ -2230,6 +2228,10 @@ pub async fn find_callers(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: FindCallersParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2240,11 +2242,11 @@ pub async fn find_callers(
     let kind_filter = p.kind.as_deref().map(SymbolKind::from_str_loose);
     let file_filter = p.file.as_deref();
 
-    let (_root, store_arc) = snapshot(state)?;
+    let (_root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
 
     // v0.3 U4: read generation BEFORE any redb txn (Deepening §C).
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
 
     let callee_sid = match store_arc.sid_for_name(&p.name).map_err(|e| {
         ProtocolError::new(
@@ -2444,6 +2446,10 @@ pub async fn verify_symbol(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifySymbolParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2452,10 +2458,10 @@ pub async fn verify_symbol(
         ));
     }
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     // Read generation BEFORE any read txn (Deepening §C cache invariant).
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
     let ctx = VerifyCtx {
         root: &root,
         store: &store_arc,
@@ -2760,6 +2766,10 @@ pub async fn verify_signature(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifySignatureParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -2768,9 +2778,9 @@ pub async fn verify_signature(
         ));
     }
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
     let ctx = VerifyCtx {
         root: &root,
         store: &store_arc,
@@ -2960,6 +2970,10 @@ pub async fn verify_import(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifyImportParams = parse_params(params)?;
     if p.path.is_empty() || p.path.len() > 1024 {
         return Err(ProtocolError::new(
@@ -2968,9 +2982,9 @@ pub async fn verify_import(
         ));
     }
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
     let ctx = VerifyCtx {
         root: &root,
         store: &store_arc,
@@ -3107,6 +3121,10 @@ pub async fn verify_claims(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifyClaimsParams = parse_params(params)?;
     if p.claims.len() > MAX_CLAIMS {
         return Err(ProtocolError::new(
@@ -3117,9 +3135,9 @@ pub async fn verify_claims(
 
     // Snapshot ONCE for the whole batch (Deepening §C: read generation
     // before any read txn). Every inner call reuses this context.
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
     let ctx = VerifyCtx {
         root: &root,
         store: &store_arc,
@@ -3422,6 +3440,10 @@ pub async fn impact_of(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: ImpactOfParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -3438,11 +3460,11 @@ pub async fn impact_of(
         exclude_test_paths: p.exclude_test_paths.unwrap_or(true),
     };
 
-    let (_root, store_arc) = snapshot(state)?;
+    let (_root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
 
     // v0.3 U4 invariant: read generation BEFORE any read txn.
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
 
     let anchor_sid = match store_arc.sid_for_name(&p.name).map_err(|e| {
         ProtocolError::new(
@@ -3600,6 +3622,10 @@ pub async fn verify_impact(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifyImpactParams = parse_params(params)?;
     if p.symbol.is_empty() || p.symbol.len() > 256 {
         return Err(ProtocolError::new(
@@ -3608,10 +3634,10 @@ pub async fn verify_impact(
         ));
     }
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     // Read generation BEFORE any read txn (Deepening §C cache invariant).
     let generation = state.index_generation.load(Ordering::Relaxed);
-    let ranks = symbol_ranks_lazy(state, &store_arc, generation)?;
+    let ranks = symbol_ranks_lazy(state, &store_arc, generation, &workspace_id)?;
 
     // Resolve the anchor def. Honor a QUALIFIED input (`Foo::method`) the
     // way `verify_symbol` does: resolve the bare final segment, then narrow
@@ -3902,6 +3928,10 @@ pub async fn verify_edit(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: VerifyEditParams = parse_params(params)?;
     if p.edits.is_empty() {
         return Err(ProtocolError::new(
@@ -3926,7 +3956,7 @@ pub async fn verify_edit(
         ));
     }
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, _workspace_id) = snapshot(state, &root_hint)?;
     // Read generation BEFORE any read txn (Deepening §C cache invariant).
     // It is also the basis for `content_version_base`.
     let generation = state.index_generation.load(Ordering::Relaxed);
@@ -4216,10 +4246,14 @@ pub async fn read_range(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: ReadRangeParams = parse_params(params)?;
     let budget = check_budget(p.token_budget)?;
 
-    let (root, _store_arc) = snapshot(state)?;
+    let (root, _store_arc, _workspace_id) = snapshot(state, &root_hint)?;
     let (abs, rel) = resolve_workspace_path(&root, &p.file)?;
     check_body_extension(&abs)?;
 
@@ -4288,6 +4322,10 @@ pub async fn read_symbol(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: ReadSymbolParams = parse_params(params)?;
     if p.name.is_empty() || p.name.len() > 256 {
         return Err(ProtocolError::new(
@@ -4306,7 +4344,7 @@ pub async fn read_symbol(
     let include_callers = p.include_callers;
     let budget = check_budget(p.token_budget)?;
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     let hits = store_arc.find_symbol(&p.name).map_err(|e| {
         ProtocolError::new(
             ErrorCode::InternalError,
@@ -4354,6 +4392,7 @@ pub async fn read_symbol(
         state,
         &root,
         &store_arc,
+        &workspace_id,
         chosen,
         extra,
         ambiguous,
@@ -4375,6 +4414,7 @@ async fn read_symbol_body(
     state: &Arc<DaemonState>,
     root: &Path,
     store_arc: &Arc<Store>,
+    workspace_id: &str,
     chosen: FoundSymbol,
     extra: Vec<String>,
     ambiguous: bool,
@@ -4559,7 +4599,7 @@ async fn read_symbol_body(
         // v0.3 U4: rank lookup for the caller entries' rank_score
         // field. Read generation BEFORE the read txn (Deepening §C).
         let generation = state.index_generation.load(Ordering::Relaxed);
-        let ranks = symbol_ranks_lazy(state, store_arc, generation)?;
+        let ranks = symbol_ranks_lazy(state, store_arc, generation, workspace_id)?;
 
         // Anchor is workspace-defined (we just read its body) so a
         // sid is virtually guaranteed; if it's missing (torn read on
@@ -4671,6 +4711,10 @@ pub async fn read_symbol_at(
     params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: ReadSymbolAtParams = parse_params(params)?;
     if p.line == 0 {
         return Err(ProtocolError::new(
@@ -4687,7 +4731,7 @@ pub async fn read_symbol_at(
     }
     let budget = check_budget(p.token_budget)?;
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
     // Validate the path (catches `..`, OUT_OF_ROOT etc.) and re-emit
     // the canonical workspace-relative form.
     let (_abs, rel) = resolve_workspace_path(&root, &p.file)?;
@@ -4732,6 +4776,7 @@ pub async fn read_symbol_at(
         state,
         &root,
         &store_arc,
+        &workspace_id,
         chosen,
         Vec::new(),
         false,
@@ -4790,10 +4835,14 @@ pub async fn outline(
     if token.is_cancelled() {
         return Err(cancelled());
     }
+    // Which mounted root serves this call: the envelope's `workspace_id`
+    // (stamped into `params` by the dispatcher), else the daemon's
+    // default root. Read before `params` is moved into the parse.
+    let root_hint = RootHint::from_params(&params);
     let p: OutlineParamsWire = parse_params(params)?;
     let budget = check_budget(p.token_budget)?;
 
-    let (root, store_arc) = snapshot(state)?;
+    let (root, store_arc, workspace_id) = snapshot(state, &root_hint)?;
 
     // Build the cache key up front. We snapshot the generation *before*
     // spawning the compute task — any writer commit that lands while
@@ -4807,7 +4856,7 @@ pub async fn outline(
             mentioned_files: &p.mentioned_files,
             mentioned_idents: &p.mentioned_idents,
         };
-        crate::outline::OutlineCacheKey::from_params(generation, &params_borrow)
+        crate::outline::OutlineCacheKey::from_params(&workspace_id, generation, &params_borrow)
     };
 
     let result = if let Some(hit) = state.outline_cache.get(&cache_key) {

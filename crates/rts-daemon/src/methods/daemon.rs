@@ -136,6 +136,15 @@ const DAEMON_CAPABILITIES: &[&str] = &[
     // — clients that omit `deadline_ms` are unaffected. See
     // `docs/protocol-v0.md` §3.4/§14 and `crate::cancel`.
     "request_deadlines",
+    // v0.8+ — multi-root. A daemon serves one or more workspace roots:
+    // `Workspace.Mount` accepts further roots instead of returning
+    // WORKSPACE_MISMATCH, every `Index.*` request may name the root it
+    // concerns via the envelope's `workspace_id`, and
+    // `Workspace.Status` / `Workspace.Mount` responses carry
+    // `mounted_roots`. Clients that never set `workspace_id` are served
+    // by the default root and see unchanged behavior. See
+    // `docs/protocol-v0.md` §3.4b / §5.3a.
+    "multi_root",
     // v0.6+ — `Daemon.Telemetry` RPC returns the **raw** collector
     // inputs that feed `rts telemetry preview` and the (separately
     // feature-gated) 24h ticker. The bounded-enum filter still runs
@@ -290,19 +299,26 @@ pub async fn stats(
 
     // v2 fields. Only emitted when a workspace is mounted — old clients
     // and pre-mount Stats calls both see the v1 shape via field absence.
-    let (pinned_path, workspace_id, index_gen, cold_walk_at_ms) = match state.workspace.lock() {
-        Ok(guard) => match guard.as_ref() {
-            Some(mounted) => {
-                let pinned = mounted.canonical.path.to_string_lossy().into_owned();
-                let ws_id = mounted.fingerprint.id_str().to_string();
+    //
+    // Multi-root: these describe the daemon's **default root** (the oldest
+    // root still mounted), matching the pre-multi-root meaning for a
+    // single-root daemon. `Workspace.Status` is the surface for per-root
+    // detail.
+    let (pinned_path, workspace_id, index_gen, cold_walk_at_ms, mount_source) =
+        match state.default_root_info() {
+            Some((id, path, source)) => {
                 let generation = state.index_generation.load(Relaxed);
                 let cold_walk = state.cold_walk_completed_at_ms.load(Relaxed);
-                (Some(pinned), Some(ws_id), Some(generation), cold_walk)
+                (
+                    Some(path),
+                    Some(id),
+                    Some(generation),
+                    cold_walk,
+                    Some(source),
+                )
             }
-            None => (None, None, None, 0),
-        },
-        Err(_) => (None, None, None, 0),
-    };
+            None => (None, None, None, 0, None),
+        };
 
     // `cold_walk_completed_at_ms: null` when 0 (not yet completed); a
     // real timestamp otherwise. Distinguishes "indexing in progress"
@@ -352,17 +368,14 @@ pub async fn stats(
         );
         obj.insert("cold_walk_completed_at_ms".into(), cold_walk_value);
 
-        // v0.6 persisted-cold-mount mount_source (U6). Only emitted
-        // when a workspace is mounted, since the value is set by the
-        // Workspace.Mount handler. Reads under the mutex (rare write
-        // contention; one write per mount).
-        if let Ok(slot) = state.mount_source.lock() {
-            if let Some(ms) = slot.as_ref() {
-                obj.insert(
-                    "mount_source".into(),
-                    serde_json::Value::String(ms.as_label()),
-                );
-            }
+        // v0.6 persisted-cold-mount mount_source (U6) for the default root.
+        // One decision per mounted root; `Workspace.Status` reports any
+        // single root's.
+        if let Some(ms) = mount_source.as_ref() {
+            obj.insert(
+                "mount_source".into(),
+                serde_json::Value::String(ms.as_label()),
+            );
         }
 
         // Cumulative cache-effectiveness counters. Present at all
@@ -493,23 +506,22 @@ pub async fn telemetry(
     // defense in depth against bounded-enum violations.
     //
     // unresolved_refs_count comes from the same store snapshot so we
-    // amortize the workspace-mutex lock to one acquisition.
+    // amortize the mount-table lock to one acquisition. Multi-root: these
+    // totals describe the daemon's default root, like the v2 fields above.
     let mut languages_indexed: std::collections::BTreeSet<&'static str> = Default::default();
     let mut workspace_files: u64 = 0;
     let mut unresolved_refs_count: u64 = 0;
-    if let Ok(store_guard) = state.store.lock() {
-        if let Some(store) = store_guard.as_ref() {
-            if let Ok(tag_counts) = store.language_tag_counts() {
-                for (tag, count) in &tag_counts {
-                    if let Some(name) = crate::writer::lang_tag_to_name(*tag) {
-                        languages_indexed.insert(name);
-                    }
-                    workspace_files = workspace_files.saturating_add(*count);
+    if let Some(store) = state.default_root_store() {
+        if let Ok(tag_counts) = store.language_tag_counts() {
+            for (tag, count) in &tag_counts {
+                if let Some(name) = crate::writer::lang_tag_to_name(*tag) {
+                    languages_indexed.insert(name);
                 }
+                workspace_files = workspace_files.saturating_add(*count);
             }
-            if let Ok(n) = store.unresolved_refs_count() {
-                unresolved_refs_count = n;
-            }
+        }
+        if let Ok(n) = store.unresolved_refs_count() {
+            unresolved_refs_count = n;
         }
     }
     let languages_indexed: Vec<&'static str> = languages_indexed.into_iter().collect();

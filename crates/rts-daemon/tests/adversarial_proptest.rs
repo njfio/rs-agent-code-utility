@@ -237,15 +237,16 @@ fn error_code(resp: &Value) -> Option<String> {
 //
 // Promise (RESILIENCE.md §"Path traversal"): `Workspace.Mount { root }`
 // either:
-//   (a) succeeds with a canonical root that starts with the mounted
-//       workspace's canonical root (after `realpath`), OR
+//   (a) succeeds with a canonical root — the daemon serves the path it was
+//       handed, canonicalised (multi-root: it may be a root other than the
+//       one mounted in setup), OR
 //   (b) fails with one of: PATH_TRAVERSAL, MOUNT_HAS_SYMLINK,
-//       INVALID_WORKSPACE_PATH, WORKSPACE_MISMATCH (we already
-//       mounted a different path in setup).
+//       INVALID_WORKSPACE_PATH, INVALID_PARAMS.
 //
-// It MUST NEVER silently operate on `/etc/passwd` or any other path
-// that escapes the user-supplied root via `../` or symlinks.
-
+// It MUST NEVER silently operate on a path that escapes the user-supplied
+// root via `../`: a path containing a `..` segment is refused outright, and a
+// successful mount's root is the canonicalised form of what was asked for —
+// absolute, with no `..` component left in it.
 #[test]
 fn path_canonicalization_never_escapes_root() -> anyhow::Result<()> {
     let harness = spawn_and_mount()?;
@@ -260,7 +261,7 @@ fn path_canonicalization_never_escapes_root() -> anyhow::Result<()> {
         .run(&strat, |path_str| {
             let resp = call(&harness, "Workspace.Mount", json!({"root": path_str}));
 
-            // Either success-with-canonical-prefix or a documented error code.
+            // Either success-with-canonical-root or a documented error code.
             if let Some(code) = error_code(&resp) {
                 // All of these are acceptable rejection codes.
                 let acceptable = matches!(
@@ -276,17 +277,40 @@ fn path_canonicalization_never_escapes_root() -> anyhow::Result<()> {
                     "unexpected error code {code:?} for mount attempt on {path_str:?}; full response: {resp}"
                 );
             } else {
-                // Success: the daemon idempotently returned its
-                // already-mounted workspace status. Confirm the
-                // canonical workspace id matches what we mounted in
-                // setup — i.e. the canonical resolution did NOT
-                // wander off to some attacker-supplied location.
+                // Success. The daemon mounted (or joined) a root; the
+                // anti-escape promise is that the root it reports for the
+                // returned id is canonical — absolute, and with no `..`
+                // component surviving from the attacker-supplied string.
                 let id = resp["result"]["workspace_id"]
                     .as_str()
                     .ok_or_else(|| TestCaseError::fail(format!("missing workspace_id in {resp}")))?;
                 prop_assert!(
                     !id.is_empty(),
                     "successful mount must carry a workspace_id; got: {resp}"
+                );
+                let roots = resp["result"]["mounted_roots"]
+                    .as_array()
+                    .ok_or_else(|| {
+                        TestCaseError::fail(format!("mount response carried no mounted_roots: {resp}"))
+                    })?;
+                let mounted = roots
+                    .iter()
+                    .find(|r| r["workspace_id"].as_str() == Some(id))
+                    .ok_or_else(|| {
+                        TestCaseError::fail(format!(
+                            "mounted root {id} missing from mounted_roots: {resp}"
+                        ))
+                    })?;
+                let path = mounted["path"].as_str().unwrap_or_default();
+                prop_assert!(
+                    std::path::Path::new(path).is_absolute(),
+                    "mounted root must be absolute; got {path:?} for {path_str:?}"
+                );
+                prop_assert!(
+                    !std::path::Path::new(path)
+                        .components()
+                        .any(|c| matches!(c, std::path::Component::ParentDir)),
+                    "mounted root must be canonicalised (no `..`); got {path:?} for {path_str:?}"
                 );
             }
             Ok(())

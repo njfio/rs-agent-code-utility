@@ -491,6 +491,10 @@ pub struct RtsServer {
     /// Which tools this process advertises. `all` keeps every tool and its pinned description;
     /// a profile advertises a subset with one-line descriptions (see `surface.rs`).
     surface: Surface,
+    /// The roots this shim may route to (multi-root). The model never names a
+    /// root; each tool call's own path arguments decide which one answers —
+    /// see `rts_mcp::roots`.
+    roots: std::sync::Arc<rts_mcp::roots::RootSet>,
 }
 
 #[tool_router]
@@ -499,7 +503,12 @@ impl RtsServer {
     /// manager owns the socket and the background heartbeat /
     /// reconnect tasks; this struct is the rmcp tool-router shim that
     /// translates between MCP `tools/call` envelopes and daemon RPCs.
-    pub fn new(connection: ConnectionManager, instructions: String, surface: Surface) -> Self {
+    pub fn new(
+        connection: ConnectionManager,
+        instructions: String,
+        surface: Surface,
+        roots: std::sync::Arc<rts_mcp::roots::RootSet>,
+    ) -> Self {
         let mut tool_router = Self::tool_router();
         let disabled = surface.disabled(
             tool_router
@@ -522,6 +531,7 @@ impl RtsServer {
             connection,
             instructions,
             surface,
+            roots,
         }
     }
 
@@ -544,8 +554,47 @@ impl RtsServer {
     /// here are one-shot. Concurrent tool calls during a known
     /// disconnect window all see the same structured error without
     /// queueing on the daemon mutex (no thundering-herd).
+    ///
+    /// Routes to the start-up root — the default for calls whose arguments
+    /// carry no path at all. Tool handlers use [`Self::call_daemon_routed`].
     async fn call_daemon(&self, method: &str, params: Value) -> Result<Value, ConnectionError> {
         self.connection.call(method, params).await
+    }
+
+    /// Forward a tool call to the mounted root its **own arguments** named.
+    ///
+    /// Each handler resolves its `route` from the call's path-shaped arguments
+    /// (most specific first — `file` before `file_glob`) *before* those
+    /// arguments are moved into the request params; see
+    /// [`rts_mcp::roots::RootSet::resolve`]. The response carries a `_root`
+    /// block naming the root that answered — including, and especially, when
+    /// no argument resolved and the call fell back to the start-up root, so a
+    /// caller never has to guess which tree answered.
+    ///
+    /// The model is never asked to pass a root: no tool schema has such a
+    /// parameter (see `tests/tool_input_schemas.rs`).
+    async fn call_daemon_routed(
+        &self,
+        method: &str,
+        params: Value,
+        route: rts_mcp::roots::Route,
+    ) -> Result<Value, ConnectionError> {
+        // The daemon's path arguments are workspace-relative; an absolute path
+        // is what routed the call, so hand it over in the chosen root's
+        // coordinate system. Only a path match proves the path belongs to that
+        // root.
+        let mut params = params;
+        if route.kind == rts_mcp::roots::RouteKind::PathMatch {
+            rts_mcp::roots::relativize_params(&mut params, &route.root);
+        }
+        let (mut value, workspace_id) = self
+            .connection
+            .call_routed(method, params, &route.root)
+            .await?;
+        if let Some(obj) = value.as_object_mut() {
+            obj.insert("_root".to_string(), route.to_wire(&workspace_id));
+        }
+        Ok(value)
     }
 
     #[tool(
@@ -555,6 +604,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<OutlineArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.glob.as_deref()]);
         let mut params = serde_json::Map::new();
         if let Some(g) = args.glob {
             params.insert("glob".into(), Value::String(g));
@@ -563,7 +613,7 @@ impl RtsServer {
             params.insert("token_budget".into(), Value::Number(b.into()));
         }
         match self
-            .call_daemon("Index.Outline", Value::Object(params))
+            .call_daemon_routed("Index.Outline", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -578,6 +628,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<FindSymbolArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file.as_deref()]);
         let mut params = serde_json::Map::new();
         if let Some(n) = args.name {
             params.insert("name".into(), Value::String(n));
@@ -604,7 +655,7 @@ impl RtsServer {
             params.insert("include_signature".into(), Value::Bool(b));
         }
         match self
-            .call_daemon("Index.FindSymbol", Value::Object(params))
+            .call_daemon_routed("Index.FindSymbol", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -619,6 +670,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<FindCallersArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file.as_deref()]);
         let mut params = serde_json::Map::new();
         params.insert("name".into(), Value::String(args.name));
         if let Some(k) = args.kind {
@@ -628,7 +680,7 @@ impl RtsServer {
             params.insert("file".into(), Value::String(f));
         }
         match self
-            .call_daemon("Index.FindCallers", Value::Object(params))
+            .call_daemon_routed("Index.FindCallers", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -643,6 +695,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifySymbolArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file.as_deref()]);
         let mut params = serde_json::Map::new();
         params.insert("name".into(), Value::String(args.name));
         if let Some(k) = args.kind {
@@ -658,7 +711,7 @@ impl RtsServer {
             params.insert("content_version".into(), Value::String(cv));
         }
         match self
-            .call_daemon("Index.VerifySymbol", Value::Object(params))
+            .call_daemon_routed("Index.VerifySymbol", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -673,6 +726,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifySignatureArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file.as_deref()]);
         let mut params = serde_json::Map::new();
         params.insert("name".into(), Value::String(args.name));
         if let Some(k) = args.kind {
@@ -695,7 +749,7 @@ impl RtsServer {
         }
         params.insert("claimed".into(), Value::Object(claimed));
         match self
-            .call_daemon("Index.VerifySignature", Value::Object(params))
+            .call_daemon_routed("Index.VerifySignature", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -710,13 +764,14 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifyImportArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([]);
         let mut params = serde_json::Map::new();
         params.insert("path".into(), Value::String(args.path));
         if let Some(l) = args.lang {
             params.insert("lang".into(), Value::String(l));
         }
         match self
-            .call_daemon("Index.VerifyImport", Value::Object(params))
+            .call_daemon_routed("Index.VerifyImport", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -731,10 +786,15 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifyClaimsArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve(
+            args.claims
+                .iter()
+                .map(|c| c.get("file").and_then(Value::as_str)),
+        );
         let mut params = serde_json::Map::new();
         params.insert("claims".into(), Value::Array(args.claims));
         match self
-            .call_daemon("Index.VerifyClaims", Value::Object(params))
+            .call_daemon_routed("Index.VerifyClaims", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -749,6 +809,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<ImpactOfArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([]);
         let mut params = serde_json::Map::new();
         params.insert("name".into(), Value::String(args.name));
         if let Some(d) = args.depth {
@@ -764,7 +825,7 @@ impl RtsServer {
             params.insert("exclude_test_paths".into(), Value::Bool(e));
         }
         match self
-            .call_daemon("Index.ImpactOf", Value::Object(params))
+            .call_daemon_routed("Index.ImpactOf", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -779,6 +840,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifyImpactArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([]);
         let mut params = serde_json::Map::new();
         params.insert("symbol".into(), Value::String(args.symbol));
         params.insert("change".into(), Value::String(args.change));
@@ -789,7 +851,7 @@ impl RtsServer {
             params.insert("depth".into(), Value::Number(d.into()));
         }
         match self
-            .call_daemon("Index.VerifyImpact", Value::Object(params))
+            .call_daemon_routed("Index.VerifyImpact", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -804,6 +866,9 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<VerifyEditArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self
+            .roots
+            .resolve(args.edits.iter().map(|e| Some(e.file.as_str())));
         let mut params = serde_json::Map::new();
         let edits: Vec<Value> = args
             .edits
@@ -823,7 +888,7 @@ impl RtsServer {
             );
         }
         match self
-            .call_daemon("Index.VerifyEdit", Value::Object(params))
+            .call_daemon_routed("Index.VerifyEdit", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -838,6 +903,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<ReadSymbolAtArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([Some(args.file.as_str())]);
         let mut params = serde_json::Map::new();
         params.insert("file".into(), Value::String(args.file));
         params.insert("line".into(), Value::Number(args.line.into()));
@@ -857,7 +923,7 @@ impl RtsServer {
             params.insert("include_callers".into(), Value::Bool(true));
         }
         match self
-            .call_daemon("Index.ReadSymbolAt", Value::Object(params))
+            .call_daemon_routed("Index.ReadSymbolAt", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -872,6 +938,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<ReadSymbolArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file.as_deref()]);
         let mut params = serde_json::Map::new();
         params.insert("name".into(), Value::String(args.name));
         if let Some(f) = args.file {
@@ -899,7 +966,7 @@ impl RtsServer {
             params.insert("force_resend".into(), Value::Bool(true));
         }
         match self
-            .call_daemon("Index.ReadSymbol", Value::Object(params))
+            .call_daemon_routed("Index.ReadSymbol", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -914,6 +981,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<ReadRangeArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([Some(args.file.as_str())]);
         let mut params = serde_json::Map::new();
         params.insert("file".into(), Value::String(args.file));
         params.insert("start_line".into(), Value::Number(args.start_line.into()));
@@ -922,7 +990,7 @@ impl RtsServer {
             params.insert("token_budget".into(), Value::Number(b.into()));
         }
         match self
-            .call_daemon("Index.ReadRange", Value::Object(params))
+            .call_daemon_routed("Index.ReadRange", Value::Object(params), route)
             .await
         {
             Ok(v) => Ok(success_json(&v)),
@@ -937,6 +1005,7 @@ impl RtsServer {
         &self,
         Parameters(args): Parameters<GrepArgs>,
     ) -> Result<CallToolResult, McpError> {
+        let route = self.roots.resolve([args.file_glob.as_deref()]);
         let mut params = serde_json::Map::new();
         // `text` is optional in v0.6 (`structural_query` may be the
         // sole search source). Pass it through only when present so
@@ -977,7 +1046,10 @@ impl RtsServer {
                 Value::Array(langs.into_iter().map(Value::String).collect()),
             );
         }
-        match self.call_daemon("Index.Grep", Value::Object(params)).await {
+        match self
+            .call_daemon_routed("Index.Grep", Value::Object(params), route)
+            .await
+        {
             Ok(v) => Ok(success_json(&v)),
             Err(e) => Ok(connection_error_to_call_result(&e)),
         }

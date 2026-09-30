@@ -34,11 +34,12 @@
 //!
 //! ## Caching
 //!
-//! Single-slot mutex cache keyed on `index_generation`, mirroring
-//! alpha.20's [`crate::outline::OutlineCache`]. The first
+//! Single-slot mutex cache keyed on `(workspace_id, index_generation)`,
+//! mirroring alpha.20's [`crate::outline::OutlineCache`]. The first
 //! `find_symbol` call after a generation bump pays the compute cost
 //! (estimated 150–450ms on 100k LOC per plan §G3 / Deepening §C3);
-//! subsequent calls at the same generation are O(1).
+//! subsequent calls at the same key are O(1). The root id is part of the key
+//! because one daemon serves N workspace roots.
 //!
 //! ## Deferred (planned for follow-up)
 //!
@@ -97,12 +98,16 @@ impl SymbolRanks {
 }
 
 /// Single-slot cache. Same shape as [`crate::outline::OutlineCache`]:
-/// one entry, generation-keyed. The cache slot is `None` on cold
-/// start (before the first commit) and after a generation mismatch
+/// one entry, keyed by `(workspace_id, index_generation)`. The cache slot is
+/// `None` on cold start (before the first commit) and after a key mismatch
 /// triggers a recompute.
+///
+/// The `workspace_id` half of the key matters because one daemon serves N
+/// roots: two roots that have not both been written to sit at the same
+/// generation, and generation alone would hand one root's ranks to another.
 #[derive(Default)]
 pub struct SymbolPagerankCache {
-    inner: Mutex<Option<Arc<SymbolRanks>>>,
+    inner: Mutex<Option<CachedRanks>>,
     /// v0.6+ telemetry collector. Aggregated alongside the other
     /// caches' counters in `DaemonState::aggregate_cache_hits` to
     /// build the `cache_hit_rate` telemetry field.
@@ -110,17 +115,23 @@ pub struct SymbolPagerankCache {
     misses: std::sync::atomic::AtomicU64,
 }
 
+/// The single cached entry: which root's ranks, and the ranks.
+struct CachedRanks {
+    workspace_id: String,
+    ranks: Arc<SymbolRanks>,
+}
+
 impl SymbolPagerankCache {
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Return the cached ranks if they match `generation`. Cheap:
-    /// one mutex acquire + one Arc clone. Returns `None` when the
-    /// cache is empty or stale; the caller invokes [`Self::put`] to
-    /// fill the slot after a recompute. Bumps hit/miss counters as
-    /// a side-effect for telemetry aggregation.
-    pub fn get(&self, generation: u64) -> Option<Arc<SymbolRanks>> {
+    /// Return the cached ranks if they match `(workspace_id, generation)`.
+    /// Cheap: one mutex acquire + one Arc clone. Returns `None` when the
+    /// cache is empty or stale; the caller invokes [`Self::put`] to fill the
+    /// slot after a recompute. Bumps hit/miss counters as a side-effect for
+    /// telemetry aggregation.
+    pub fn get(&self, workspace_id: &str, generation: u64) -> Option<Arc<SymbolRanks>> {
         use std::sync::atomic::Ordering::Relaxed;
         let g = match self.inner.lock() {
             Ok(g) => g,
@@ -130,9 +141,11 @@ impl SymbolPagerankCache {
             }
         };
         match g.as_ref() {
-            Some(entry) if entry.generation == generation => {
+            Some(entry)
+                if entry.ranks.generation == generation && entry.workspace_id == workspace_id =>
+            {
                 self.hits.fetch_add(1, Relaxed);
-                Some(entry.clone())
+                Some(entry.ranks.clone())
             }
             _ => {
                 self.misses.fetch_add(1, Relaxed);
@@ -147,11 +160,15 @@ impl SymbolPagerankCache {
         (self.hits.load(Relaxed), self.misses.load(Relaxed))
     }
 
-    /// Replace the cache slot. The stored ranks are wrapped in `Arc`
-    /// so cache hits hand out cheap clones — the caller only reads.
-    pub fn put(&self, ranks: SymbolRanks) {
+    /// Replace the cache slot with `workspace_id`'s ranks. The stored ranks
+    /// are wrapped in `Arc` so cache hits hand out cheap clones — the caller
+    /// only reads.
+    pub fn put(&self, workspace_id: &str, ranks: SymbolRanks) {
         if let Ok(mut g) = self.inner.lock() {
-            *g = Some(Arc::new(ranks));
+            *g = Some(CachedRanks {
+                workspace_id: workspace_id.to_string(),
+                ranks: Arc::new(ranks),
+            });
         }
     }
 
@@ -165,15 +182,20 @@ impl SymbolPagerankCache {
 
 impl std::fmt::Debug for SymbolPagerankCache {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (occupied, gen_str) = match self.inner.lock() {
+        let (occupied, gen_str, root_str) = match self.inner.lock() {
             Ok(g) => match g.as_ref() {
-                Some(r) => (true, r.generation.to_string()),
-                None => (false, "-".to_string()),
+                Some(entry) => (
+                    true,
+                    entry.ranks.generation.to_string(),
+                    entry.workspace_id.clone(),
+                ),
+                None => (false, "-".to_string(), "-".to_string()),
             },
-            Err(_) => (false, "poisoned".to_string()),
+            Err(_) => (false, "poisoned".to_string(), "poisoned".to_string()),
         };
         f.debug_struct("SymbolPagerankCache")
             .field("occupied", &occupied)
+            .field("workspace_id", &root_str)
             .field("generation", &gen_str)
             .finish()
     }
@@ -819,29 +841,58 @@ mod tests {
     #[test]
     fn cache_stores_and_invalidates_by_generation() {
         let cache = SymbolPagerankCache::new();
-        assert!(cache.get(0).is_none(), "cold cache should miss");
+        let root = "aaaa0000aaaa0000";
+        assert!(cache.get(root, 0).is_none(), "cold cache should miss");
 
-        cache.put(SymbolRanks {
-            generation: 7,
-            sid_to_rank: [(1, 0.5), (2, 0.5)].into_iter().collect(),
-        });
-        let hit = cache.get(7).expect("hit at gen=7");
+        cache.put(
+            root,
+            SymbolRanks {
+                generation: 7,
+                sid_to_rank: [(1, 0.5), (2, 0.5)].into_iter().collect(),
+            },
+        );
+        let hit = cache.get(root, 7).expect("hit at gen=7");
         assert_eq!(hit.generation, 7);
         assert!((hit.rank_for(1) - 0.5).abs() < 1e-9);
         assert!((hit.rank_for(2) - 0.5).abs() < 1e-9);
         assert_eq!(hit.rank_for(999), 0.0, "unknown sid → 0 rank");
 
         // Stale generation → miss (caller must recompute).
-        assert!(cache.get(8).is_none(), "gen=8 should not hit gen=7 slot");
+        assert!(
+            cache.get(root, 8).is_none(),
+            "gen=8 should not hit gen=7 slot"
+        );
 
         // Re-putting at a new generation replaces the slot.
-        cache.put(SymbolRanks {
-            generation: 8,
-            sid_to_rank: [(3, 1.0)].into_iter().collect(),
-        });
-        assert!(cache.get(7).is_none(), "gen=7 should now miss");
-        let hit = cache.get(8).expect("hit at gen=8");
+        cache.put(
+            root,
+            SymbolRanks {
+                generation: 8,
+                sid_to_rank: [(3, 1.0)].into_iter().collect(),
+            },
+        );
+        assert!(cache.get(root, 7).is_none(), "gen=7 should now miss");
+        let hit = cache.get(root, 8).expect("hit at gen=8");
         assert!((hit.rank_for(3) - 1.0).abs() < 1e-9);
+    }
+
+    /// Multi-root: a different root at the *same* generation must miss, or a
+    /// worktree would be ranked by the repo root's call graph.
+    #[test]
+    fn cache_misses_for_a_different_root_at_the_same_generation() {
+        let cache = SymbolPagerankCache::new();
+        cache.put(
+            "aaaa0000aaaa0000",
+            SymbolRanks {
+                generation: 3,
+                sid_to_rank: [(1, 1.0)].into_iter().collect(),
+            },
+        );
+        assert!(cache.get("aaaa0000aaaa0000", 3).is_some(), "same key hits");
+        assert!(
+            cache.get("bbbb1111bbbb1111", 3).is_none(),
+            "same generation, different root must miss"
+        );
     }
 
     // v0.7.0 — heading dampener verification. The plan calls out a

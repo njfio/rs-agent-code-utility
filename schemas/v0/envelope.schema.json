@@ -25,6 +25,10 @@
       "minLength": 1,
       "maxLength": 256
     },
+    "workspace_id": {
+      "description": "Optional mounted-root selector (multi-root, capability `multi_root`). Names the `workspace_id` of the root this request concerns; rts-mcp infers it from the call's own paths and stamps it here. Absent = the daemon's default root (the oldest root still mounted), which is what every single-root client gets. Lives in the envelope, like `cancel_id`, so no method's param schema declares it. See protocol-v0.md §3.4b.",
+      "type": "string"
+    },
     "result": {
       "description": "Method-specific success payload. Object on every v0 verb."
     },

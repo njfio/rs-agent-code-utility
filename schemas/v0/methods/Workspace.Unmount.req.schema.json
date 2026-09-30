@@ -2,8 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rts.local/schemas/v0/methods/Workspace.Unmount.req.schema.json",
   "title": "Workspace.Unmount request params",
-  "description": "Per protocol-v0.md §7.3. Tells the daemon this client is done with the workspace. Last-unmount starts the idle-shutdown timer.",
+  "description": "Per protocol-v0.md §7.3. Tells the daemon this client is done with one workspace root. `root` (a `workspace_id` or a workspace path) selects which mounted root to release; absent, the daemon's default root. Unmounting the last root starts the idle-shutdown timer.",
   "type": "object",
-  "properties": {},
+  "properties": {
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mounted root to release: its `workspace_id` (as returned by `Workspace.Mount` / `Workspace.Status`) or its workspace path. Absent = the daemon's default root."
+    }
+  },
   "additionalProperties": false
 }
