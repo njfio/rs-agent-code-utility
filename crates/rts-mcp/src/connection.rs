@@ -351,6 +351,20 @@ fn backoff_for_attempt(attempt: u32, ceiling: Duration) -> Duration {
     if raw > ceiling { ceiling } else { raw }
 }
 
+/// What a routed call did, so the tool layer can report it honestly rather
+/// than inferring it.
+pub struct RoutedCall {
+    /// The daemon's response body.
+    pub value: Value,
+    /// The daemon's mount id for the root that served the call.
+    pub workspace_id: String,
+    /// `true` when this call had to mount the root — the shim held no mount
+    /// id for it on the current daemon — and `false` when it reused a mount an
+    /// earlier call made. (A reconnect drops the remembered ids, so a root the
+    /// daemon still has can be mounted again here; `Workspace.Mount` joins.)
+    pub mounted_now: bool,
+}
+
 /// Long-lived connection manager. Owns the socket (via a `DaemonClient`
 /// inside an `Arc<Mutex<…>>`) and a background heartbeat / reconnect
 /// task. `clone()` is cheap (`Arc` clones); the same manager is shared
@@ -476,7 +490,7 @@ impl ConnectionManager {
         let workspace = self.inner.workspace.clone();
         self.call_routed(method, params, &workspace)
             .await
-            .map(|(value, _)| value)
+            .map(|routed| routed.value)
     }
 
     /// Forward a daemon RPC **against one mounted root**, returning the
@@ -502,7 +516,7 @@ impl ConnectionManager {
         method: &str,
         params: Value,
         root: &std::path::Path,
-    ) -> Result<(Value, String), ConnectionError> {
+    ) -> Result<RoutedCall, ConnectionError> {
         // 1. Fast-path state check. If we're not Connected, return the
         //    structured error without acquiring the daemon mutex.
         {
@@ -541,10 +555,10 @@ impl ConnectionManager {
         // 2. Connected path. Acquire daemon, ensure the root is mounted,
         //    forward the call.
         let mut guard = self.inner.daemon.lock().await;
-        let workspace_id = match self.mounted_id(root) {
-            Some(id) => id,
+        let (workspace_id, mounted_now) = match self.mounted_id(root) {
+            Some(id) => (id, false),
             None => match self.mount_root(&mut guard, root).await {
-                Ok(id) => id,
+                Ok(id) => (id, true),
                 Err(e) => {
                     drop(guard);
                     return Err(e);
@@ -562,7 +576,11 @@ impl ConnectionManager {
                 // socket. Take write-lock briefly.
                 drop(guard);
                 self.bump_pong().await;
-                Ok((v, workspace_id))
+                Ok(RoutedCall {
+                    value: v,
+                    workspace_id,
+                    mounted_now,
+                })
             }
             Err(e) if e.is_disconnect() => {
                 drop(guard);

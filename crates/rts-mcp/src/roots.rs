@@ -17,9 +17,9 @@
 //! first — an explicit `file` before a `glob`). For each argument:
 //!
 //! 1. **Absolute** path (or glob): the mounted root that is a path-prefix of
-//!    it wins; the longest match wins, so a worktree nested inside the repo
-//!    root routes to the worktree. Component-wise (`Path::starts_with`), so
-//!    `/a/b` never matches root `/a/bc`.
+//!    it wins; the longest match wins, so a worktree that is itself a mounted
+//!    root routes there rather than to the repo enclosing it. Component-wise
+//!    (`Path::starts_with`), so `/a/b` never matches root `/a/bc`.
 //! 2. **Relative** path: the root under which it actually exists wins —
 //!    *only* when exactly one mounted root has it. A relative path that
 //!    exists under several roots (the normal case for a worktree: it is a
@@ -27,21 +27,33 @@
 //! 3. **Glob**: rules 1–2 applied to the literal prefix before the first
 //!    wildcard (`src/**/*.rs` → `src/`); a glob whose prefix is empty or is
 //!    just `.` carries no information.
+//! 4. **Nested checkout**: an absolute argument whose longest mounted prefix
+//!    is a root that does not *index* it — a git worktree living inside the
+//!    repo (`/repo/.wt/alpha/…`, which the repo's `.gitignore` excludes, so
+//!    the repo's index skips it) — names a tree of its own. The deepest
+//!    ancestor of the argument that holds a `.git` entry becomes the root
+//!    ([`RouteKind::Mounted`]) and is mounted on demand. Bounded twice over:
+//!    the checkout must sit under the shim's **start-up root**, so no tool
+//!    call can mount an arbitrary filesystem directory, and it must be
+//!    strictly deeper than the root rule 1 matched, so a root that already
+//!    serves a path keeps it.
 //!
 //! If the arguments that *do* resolve agree on one root, that root serves the
-//! call ([`RouteKind::PathMatch`]). If none resolve, or if they disagree, the
-//! call is served by the start-up root ([`RouteKind::Default`] /
-//! [`RouteKind::Ambiguous`]) and the tool response says so in `_root` — a
-//! visible default, never a silent guess.
+//! call ([`RouteKind::PathMatch`], or [`RouteKind::Mounted`] when rule 4 is
+//! what found it). If none resolve, or if they disagree, the call is served
+//! by the start-up root ([`RouteKind::Default`] / [`RouteKind::Ambiguous`])
+//! and the tool response says so in `_root` — a visible default, never a
+//! silent guess.
 //!
 //! ## Addressing a worktree
 //!
 //! Because of rule 2, the way to address a worktree is an **absolute** path
-//! (`/repo/.wt/alpha/crates/x.rs`), which rule 1 routes to `/repo/.wt/alpha`.
-//! A bare `crates/x.rs` exists under every root and is therefore served by
-//! the start-up root; the `_root` block on the response names that root and
-//! `resolved_by: "default"`, so an agent that sees the wrong tree learns
-//! exactly what to pass instead.
+//! (`/repo/.wt/alpha/crates/x.rs`): rule 1 routes it to `/repo/.wt/alpha` when
+//! that worktree is a mounted root, and rule 4 mounts it for the call when it
+//! is not. A bare `crates/x.rs` exists under every root and is therefore
+//! served by the start-up root; the `_root` block on the response names that
+//! root and `resolved_by: "default"`, so an agent that sees the wrong tree
+//! learns exactly what to pass instead.
 
 use std::path::{Path, PathBuf};
 
@@ -59,6 +71,11 @@ pub struct RootSet {
 pub enum RouteKind {
     /// A path-shaped argument named the root.
     PathMatch,
+    /// A path-shaped argument named a **nested checkout** (a git worktree
+    /// under the start-up root) that no mounted root indexes; it is mounted
+    /// for this call. Distinct from [`RouteKind::PathMatch`] because the root
+    /// was not one the shim already had.
+    Mounted,
     /// No argument resolved; the start-up root serves the call.
     Default,
     /// Arguments resolved to *different* roots; the start-up root serves the
@@ -70,9 +87,16 @@ impl RouteKind {
     pub fn as_str(self) -> &'static str {
         match self {
             RouteKind::PathMatch => "path_match",
+            RouteKind::Mounted => "mounted",
             RouteKind::Default => "default",
             RouteKind::Ambiguous => "ambiguous",
         }
+    }
+
+    /// `true` when the route's absolute arguments are known to belong to the
+    /// routed root, and so must be handed to the daemon relative to it.
+    pub fn names_the_root(self) -> bool {
+        matches!(self, RouteKind::PathMatch | RouteKind::Mounted)
     }
 }
 
@@ -89,16 +113,26 @@ impl Route {
     /// The `_root` block the tool layer attaches to a response. `workspace_id`
     /// is the daemon's mount id for this root, which the model can quote back
     /// in a bug report; `path` + `resolved_by` are what it acts on.
-    pub fn to_wire(&self, workspace_id: &str) -> Value {
+    ///
+    /// `mounted_now` reports what *this* call cost: `true` when the shim had
+    /// no mount for the root and mounted it before forwarding, `false` when it
+    /// reused a mount an earlier call made.
+    pub fn to_wire(&self, workspace_id: &str, mounted_now: bool) -> Value {
         let mut obj = serde_json::Map::new();
         obj.insert("workspace_id".into(), json!(workspace_id));
         obj.insert("path".into(), json!(self.root.to_string_lossy()));
         obj.insert("resolved_by".into(), json!(self.kind.as_str()));
+        obj.insert("mounted_now".into(), json!(mounted_now));
         if let Some(ev) = self.evidence.as_deref() {
             obj.insert("matched_arg".into(), json!(ev));
         }
         let note = match self.kind {
             RouteKind::PathMatch => None,
+            RouteKind::Mounted => Some(format!(
+                "this call's absolute path named the nested checkout {}; it is not a root the \
+                 shim was started with, so it was mounted for this call and serves it.",
+                self.root.display()
+            )),
             RouteKind::Default => Some(format!(
                 "no mounted root matched this call's paths; served by the start-up root {}. \
                  Pass an absolute path (e.g. {}/…) to target another root.",
@@ -143,26 +177,30 @@ impl RootSet {
 
     /// Route a call by its path-shaped arguments, most specific first.
     pub fn resolve<'a>(&self, candidates: impl IntoIterator<Item = Option<&'a str>>) -> Route {
-        let mut matched: Option<(PathBuf, String)> = None;
+        let mut matched: Option<(PathBuf, bool, String)> = None;
         let mut conflicting: Option<String> = None;
         for candidate in candidates.into_iter().flatten() {
             let candidate = candidate.trim();
             if candidate.is_empty() {
                 continue;
             }
-            let Some(root) = self.match_one(candidate) else {
+            let Some(hit) = self.match_one(candidate) else {
                 continue;
             };
             match &matched {
-                None => matched = Some((root, candidate.to_string())),
-                Some((previous, _)) if *previous == root => {}
+                None => matched = Some((hit.root, hit.inferred, candidate.to_string())),
+                Some((previous, _, _)) if *previous == hit.root => {}
                 Some(_) => conflicting = Some(candidate.to_string()),
             }
         }
         match (matched, conflicting) {
-            (Some((root, evidence)), None) => Route {
+            (Some((root, inferred, evidence)), None) => Route {
                 root,
-                kind: RouteKind::PathMatch,
+                kind: if inferred {
+                    RouteKind::Mounted
+                } else {
+                    RouteKind::PathMatch
+                },
                 evidence: Some(evidence),
             },
             (Some(_), Some(conflict)) => Route {
@@ -178,8 +216,9 @@ impl RootSet {
         }
     }
 
-    /// Which mounted root (if exactly one) a single argument names.
-    fn match_one(&self, candidate: &str) -> Option<PathBuf> {
+    /// Which root a single argument names, and whether that root had to be
+    /// inferred (rule 4) rather than matched directly.
+    fn match_one(&self, candidate: &str) -> Option<RootMatch> {
         let literal = literal_prefix(candidate);
         if literal.is_empty() {
             return None;
@@ -188,12 +227,26 @@ impl RootSet {
         if path.is_absolute() {
             // Longest matching root wins: `/repo/.wt/alpha/…` must route to
             // the worktree, not to `/repo`.
-            return self
+            let root = self
                 .roots
                 .iter()
                 .filter(|root| path.starts_with(root))
                 .max_by_key(|root| root.components().count())
-                .cloned();
+                .cloned()?;
+            // …but that root only *serves* the path if its index covers it. A
+            // nested checkout below it is a tree of its own: the repo's index
+            // skips it (`.wt/` is gitignored), so the checkout has to become
+            // the root before the call can be answered.
+            return Some(match self.nested_checkout(path, &root) {
+                Some(checkout) => RootMatch {
+                    root: checkout,
+                    inferred: true,
+                },
+                None => RootMatch {
+                    root,
+                    inferred: false,
+                },
+            });
         }
         // Relative: only a path that exists under exactly one root is
         // evidence. Existence under several roots is the worktree case and
@@ -204,10 +257,49 @@ impl RootSet {
             .filter(|root| root.join(path).exists())
             .collect();
         match hits.as_slice() {
-            [only] => Some((*only).clone()),
+            [only] => Some(RootMatch {
+                root: (*only).clone(),
+                inferred: false,
+            }),
             _ => None,
         }
     }
+
+    /// The deepest ancestor of `path` — strictly below `root` — that is a
+    /// checkout of its own, i.e. holds a `.git` entry (a directory for a
+    /// clone, a file for a `git worktree add`). `None` when there is none,
+    /// which is the common case: `root`'s index already covers `path`.
+    ///
+    /// The answer is canonicalised (the roots are) and must stay under the
+    /// start-up root: a tool call may mount a checkout *inside* the workspace
+    /// the shim was started for, never an arbitrary directory. The `.git`
+    /// boundary is what makes the inference narrow — an ordinary
+    /// subdirectory, or a path that does not exist, keeps the root rule 1
+    /// gave it.
+    fn nested_checkout(&self, path: &Path, root: &Path) -> Option<PathBuf> {
+        for dir in path.ancestors() {
+            if dir == root || !dir.starts_with(root) {
+                break;
+            }
+            if !dir.join(".git").exists() {
+                continue;
+            }
+            let Ok(checkout) = dir.canonicalize() else {
+                continue;
+            };
+            if checkout.starts_with(&self.start_up) {
+                return Some(checkout);
+            }
+        }
+        None
+    }
+}
+
+/// One argument's answer: the root that serves it, and whether that root was
+/// inferred from a nested checkout rather than matched directly.
+struct RootMatch {
+    root: PathBuf,
+    inferred: bool,
 }
 
 /// The literal (wildcard-free) prefix of a glob or path argument.
@@ -324,6 +416,105 @@ mod tests {
         assert_eq!(route.root, PathBuf::from("/repo"));
     }
 
+    /// A git worktree nested inside the start-up root is not a mounted root,
+    /// and the repo's index skips it (`.wt/` is gitignored) — so a path into
+    /// it has to bring the checkout in as the root of its own call.
+    #[test]
+    fn absolute_path_into_a_nested_checkout_mounts_the_checkout() {
+        let repo = tempfile::tempdir().unwrap();
+        let repo = repo.path().canonicalize().unwrap();
+        let checkout = repo.join(".wt/w1");
+        std::fs::create_dir_all(checkout.join("src")).unwrap();
+        // `git worktree add` writes a `.git` *file* pointing at the parent
+        // repository's gitdir; a nested clone has a `.git` directory.
+        std::fs::write(
+            checkout.join(".git"),
+            "gitdir: /elsewhere/.git/worktrees/w1\n",
+        )
+        .unwrap();
+        std::fs::write(checkout.join("src/lib.rs"), "fn a() {}\n").unwrap();
+
+        let set = RootSet::new(repo.clone(), vec![]);
+
+        // A glob into the worktree (the shape the failing call used) and a
+        // file inside it agree on the checkout.
+        let glob = format!("{}/src/**", checkout.display());
+        let file = format!("{}/src/lib.rs", checkout.display());
+        let route = set.resolve([Some(glob.as_str()), Some(file.as_str())]);
+        assert_eq!(route.kind, RouteKind::Mounted);
+        assert_eq!(route.root, checkout);
+        assert_eq!(route.evidence.as_deref(), Some(glob.as_str()));
+
+        let wire = route.to_wire("aabbccddeeff0011", true);
+        assert_eq!(wire["resolved_by"], "mounted");
+        assert_eq!(wire["mounted_now"], true);
+        assert_eq!(wire["path"], json!(checkout.to_string_lossy()));
+        assert!(
+            wire["note"].as_str().unwrap().contains("nested checkout"),
+            "the mount must be stated in the response: {wire:?}"
+        );
+    }
+
+    /// The inference is narrow: only a checkout boundary is a root of its own.
+    /// An ordinary subdirectory — and a path that does not exist — keeps the
+    /// root rule 1 gave it, even when that root is itself a checkout.
+    #[test]
+    fn an_ordinary_subdirectory_keeps_the_root_that_indexes_it() {
+        let repo = tempfile::tempdir().unwrap();
+        let repo = repo.path().canonicalize().unwrap();
+        std::fs::create_dir_all(repo.join(".git")).unwrap();
+        std::fs::create_dir_all(repo.join("src")).unwrap();
+        std::fs::write(repo.join("src/lib.rs"), "fn a() {}\n").unwrap();
+        let set = RootSet::new(repo.clone(), vec![]);
+
+        let file = format!("{}/src/lib.rs", repo.display());
+        let route = set.resolve([Some(file.as_str())]);
+        assert_eq!(route.kind, RouteKind::PathMatch);
+        assert_eq!(route.root, repo);
+
+        // No directory of its own: nothing exists to be a root.
+        let missing = format!("{}/nope/deep/**", repo.display());
+        let route = set.resolve([Some(missing.as_str())]);
+        assert_eq!(route.kind, RouteKind::PathMatch);
+        assert_eq!(route.root, repo);
+    }
+
+    /// The bound: a checkout is mounted only when it sits under the shim's
+    /// start-up root. Outside it — even under another configured root — the
+    /// path stays on the root that matched, so no tool call can make the shim
+    /// mount an arbitrary directory.
+    #[test]
+    fn a_nested_checkout_outside_the_start_up_root_is_not_mounted() {
+        let start_up = tempfile::tempdir().unwrap();
+        let start_up = start_up.path().canonicalize().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let other = other.path().canonicalize().unwrap();
+        let checkout = other.join(".wt/w2");
+        std::fs::create_dir_all(checkout.join("src")).unwrap();
+        std::fs::write(
+            checkout.join(".git"),
+            "gitdir: /elsewhere/.git/worktrees/w2\n",
+        )
+        .unwrap();
+        std::fs::write(checkout.join("src/lib.rs"), "fn a() {}\n").unwrap();
+
+        let set = RootSet::new(start_up.clone(), vec![other.clone()]);
+        let glob = format!("{}/src/**", checkout.display());
+        let route = set.resolve([Some(glob.as_str())]);
+        assert_eq!(route.kind, RouteKind::PathMatch);
+        assert_eq!(route.root, other);
+
+        // A checkout under no configured root at all stays a visible default.
+        let outside = tempfile::tempdir().unwrap();
+        let outside = outside.path().canonicalize().unwrap();
+        std::fs::create_dir_all(outside.join(".wt/w3/src")).unwrap();
+        std::fs::write(outside.join(".wt/w3/.git"), "gitdir: /elsewhere\n").unwrap();
+        let glob = format!("{}/.wt/w3/src/**", outside.display());
+        let route = set.resolve([Some(glob.as_str())]);
+        assert_eq!(route.kind, RouteKind::Default);
+        assert_eq!(route.root, start_up);
+    }
+
     #[test]
     fn absolute_path_prefix_must_end_on_a_component_boundary() {
         // `/repo2/...` must not match the `/repo` root.
@@ -337,9 +528,10 @@ mod tests {
         let route = roots().resolve([Some("/elsewhere/src/lib.rs")]);
         assert_eq!(route.kind, RouteKind::Default);
         assert_eq!(route.root, PathBuf::from("/repo"));
-        let wire = route.to_wire("aabbccddeeff0011");
+        let wire = route.to_wire("aabbccddeeff0011", false);
         assert_eq!(wire["resolved_by"], "default");
         assert_eq!(wire["workspace_id"], "aabbccddeeff0011");
+        assert_eq!(wire["mounted_now"], false);
         assert!(
             wire["note"].as_str().unwrap().contains("start-up root"),
             "the default must be stated in the response: {wire:?}"
