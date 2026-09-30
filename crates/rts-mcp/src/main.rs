@@ -193,8 +193,10 @@ async fn main() -> Result<()> {
         format!(
             "rts-mcp serves read-only retrieval tools for {} workspace roots out of one daemon \
              (start-up root {}). Every tool call is served by the root its own path arguments \
-             name: an absolute path under a root routes there, and each response's `_root` \
-             block reports which root answered (path, workspace_id, resolved_by). When a call \
+             name: an absolute path under a root routes there — including a nested checkout \
+             (a git worktree under the start-up root), which is mounted on demand and reported \
+             as `resolved_by: \"mounted\"` — and each response's `_root` block reports which \
+             root answered (path, workspace_id, resolved_by, mounted_now). When a call \
              has no path that identifies a root — a bare symbol name, or a relative path that \
              exists under several roots — it is served by the start-up root and `_root` says \
              `resolved_by: \"default\"`; pass an absolute path to target another root. \
