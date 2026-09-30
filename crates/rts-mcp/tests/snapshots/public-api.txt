@@ -200,6 +200,7 @@ impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ConnectionS
 pub struct rts_mcp::connection::ConnectionManager
 impl rts_mcp::connection::ConnectionManager
 pub async fn rts_mcp::connection::ConnectionManager::call(&self, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::connection::ConnectionError>
+pub async fn rts_mcp::connection::ConnectionManager::call_routed(&self, method: &str, params: serde_json::value::Value, root: &std::path::Path) -> core::result::Result<(serde_json::value::Value, alloc::string::String), rts_mcp::connection::ConnectionError>
 pub async fn rts_mcp::connection::ConnectionManager::is_connected(&self) -> bool
 pub fn rts_mcp::connection::ConnectionManager::new(client: rts_mcp::daemon_client::DaemonClient, daemon_bin: std::path::PathBuf, workspace: std::path::PathBuf, config: rts_mcp::connection::ResilienceConfig, start_background_tasks: bool) -> Self
 pub fn rts_mcp::connection::ConnectionManager::start_background_tasks(&self)
@@ -289,6 +290,7 @@ pub mod rts_mcp::daemon_client
 pub struct rts_mcp::daemon_client::DaemonClient
 impl rts_mcp::daemon_client::DaemonClient
 pub async fn rts_mcp::daemon_client::DaemonClient::call(&mut self, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::daemon_client::DaemonError>
+pub async fn rts_mcp::daemon_client::DaemonClient::call_with_root(&mut self, method: &str, params: serde_json::value::Value, workspace_id: core::option::Option<&str>) -> core::result::Result<serde_json::value::Value, rts_mcp::daemon_client::DaemonError>
 pub fn rts_mcp::daemon_client::DaemonClient::new(stream: tokio::net::unix::stream::UnixStream, daemon_bin: std::path::PathBuf, workspace: std::path::PathBuf) -> Self
 pub async fn rts_mcp::daemon_client::DaemonClient::reconnect(&mut self) -> core::result::Result<(), rts_mcp::daemon_client::DaemonError>
 impl !core::marker::Freeze for rts_mcp::daemon_client::DaemonClient
@@ -363,6 +365,137 @@ pub fn rts_mcp::daemon_client::DaemonError::from(t: T) -> T
 impl<T> tracing::instrument::Instrument for rts_mcp::daemon_client::DaemonError
 impl<T> tracing::instrument::WithSubscriber for rts_mcp::daemon_client::DaemonError
 pub const rts_mcp::daemon_client::MAX_FRAME_BYTES: usize
+pub mod rts_mcp::roots
+pub enum rts_mcp::roots::RouteKind
+pub rts_mcp::roots::RouteKind::Ambiguous
+pub rts_mcp::roots::RouteKind::Default
+pub rts_mcp::roots::RouteKind::PathMatch
+impl rts_mcp::roots::RouteKind
+pub fn rts_mcp::roots::RouteKind::as_str(self) -> &'static str
+impl core::clone::Clone for rts_mcp::roots::RouteKind
+pub fn rts_mcp::roots::RouteKind::clone(&self) -> rts_mcp::roots::RouteKind
+impl core::cmp::Eq for rts_mcp::roots::RouteKind
+impl core::cmp::PartialEq for rts_mcp::roots::RouteKind
+pub fn rts_mcp::roots::RouteKind::eq(&self, other: &rts_mcp::roots::RouteKind) -> bool
+impl core::fmt::Debug for rts_mcp::roots::RouteKind
+pub fn rts_mcp::roots::RouteKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for rts_mcp::roots::RouteKind
+impl core::marker::StructuralPartialEq for rts_mcp::roots::RouteKind
+impl core::marker::Freeze for rts_mcp::roots::RouteKind
+impl core::marker::Send for rts_mcp::roots::RouteKind
+impl core::marker::Sync for rts_mcp::roots::RouteKind
+impl core::marker::Unpin for rts_mcp::roots::RouteKind
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::roots::RouteKind
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::roots::RouteKind
+impl<Q, K> equivalent::Equivalent<K> for rts_mcp::roots::RouteKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rts_mcp::roots::RouteKind::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for rts_mcp::roots::RouteKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn rts_mcp::roots::RouteKind::equivalent(&self, key: &K) -> bool
+impl<T, U> core::convert::Into<U> for rts_mcp::roots::RouteKind where U: core::convert::From<T>
+pub fn rts_mcp::roots::RouteKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::roots::RouteKind where U: core::convert::Into<T>
+pub type rts_mcp::roots::RouteKind::Error = core::convert::Infallible
+pub fn rts_mcp::roots::RouteKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::roots::RouteKind where U: core::convert::TryFrom<T>
+pub type rts_mcp::roots::RouteKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::roots::RouteKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::roots::RouteKind where T: core::clone::Clone
+pub type rts_mcp::roots::RouteKind::Owned = T
+pub fn rts_mcp::roots::RouteKind::clone_into(&self, target: &mut T)
+pub fn rts_mcp::roots::RouteKind::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::roots::RouteKind where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::roots::RouteKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::roots::RouteKind where T: ?core::marker::Sized
+pub fn rts_mcp::roots::RouteKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::roots::RouteKind where T: ?core::marker::Sized
+pub fn rts_mcp::roots::RouteKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::roots::RouteKind where T: core::clone::Clone
+pub unsafe fn rts_mcp::roots::RouteKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::roots::RouteKind
+pub fn rts_mcp::roots::RouteKind::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::roots::RouteKind
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::roots::RouteKind
+pub struct rts_mcp::roots::RootSet
+impl rts_mcp::roots::RootSet
+pub fn rts_mcp::roots::RootSet::new(start_up: std::path::PathBuf, extras: alloc::vec::Vec<std::path::PathBuf>) -> Self
+pub fn rts_mcp::roots::RootSet::resolve<'a>(&self, candidates: impl core::iter::traits::collect::IntoIterator<Item = core::option::Option<&'a str>>) -> rts_mcp::roots::Route
+pub fn rts_mcp::roots::RootSet::roots(&self) -> &[std::path::PathBuf]
+pub fn rts_mcp::roots::RootSet::start_up(&self) -> &std::path::Path
+impl core::clone::Clone for rts_mcp::roots::RootSet
+pub fn rts_mcp::roots::RootSet::clone(&self) -> rts_mcp::roots::RootSet
+impl core::fmt::Debug for rts_mcp::roots::RootSet
+pub fn rts_mcp::roots::RootSet::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::roots::RootSet
+impl core::marker::Send for rts_mcp::roots::RootSet
+impl core::marker::Sync for rts_mcp::roots::RootSet
+impl core::marker::Unpin for rts_mcp::roots::RootSet
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::roots::RootSet
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::roots::RootSet
+impl<T, U> core::convert::Into<U> for rts_mcp::roots::RootSet where U: core::convert::From<T>
+pub fn rts_mcp::roots::RootSet::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::roots::RootSet where U: core::convert::Into<T>
+pub type rts_mcp::roots::RootSet::Error = core::convert::Infallible
+pub fn rts_mcp::roots::RootSet::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::roots::RootSet where U: core::convert::TryFrom<T>
+pub type rts_mcp::roots::RootSet::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::roots::RootSet::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::roots::RootSet where T: core::clone::Clone
+pub type rts_mcp::roots::RootSet::Owned = T
+pub fn rts_mcp::roots::RootSet::clone_into(&self, target: &mut T)
+pub fn rts_mcp::roots::RootSet::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::roots::RootSet where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::roots::RootSet::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::roots::RootSet where T: ?core::marker::Sized
+pub fn rts_mcp::roots::RootSet::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::roots::RootSet where T: ?core::marker::Sized
+pub fn rts_mcp::roots::RootSet::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::roots::RootSet where T: core::clone::Clone
+pub unsafe fn rts_mcp::roots::RootSet::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::roots::RootSet
+pub fn rts_mcp::roots::RootSet::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::roots::RootSet
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::roots::RootSet
+pub struct rts_mcp::roots::Route
+pub rts_mcp::roots::Route::evidence: core::option::Option<alloc::string::String>
+pub rts_mcp::roots::Route::kind: rts_mcp::roots::RouteKind
+pub rts_mcp::roots::Route::root: std::path::PathBuf
+impl rts_mcp::roots::Route
+pub fn rts_mcp::roots::Route::to_wire(&self, workspace_id: &str) -> serde_json::value::Value
+impl core::clone::Clone for rts_mcp::roots::Route
+pub fn rts_mcp::roots::Route::clone(&self) -> rts_mcp::roots::Route
+impl core::fmt::Debug for rts_mcp::roots::Route
+pub fn rts_mcp::roots::Route::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for rts_mcp::roots::Route
+impl core::marker::Send for rts_mcp::roots::Route
+impl core::marker::Sync for rts_mcp::roots::Route
+impl core::marker::Unpin for rts_mcp::roots::Route
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::roots::Route
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::roots::Route
+impl<T, U> core::convert::Into<U> for rts_mcp::roots::Route where U: core::convert::From<T>
+pub fn rts_mcp::roots::Route::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::roots::Route where U: core::convert::Into<T>
+pub type rts_mcp::roots::Route::Error = core::convert::Infallible
+pub fn rts_mcp::roots::Route::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::roots::Route where U: core::convert::TryFrom<T>
+pub type rts_mcp::roots::Route::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::roots::Route::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for rts_mcp::roots::Route where T: core::clone::Clone
+pub type rts_mcp::roots::Route::Owned = T
+pub fn rts_mcp::roots::Route::clone_into(&self, target: &mut T)
+pub fn rts_mcp::roots::Route::to_owned(&self) -> T
+impl<T> core::any::Any for rts_mcp::roots::Route where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::roots::Route::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::roots::Route where T: ?core::marker::Sized
+pub fn rts_mcp::roots::Route::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::roots::Route where T: ?core::marker::Sized
+pub fn rts_mcp::roots::Route::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for rts_mcp::roots::Route where T: core::clone::Clone
+pub unsafe fn rts_mcp::roots::Route::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for rts_mcp::roots::Route
+pub fn rts_mcp::roots::Route::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::roots::Route
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::roots::Route
+pub fn rts_mcp::roots::relativize_params(params: &mut serde_json::value::Value, root: &std::path::Path) -> usize
 pub mod rts_mcp::socket
 pub async fn rts_mcp::socket::connect_with_auto_spawn(daemon_bin: &std::path::Path, prewarm_workspace: core::option::Option<&std::path::Path>) -> anyhow::Result<tokio::net::unix::stream::UnixStream>
 pub fn rts_mcp::socket::default_socket_path() -> anyhow::Result<std::path::PathBuf>

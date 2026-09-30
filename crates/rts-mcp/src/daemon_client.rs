@@ -144,10 +144,29 @@ impl DaemonClient {
     /// `error` envelope, returns `Err(DaemonError { code, message, data })`
     /// so the caller can map daemon error codes to `CallToolResult::error`.
     pub async fn call(&mut self, method: &str, params: Value) -> Result<Value, DaemonError> {
+        self.call_with_root(method, params, None).await
+    }
+
+    /// Send one request naming the mounted root it concerns.
+    ///
+    /// `workspace_id` lands in the request **envelope** (multi-root,
+    /// capability `multi_root`), alongside `cancel_id` / `deadline_ms`: it is
+    /// a routing field, so no method's param schema has to declare it.
+    /// `None` omits it, which the daemon reads as "the default root" — the
+    /// behaviour of every pre-multi-root client.
+    pub async fn call_with_root(
+        &mut self,
+        method: &str,
+        params: Value,
+        workspace_id: Option<&str>,
+    ) -> Result<Value, DaemonError> {
         let id = self.alloc_id();
         let mut req = json!({ "id": id, "method": method, "params": params });
         if let Some(ms) = stamped_deadline(self.default_deadline_ms, method) {
             req["deadline_ms"] = json!(ms);
+        }
+        if let Some(root) = workspace_id {
+            req["workspace_id"] = json!(root);
         }
         let mut bytes = serde_json::to_vec(&req)
             .map_err(|e| DaemonError::transport(format!("encode request: {e}")))?;

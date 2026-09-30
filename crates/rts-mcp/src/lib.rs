@@ -26,6 +26,7 @@ pub mod connection;
 pub mod daemon_client;
 #[cfg(feature = "experimental")]
 pub mod entropy;
+pub mod roots;
 pub mod socket;
 pub mod surface;
 pub mod telemetry;

@@ -8,10 +8,10 @@ use serde::Deserialize;
 
 use crate::cancel::CancelToken;
 use crate::error::{ErrorCode, ProtocolError};
-use crate::state::DaemonState;
+use crate::state::{DaemonState, MountTable, MountedRoot};
 use crate::store::Store;
 use crate::watcher::{WatchEvent, Watcher};
-use crate::workspace::{self, MountedWorkspace, state_dir_for};
+use crate::workspace::{self, state_dir_for};
 use crate::writer;
 
 #[derive(Debug, Deserialize)]
@@ -19,6 +19,22 @@ struct MountParams {
     root: String,
     #[serde(default)]
     enable_telemetry: bool,
+}
+
+/// `Workspace.Status` params. `root` (a `workspace_id` or a workspace path)
+/// selects which mounted root to report; absent → the daemon's default root.
+#[derive(Debug, Default, Deserialize)]
+struct StatusParams {
+    #[serde(default)]
+    root: Option<String>,
+}
+
+/// `Workspace.Unmount` params. `root` (a `workspace_id` or a workspace path)
+/// selects which mounted root to release; absent → the default root.
+#[derive(Debug, Default, Deserialize)]
+struct UnmountParams {
+    #[serde(default)]
+    root: Option<String>,
 }
 
 fn parse_params<T: for<'de> Deserialize<'de>>(
@@ -115,41 +131,34 @@ pub(super) async fn mount_inner(
         }
     };
 
-    // Idempotent within a connection: a second Mount for the same canonical
-    // path returns current status. Held in its own scope so the lock is
-    // released before we await the initial walk further down (the
-    // `MutexGuard` is `!Send` and would otherwise prevent this future
-    // from running on the multi-threaded runtime).
+    // Idempotent per canonical path: a second Mount for an already-mounted
+    // root *joins* it (holding a second ref) and returns its status. Held in
+    // its own scope so the lock is released before we await the initial walk
+    // further down (the `MutexGuard` is `!Send` and would otherwise prevent
+    // this future from running on the multi-threaded runtime).
+    //
+    // Multi-root: a mount for a *different* path is no longer
+    // `WORKSPACE_MISMATCH` — it mounts as an additional root of the same
+    // daemon. The first root mounted becomes the daemon's default root (the
+    // one a call that names no root is served by).
     {
-        let current = state.workspace.lock().map_err(|e| {
+        let canonical = workspace::canonicalize(&user_path)?;
+        let mut table = state.mounts.lock().map_err(|e| {
             ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
         })?;
-        if let Some(existing) = current.as_ref() {
-            match workspace::canonicalize(&user_path) {
-                Ok(canonical) if canonical.path == existing.canonical.path => {
-                    workspace::verify_unchanged(existing)?;
-                    let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
-                    // Count this joiner. A concurrent/idempotent mount of the
-                    // same workspace is a successful mount and must hold a ref;
-                    // otherwise the first `Workspace.Unmount` drops the store
-                    // out from under the other mounted clients (#150 review).
-                    // Mirrors the `fetch_add` on the full-mount path below.
-                    state.mount_refcount.fetch_add(1, Ordering::Relaxed);
-                    return Ok(status_payload(existing, state, store_snapshot.as_deref()));
-                }
-                Ok(_other) => {
-                    return Err(ProtocolError::new(
-                        ErrorCode::WorkspaceMismatch,
-                        "daemon is already pinned to a different workspace on this socket. \
-                         Per protocol-v0 §5.3 the socket path is per-workspace-hash; \
-                         connect via the correct socket, or start a fresh daemon for the \
-                         other workspace (auto-spawn handles this for new paths).",
-                    ));
-                }
-                Err(e) => return Err(e),
-            }
+        if let Some(id) = table.id_for_path(&canonical.path) {
+            let entry = table.get_mut(&id).expect("id_for_path returned a live id");
+            workspace::verify_unchanged(&entry.workspace)?;
+            // Count this joiner. A concurrent/idempotent mount of the same
+            // workspace is a successful mount and must hold a ref; otherwise
+            // the first `Workspace.Unmount` drops the store out from under
+            // the other mounted clients (#150 review).
+            entry.refcount += 1;
+            state.mount_refcount.fetch_add(1, Ordering::Relaxed);
+            let entry = table.get(&id).expect("just resolved");
+            return Ok(status_payload(entry, &table, state));
         }
-        // No existing mount; fall through. `current` drops here.
+        // Not mounted yet; fall through. `table` drops here.
     }
 
     // Test-only seam (issue #150 regression). Widens the window between
@@ -240,15 +249,10 @@ pub(super) async fn mount_inner(
 
     // Record the decision for `Daemon.Stats` (U6) and bump the
     // appropriate counter.
-    {
-        let mut slot = state.mount_source.lock().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("mount_source state poisoned: {e}"),
-            )
-        })?;
-        *slot = Some(mount_source.clone());
-    }
+    // The decision itself is stored on the root's mount-table entry below
+    // (`MountedRoot::mount_source`) — with N roots there is one decision per
+    // root, not one per daemon. Only the cumulative counters stay on the
+    // daemon.
     match &mount_source {
         MountSource::Rehydrate => {
             state
@@ -282,11 +286,21 @@ pub(super) async fn mount_inner(
     // start consuming from the channel first. See watcher.rs comment on
     // `InitialWalkHandle` for the 256-file plateau bug this restructure
     // fixes.
+    // A root the daemon cannot watch is a root it cannot serve: refuse the
+    // mount with the documented path-rejection code rather than an internal
+    // error. Reachable for any path whose subtree the watcher cannot observe
+    // (a filesystem root containing root-only directories, a bind mount, an
+    // exhausted inotify budget). Since multi-root, *any* new path reaches
+    // this point, so this is the code a client sees for e.g.
+    // `Workspace.Mount { root: "/" }` as a non-root user.
     let (watcher, rx, initial, watch_sink) = Watcher::start(&mounted.canonical.path, state.clone())
         .map_err(|e| {
             ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("could not start file watcher: {e}"),
+                ErrorCode::InvalidWorkspacePath,
+                format!(
+                    "could not start file watcher for {}: {e}",
+                    mounted.canonical.path.display()
+                ),
             )
         })?;
 
@@ -462,41 +476,7 @@ pub(super) async fn mount_inner(
         );
     }
 
-    let payload = status_payload(&mounted, state, Some(&store));
     let reconcile_root = mounted.canonical.path.clone();
-    {
-        let mut current = state.workspace.lock().map_err(|e| {
-            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
-        })?;
-        *current = Some(mounted);
-    }
-    {
-        let mut watcher_slot = state.watcher.lock().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("watcher state poisoned: {e}"),
-            )
-        })?;
-        *watcher_slot = Some(watcher);
-    }
-    {
-        let mut store_slot = state.store.lock().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("store state poisoned: {e}"),
-            )
-        })?;
-        *store_slot = Some(store.clone());
-    }
-    {
-        let mut cancel_slot = state.writer_cancel.lock().map_err(|e| {
-            ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("writer_cancel state poisoned: {e}"),
-            )
-        })?;
-        *cancel_slot = Some(writer_cancel);
-    }
 
     // v0.6 reconciliation worker (U5 follow-up): on the persisted
     // cold-mount path (`MountSource::Rehydrate`), the cold walk is
@@ -546,40 +526,149 @@ pub(super) async fn mount_inner(
     // local clone here is a no-op for steady-state operation.
     drop(watch_sink);
 
+    // Publish the root. From here on it is addressable by its
+    // `workspace_id` and (if it is the first root) it is the daemon's
+    // default root. The watcher moves in with it: dropping the entry on
+    // unmount is what stops the debouncer thread.
+    let mount_id = {
+        let mut table = state.mounts.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        table.insert(MountedRoot {
+            workspace: mounted,
+            store: store.clone(),
+            watcher,
+            writer_cancel,
+            mount_source: mount_source.clone(),
+            refcount: 1,
+        })
+    };
+    let payload = {
+        let table = state.mounts.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        match table.get(&mount_id) {
+            Some(entry) => status_payload(entry, &table, state),
+            None => {
+                return Err(ProtocolError::new(
+                    ErrorCode::InternalError,
+                    "mounted root vanished immediately after insert",
+                ));
+            }
+        }
+    };
+
     state.mount_refcount.fetch_add(1, Ordering::Relaxed);
     state.touch();
     Ok(payload)
 }
 
 /// `Workspace.Status` — protocol-v0 §7.4.
+///
+/// Reports one root (the `root` param — a `workspace_id` or a path — else the
+/// daemon's default root) plus the full `mounted_roots` list, so a client can
+/// see every root this daemon serves and poll any one of them.
 pub async fn status(
-    _params: serde_json::Value,
+    params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
-    let current = state.workspace.lock().map_err(|e| {
+    let p: StatusParams = parse_params(params)?;
+    let table = state.mounts.lock().map_err(|e| {
         ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
     })?;
-    if let Some(mounted) = current.as_ref() {
-        let store_snapshot = state.store.lock().ok().and_then(|g| g.clone());
-        Ok(status_payload(mounted, state, store_snapshot.as_deref()))
-    } else {
-        Ok(serde_json::json!({
+    match table.resolve(p.root.as_deref()) {
+        Some(id) => match table.get(&id) {
+            Some(entry) => Ok(status_payload(entry, &table, state)),
+            None => Err(ProtocolError::new(
+                ErrorCode::InternalError,
+                "mount table lost a root between resolve and read",
+            )),
+        },
+        None if table.is_empty() => Ok(serde_json::json!({
             "state":            "no_workspace",
             "progress":         { "files_done": 0, "files_total": 0, "phase": "no_mount" },
             "index_generation": state.index_generation.load(Ordering::Relaxed),
             "parse_failed_files": 0,
             "watcher_status":   state.watcher_status().as_wire_str(),
             "uptime_ms":        state.uptime().as_millis() as u64,
-            "memory_rss_bytes": 0
-        }))
+            "memory_rss_bytes": 0,
+            "mounted_roots":    Vec::<serde_json::Value>::new(),
+        })),
+        None => {
+            let requested = p.root.unwrap_or_default();
+            let mounted: Vec<serde_json::Value> = table
+                .describe()
+                .into_iter()
+                .map(|(id, path)| serde_json::json!({ "workspace_id": id, "path": path }))
+                .collect();
+            Err(ProtocolError::new(
+                ErrorCode::WorkspaceMismatch,
+                format!("no mounted root matching `{requested}`"),
+            )
+            .with_data(serde_json::json!({
+                "requested": requested,
+                "mounted_roots": mounted,
+            })))
+        }
     }
 }
 
 /// `Workspace.Unmount` — protocol-v0 §7.3.
+///
+/// Releases the caller's ref on **one** root. With several roots mounted the
+/// `root` param (a `workspace_id` or a workspace path) says which; absent, the
+/// daemon's default root is released. When a root's refcount reaches zero its
+/// watcher, writer task, index handle, and mount-table entry are dropped — the
+/// daemon keeps serving its other roots, and exits only once nothing is
+/// mounted and the idle window elapses.
+///
+/// An unmount that names no mounted root is a no-op (`unmounted: null`) rather
+/// than an error, preserving the pre-multi-root behaviour where a duplicate
+/// unmount is harmless; the aggregate refcount is still decremented (with the
+/// same underflow guard as before).
 pub async fn unmount(
-    _params: serde_json::Value,
+    params: serde_json::Value,
     state: &Arc<DaemonState>,
 ) -> Result<serde_json::Value, ProtocolError> {
+    let p: UnmountParams = parse_params(params)?;
+
+    // Resolve → decrement → tear down at zero, all under one lock so a
+    // concurrent mount of the same root cannot slip between the check and the
+    // teardown.
+    let (unmounted_id, unmounted_path, torn_down) = {
+        let mut table = state.mounts.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        match table.resolve(p.root.as_deref()) {
+            Some(id) => {
+                let release = match table.get_mut(&id) {
+                    Some(entry) => {
+                        entry.refcount = entry.refcount.saturating_sub(1);
+                        entry.refcount == 0
+                    }
+                    None => false,
+                };
+                if release {
+                    let entry = table.remove(&id).expect("resolved id was mounted");
+                    let path = entry.root().to_string_lossy().into_owned();
+                    // Signal the writer first so it drains its final batch
+                    // before the watcher disappears and the channel closes.
+                    entry.writer_cancel.cancel();
+                    (Some(id), Some(path), Some(entry))
+                } else {
+                    let path = table
+                        .get(&id)
+                        .map(|entry| entry.root().to_string_lossy().into_owned());
+                    (Some(id), path, None)
+                }
+            }
+            None => (None, None, None),
+        }
+    };
+    // Drop the entry outside the lock: this is what stops the debouncer
+    // thread and releases the root's index handle.
+    drop(torn_down);
+
     // The refcount decrements regardless of whether this connection is the
     // one that originally mounted (per-connection mount tracking is a v1.1
     // refinement; v0 keeps it simple).
@@ -589,39 +678,45 @@ pub async fn unmount(
         state.mount_refcount.store(0, Ordering::Relaxed);
     }
 
-    // When refcount falls to 0, tear down the watcher + writer task. (We
-    // don't tear down the workspace mount or the store itself — the daemon
-    // is workspace-pinned and a future remount on the same path should be
-    // fast; the store reopens on next Mount, so dropping it is fine too.)
-    if state.mount_refcount.load(Ordering::Relaxed) == 0 {
-        // Signal the writer first so it drains its final batch before the
-        // watcher disappears and the channel closes.
-        if let Ok(mut slot) = state.writer_cancel.lock() {
-            if let Some(cancel) = slot.take() {
-                cancel.cancel();
-            }
-        }
-        if let Ok(mut slot) = state.watcher.lock() {
-            if slot.take().is_some() {
-                state.set_watcher_status(crate::state::WatcherStatus::NoWatcher);
-                tracing::info!("watcher torn down after last unmount");
-            }
-        }
-        if let Ok(mut slot) = state.store.lock() {
-            let _ = slot.take();
-        }
+    // The watcher status is process-wide: it only means "no watcher running"
+    // once the last root is gone.
+    let remaining = {
+        let table = state.mounts.lock().map_err(|e| {
+            ProtocolError::new(ErrorCode::InternalError, format!("state poisoned: {e}"))
+        })?;
+        (table.len(), table.describe())
+    };
+    if remaining.0 == 0 {
+        state.set_watcher_status(crate::state::WatcherStatus::NoWatcher);
+        tracing::info!("watcher torn down after last unmount");
+    } else if unmounted_id.is_some() {
+        tracing::info!(workspace_id = ?unmounted_id, "root released; other roots still mounted");
     }
 
     state.touch();
-    Ok(serde_json::json!({ "drained": true }))
+    Ok(serde_json::json!({
+        "drained": true,
+        "unmounted": unmounted_id,
+        "workspace_root": unmounted_path,
+        "mounted_roots": remaining.1
+            .into_iter()
+            .map(|(id, path)| serde_json::json!({ "workspace_id": id, "path": path }))
+            .collect::<Vec<_>>(),
+    }))
 }
 
 /// Compose the v0 `Workspace.Status` shape (also used as `Mount` response).
+///
+/// `mounted_roots` lists every root this daemon currently serves, in mount
+/// order; `workspace_id` / `progress` / `languages` describe `root` (the one
+/// the caller asked about, or the default root).
 fn status_payload(
-    mounted: &MountedWorkspace,
+    root: &MountedRoot,
+    table: &MountTable,
     state: &Arc<DaemonState>,
-    store: Option<&Store>,
 ) -> serde_json::Value {
+    let mounted = &root.workspace;
+    let store = root.store.as_ref();
     // Languages the daemon's index would cover. Mirrors `rust_tree_sitter::Language::all()`
     // but listed inline so this can ship without indexing wired up yet.
     let languages = [
@@ -637,7 +732,7 @@ fn status_payload(
         "ruby",
         "swift",
     ];
-    let store_stats = store.map(|s| s.stats()).unwrap_or_default();
+    let store_stats = store.stats();
     serde_json::json!({
         "workspace_id":     mounted.fingerprint.id_str(),
         "state":            "ready",
@@ -653,6 +748,14 @@ fn status_payload(
         "parse_failed_files": store_stats.parse_failed_files,
         "watcher_status":     state.watcher_status().as_wire_str(),
         "uptime_ms":          state.uptime().as_millis() as u64,
-        "memory_rss_bytes":   0
+        "memory_rss_bytes":   0,
+        // Multi-root: every root this daemon serves, in mount order. The
+        // first entry is the default root. `workspace_id` above names the
+        // root this payload describes.
+        "mounted_roots": table
+            .describe()
+            .into_iter()
+            .map(|(id, path)| serde_json::json!({ "workspace_id": id, "path": path }))
+            .collect::<Vec<_>>(),
     })
 }

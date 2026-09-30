@@ -53,8 +53,11 @@ pub struct OutlineResult {
 }
 
 /// Cache key. Captures every input that affects the rendered outline.
-/// `index_generation` is the implicit invalidator: any writer commit
-/// bumps it, so a stale entry is just a key mismatch on the next call.
+/// `(workspace_id, index_generation)` is the implicit invalidator: any writer
+/// commit bumps the generation, so a stale entry is just a key mismatch on the
+/// next call. The `workspace_id` half matters because one daemon serves N
+/// roots — two roots that have not both been written to sit at the same
+/// generation, and generation alone would hand one root's outline to another.
 ///
 /// `mentioned_files` and `mentioned_idents` are stored as owned `Vec`s
 /// because the live request borrows from a JSON-deserialised value
@@ -62,6 +65,7 @@ pub struct OutlineResult {
 /// lists are agent-chat hints, typically 0–10 short strings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutlineCacheKey {
+    pub workspace_id: String,
     pub index_generation: u64,
     pub token_budget: u64,
     pub glob: Option<String>,
@@ -70,9 +74,11 @@ pub struct OutlineCacheKey {
 }
 
 impl OutlineCacheKey {
-    /// Convenience constructor from the borrowed handler view.
-    pub fn from_params(generation: u64, p: &OutlineParams<'_>) -> Self {
+    /// Convenience constructor from the borrowed handler view. `workspace_id`
+    /// names the root the outline was rendered for.
+    pub fn from_params(workspace_id: &str, generation: u64, p: &OutlineParams<'_>) -> Self {
         Self {
+            workspace_id: workspace_id.to_string(),
             index_generation: generation,
             token_budget: p.token_budget,
             glob: p.glob.map(|s| s.to_string()),
@@ -484,6 +490,7 @@ mod tests {
 
     fn key(generation: u64) -> OutlineCacheKey {
         OutlineCacheKey {
+            workspace_id: "aaaa0000aaaa0000".to_string(),
             index_generation: generation,
             token_budget: 4096,
             glob: None,
@@ -533,6 +540,17 @@ mod tests {
         assert!(c.get(&other).is_none());
     }
 
+    /// Multi-root: the same generation under a different root must miss, or a
+    /// worktree would be rendered the repo root's outline.
+    #[test]
+    fn cache_misses_on_root_change() {
+        let c = OutlineCache::new();
+        c.put(key(7), Arc::new(fake_result("v7")));
+        let mut other = key(7);
+        other.workspace_id = "bbbb1111bbbb1111".to_string();
+        assert!(c.get(&other).is_none());
+    }
+
     #[test]
     fn cache_put_overwrites() {
         let c = OutlineCache::new();
@@ -552,7 +570,8 @@ mod tests {
             mentioned_files: &mentioned_files,
             mentioned_idents: &mentioned_idents,
         };
-        let k = OutlineCacheKey::from_params(42, &p);
+        let k = OutlineCacheKey::from_params("aaaa0000aaaa0000", 42, &p);
+        assert_eq!(k.workspace_id, "aaaa0000aaaa0000");
         assert_eq!(k.index_generation, 42);
         assert_eq!(k.token_budget, 1024);
         assert_eq!(k.glob.as_deref(), Some("src/**"));

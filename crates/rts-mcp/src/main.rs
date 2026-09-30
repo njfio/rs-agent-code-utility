@@ -23,23 +23,34 @@ use server::RtsServer;
 
 /// CLI flags, parsed manually so we don't pull in `clap` for a handful of flags.
 struct Args {
-    /// Workspace root to `Workspace.Mount` against. Defaults to `$PWD`.
-    workspace: Option<PathBuf>,
+    /// Workspace roots to `Workspace.Mount` against, in order. The first is
+    /// the start-up root (it also decides the daemon socket); the rest are
+    /// mounted lazily on first use. Defaults to `$PWD`.
+    workspaces: Vec<PathBuf>,
     /// Which tools to advertise: `all` (default), `core`, `verify`, or a comma-separated list
     /// of tool names. `RTS_MCP_TOOLS` is the same setting for harnesses that launch us without
     /// arguments; the flag wins.
     tools: Option<String>,
 }
 
+/// Extra workspace roots from `RTS_MCP_ROOTS` (a platform path list, i.e.
+/// `:`-separated on unix). The harness-friendly form of a repeated
+/// `--workspace`, for launchers that cannot pass argv.
+fn roots_from_env() -> Vec<PathBuf> {
+    std::env::var_os("RTS_MCP_ROOTS")
+        .map(|raw| std::env::split_paths(&raw).collect())
+        .unwrap_or_default()
+}
+
 fn parse_args() -> Result<Args> {
-    let mut workspace: Option<PathBuf> = None;
+    let mut workspaces: Vec<PathBuf> = Vec::new();
     let mut tools: Option<String> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--workspace" | "-w" => {
-                workspace =
-                    Some(PathBuf::from(args.next().ok_or_else(|| {
+                workspaces
+                    .push(PathBuf::from(args.next().ok_or_else(|| {
                         anyhow::anyhow!("--workspace requires a value")
                     })?));
             }
@@ -52,9 +63,16 @@ fn parse_args() -> Result<Args> {
             "--help" | "-h" => {
                 eprintln!("rts-mcp — MCP server bridging Claude Code/Cursor/etc. to rts-daemon.");
                 eprintln!();
-                eprintln!("Usage: rts-mcp [--workspace PATH] [--tools SURFACE]");
+                eprintln!("Usage: rts-mcp [--workspace PATH]... [--tools SURFACE]");
                 eprintln!();
                 eprintln!("If --workspace is omitted, the current working directory is used.");
+                eprintln!();
+                eprintln!("Multiple --workspace flags mount several roots on ONE daemon: the");
+                eprintln!("first is the start-up root (it also decides the daemon socket) and");
+                eprintln!("the rest are mounted on first use. Each tool call is served by the");
+                eprintln!("root its own path arguments name — an absolute path under a root");
+                eprintln!("routes there, and the response's `_root` block always reports which");
+                eprintln!("root answered. No tool takes a root parameter.");
                 eprintln!();
                 eprintln!("Surfaces (--tools):");
                 eprintln!("  all      every tool, with its full description (default)");
@@ -70,6 +88,8 @@ fn parse_args() -> Result<Args> {
                 eprintln!(
                     "  RTS_MCP_TOOLS   the same as --tools, when a harness cannot pass a flag."
                 );
+                eprintln!("  RTS_MCP_ROOTS   extra workspace roots (path list); the same as extra");
+                eprintln!("                  --workspace flags.");
                 std::process::exit(0);
             }
             "--version" | "-V" => {
@@ -84,7 +104,7 @@ fn parse_args() -> Result<Args> {
             }
         }
     }
-    Ok(Args { workspace, tools })
+    Ok(Args { workspaces, tools })
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -100,18 +120,35 @@ async fn main() -> Result<()> {
         .init();
 
     let args = parse_args()?;
-    let workspace = match args.workspace {
-        Some(p) => p,
-        None => std::env::current_dir().context("$PWD lookup")?,
-    };
-    let workspace = std::fs::canonicalize(&workspace)
-        .with_context(|| format!("canonicalize {}", workspace.display()))?;
+    // Start-up root: the first `--workspace`, else `$PWD`. Extra roots come
+    // from the remaining flags plus `RTS_MCP_ROOTS`. Every root is
+    // canonicalised up front so routing compares canonical paths (the same
+    // form the daemon reports back).
+    let mut requested = args.workspaces;
+    requested.extend(roots_from_env());
+    if requested.is_empty() {
+        requested.push(std::env::current_dir().context("$PWD lookup")?);
+    }
+    let mut canonical_roots: Vec<PathBuf> = Vec::with_capacity(requested.len());
+    for path in &requested {
+        let canonical = std::fs::canonicalize(path)
+            .with_context(|| format!("canonicalize {}", path.display()))?;
+        if !canonical_roots.contains(&canonical) {
+            canonical_roots.push(canonical);
+        }
+    }
+    let workspace = canonical_roots[0].clone();
+    let roots = std::sync::Arc::new(rts_mcp::roots::RootSet::new(
+        workspace.clone(),
+        canonical_roots[1..].to_vec(),
+    ));
 
     tracing::info!(
         target: "rts_mcp",
-        "rts-mcp starting (pid={}, workspace={})",
+        "rts-mcp starting (pid={}, workspace={}, extra_roots={})",
         std::process::id(),
-        workspace.display()
+        workspace.display(),
+        roots.roots().len() - 1
     );
 
     let daemon_bin = socket::resolve_daemon_bin()?;
@@ -152,12 +189,27 @@ async fn main() -> Result<()> {
     // Daemon prewarm overlaps with the seconds the user spends
     // typing their first question, so Mount is effectively free.
 
-    let instructions = format!(
-        "rts-mcp serves read-only retrieval tools for the workspace at {}. \
-         Tools are deterministic and offline; no LLM in the server. Use `outline_workspace` \
-         first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
-        workspace.display()
-    );
+    let instructions = if roots.roots().len() > 1 {
+        format!(
+            "rts-mcp serves read-only retrieval tools for {} workspace roots out of one daemon \
+             (start-up root {}). Every tool call is served by the root its own path arguments \
+             name: an absolute path under a root routes there, and each response's `_root` \
+             block reports which root answered (path, workspace_id, resolved_by). When a call \
+             has no path that identifies a root — a bare symbol name, or a relative path that \
+             exists under several roots — it is served by the start-up root and `_root` says \
+             `resolved_by: \"default\"`; pass an absolute path to target another root. \
+             Tools are deterministic and offline; no LLM in the server.",
+            roots.roots().len(),
+            workspace.display()
+        )
+    } else {
+        format!(
+            "rts-mcp serves read-only retrieval tools for the workspace at {}. \
+             Tools are deterministic and offline; no LLM in the server. Use `outline_workspace` \
+             first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
+            workspace.display()
+        )
+    };
     let surface = match args.tools.or_else(|| std::env::var("RTS_MCP_TOOLS").ok()) {
         Some(spec) => match Surface::parse(&spec) {
             Ok(surface) => surface,
@@ -167,7 +219,7 @@ async fn main() -> Result<()> {
         },
         None => Surface::all(),
     };
-    let server = RtsServer::new(connection.clone(), instructions, surface);
+    let server = RtsServer::new(connection.clone(), instructions, surface, roots);
     // v0.5.8: hold a clone of the connection so we can issue one
     // last `Daemon.Stats` after `service.waiting()` returns —
     // `serve()` consumes the server, so this is the only window we

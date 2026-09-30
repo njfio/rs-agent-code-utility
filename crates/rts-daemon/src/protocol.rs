@@ -36,6 +36,18 @@ pub struct Request {
     /// Absent (`None`) = no deadline; existing clients are unaffected.
     #[serde(default)]
     pub deadline_ms: Option<u64>,
+    /// Optional mounted-root selector (multi-root, capability `multi_root`).
+    /// Names the `workspace_id` of the root this request concerns; the MCP
+    /// layer infers it from the call's own paths and names it here. Absent =
+    /// the daemon's **default root** (the oldest root still mounted), which is
+    /// what a single-root client always gets.
+    ///
+    /// Lives in the envelope, not `params`, for the same reason as
+    /// `cancel_id`: it is a routing field, so no method's param schema has to
+    /// declare it. `methods::dispatch` stamps it into `params` where handlers
+    /// pick it up via `state::RootHint`.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
 }
 
 fn empty_object() -> serde_json::Value {

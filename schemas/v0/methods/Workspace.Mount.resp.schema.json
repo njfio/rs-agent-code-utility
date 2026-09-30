@@ -21,7 +21,19 @@
     "parse_failed_files":  { "type": "integer", "minimum": 0 },
     "watcher_status":      { "type": "string", "enum": ["ok", "polling_fallback", "overflowed_rewalking", "no_watcher"] },
     "uptime_ms":           { "type": "integer", "minimum": 0 },
-    "memory_rss_bytes":    { "type": "integer", "minimum": 0 }
+    "memory_rss_bytes":    { "type": "integer", "minimum": 0 },
+    "mounted_roots": {
+      "description": "Every workspace root this daemon currently serves, in mount order; the first entry is the default root. The sibling `workspace_id` names the root this payload describes. Multi-root: a daemon accepts further `Workspace.Mount` calls for other paths and serves them from the same process.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "path":         { "type": "string" }
+        },
+        "required": ["workspace_id", "path"]
+      }
+    }
   },
   "required": ["workspace_id", "state", "progress", "index_generation", "languages"]
 }

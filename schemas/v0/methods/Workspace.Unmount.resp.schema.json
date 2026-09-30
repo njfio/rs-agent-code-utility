@@ -2,10 +2,30 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rts.local/schemas/v0/methods/Workspace.Unmount.resp.schema.json",
   "title": "Workspace.Unmount result",
-  "description": "Per protocol-v0.md §7.3.",
+  "description": "Per protocol-v0.md §7.3. `drained` keeps its v0 meaning (the daemon accepted the release). `unmounted` names the root that was released — null when the request named no mounted root, since a duplicate unmount is a no-op rather than an error. `mounted_roots` lists what the daemon still serves.",
   "type": "object",
   "properties": {
-    "drained": { "type": "boolean" }
+    "drained": { "type": "boolean" },
+    "unmounted": {
+      "description": "`workspace_id` of the released root, or null when no mounted root matched the request.",
+      "type": ["string", "null"]
+    },
+    "workspace_root": {
+      "description": "Canonical path of the released root, or null.",
+      "type": ["string", "null"]
+    },
+    "mounted_roots": {
+      "description": "Every workspace root the daemon still serves, in mount order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "path":         { "type": "string" }
+        },
+        "required": ["workspace_id", "path"]
+      }
+    }
   },
   "required": ["drained"]
 }

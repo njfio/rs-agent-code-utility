@@ -326,6 +326,7 @@ async fn dispatch(
         state,
         req.cancel_id,
         req.deadline_ms,
+        req.workspace_id,
     )
     .await
 }

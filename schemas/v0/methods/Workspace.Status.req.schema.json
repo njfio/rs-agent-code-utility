@@ -2,8 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rts.local/schemas/v0/methods/Workspace.Status.req.schema.json",
   "title": "Workspace.Status request params",
-  "description": "Per protocol-v0.md §7.4. Poll the indexing state. Cheap; safe to call between every other request.",
+  "description": "Per protocol-v0.md §7.4. Poll the indexing state of one mounted root (`root`, else the daemon's default root). Cheap; safe to call between every other request. The response's `mounted_roots` lists every root the daemon serves.",
   "type": "object",
-  "properties": {},
+  "properties": {
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mounted root to report: its `workspace_id` or its workspace path. Absent = the daemon's default root."
+    }
+  },
   "additionalProperties": false
 }

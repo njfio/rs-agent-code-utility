@@ -1,8 +1,11 @@
 //! Workspace canonicalisation, fingerprinting, and redb open.
 //!
-//! Implements `docs/protocol-v0.md` §5 (workspace identity). The v0 daemon is
-//! workspace-pinned: the first `Workspace.Mount` decides; later mounts on a
-//! different path are rejected via `WORKSPACE_VANISHED`.
+//! Implements `docs/protocol-v0.md` §5 (workspace identity). A daemon serves
+//! one or more workspace roots: the first `Workspace.Mount` establishes the
+//! default root, and later mounts of *other* paths add further roots
+//! (`DaemonState::mounts`). Re-mounting an already-mounted path joins that
+//! root. Each root is addressed by its `workspace_id` — the fingerprint id
+//! below — so callers can say which tree a call concerns.
 
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
