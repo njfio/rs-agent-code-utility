@@ -19,7 +19,10 @@ pub enum ErrorCode {
     MessageTooLarge,
     /// `params` failed schema validation.
     InvalidParams,
-    /// Path passed in `Workspace.Mount` was non-UTF-8 / non-existent / non-canonicalisable.
+    /// Path passed in `Workspace.Mount` was non-UTF-8 / non-existent /
+    /// non-canonicalisable — or is a directory the daemon cannot serve
+    /// because its file watcher refuses to start on it (root-only subtree,
+    /// exhausted inotify budget).
     InvalidWorkspacePath,
     /// A component of the mounted path was a symlink (security: refuse-symlink rule).
     MountHasSymlink,

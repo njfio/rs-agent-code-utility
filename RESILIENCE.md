@@ -36,7 +36,10 @@ Out of scope (separate workstreams):
   `WORKSPACE_MISMATCH`; the daemon never substitutes another root's answer,
   because answering about a different tree is the failure multi-root routing
   exists to prevent. Each root's index, watcher, and writer are separate, so
-  no root can observe or mutate another's indexed state.
+  no root can observe or mutate another's indexed state. A root whose file
+  watcher cannot start is refused with `INVALID_WORKSPACE_PATH` (a root the
+  daemon cannot watch is a root it cannot serve) — reachable for any path with
+  a root-only subtree, e.g. `Workspace.Mount { root: "/" }` as a non-root user.
 - **Validated by:** `adversarial_proptest::path_canonicalization_never_escapes_root`
   (32 random adversarial path shapes by default, 256 in nightly CI)
   + corpus `crates/rts-daemon/fuzz/corpus/path_traversal/` — mount validation

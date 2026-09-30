@@ -45,6 +45,15 @@ that would hand one root's answer to another, so both keys now include the
 `workspace_id` (the signature and content-version caches already key on
 absolute paths).
 
+**An unwatchable root is a rejection, not an internal error.** `Workspace.Mount`
+of a path whose file watcher refuses to start (a root-only subtree, an
+exhausted inotify budget) now returns `INVALID_WORKSPACE_PATH` with the cause
+in the message, instead of `INTERNAL_ERROR`. On Linux CI this is what a
+non-root `Workspace.Mount { root: "/" }` produces (the watcher hits
+`/etc/sudoers.d`: EACCES) — a root the daemon cannot watch is a root it cannot
+serve, so it belongs in the documented rejection set rather than reading as a
+daemon bug.
+
 **Verification:** `cargo test -p rts-daemon -p rts-mcp` — new integration tests
 `multi_root_round_trip::one_daemon_serves_two_roots_by_workspace_id` (two roots
 with the same symbol defined differently, per-root answers, join/refcount,

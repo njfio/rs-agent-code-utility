@@ -514,7 +514,7 @@ root. The **first** root mounted is the daemon's default root.
 }
 ```
 
-Errors: `INVALID_WORKSPACE_PATH`, `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable). **`WORKSPACE_MISMATCH` is no longer returned for a second root** (v0.8+) — it is reserved for `Index.*` calls naming a root that isn't mounted.
+Errors: `INVALID_WORKSPACE_PATH` (also returned when the root's file watcher cannot start — e.g. a filesystem root containing root-only directories — since a root the daemon cannot watch is a root it cannot serve), `MOUNT_HAS_SYMLINK`, `WORKSPACE_VANISHED`, `WORKSPACE_ON_NETWORK_MOUNT`, `OUT_OF_ROOT` (if the path resolves outside the daemon's filesystem), `STORAGE_FULL` (if `${XDG_STATE_HOME}/rts/` is unwritable). **`WORKSPACE_MISMATCH` is no longer returned for a second root** (v0.8+) — it is reserved for `Index.*` calls naming a root that isn't mounted.
 
 After `Workspace.Mount` returns, `Index.*` calls naming that `workspace_id` are served by it; calls naming no root are served by the default root.
 
@@ -1304,7 +1304,7 @@ All errors use string codes (not JSON-RPC numeric codes — easier to grep, more
 | `INVALID_FRAME` | non-UTF-8 or non-JSON on the wire | No (connection closes) |
 | `MESSAGE_TOO_LARGE` | request/response exceeded 16 MiB | No |
 | `INVALID_PARAMS` | params object failed schema validation | No (without param fix) |
-| `INVALID_WORKSPACE_PATH` | non-UTF-8 / non-existent / non-canonicalisable path | No |
+| `INVALID_WORKSPACE_PATH` | non-UTF-8 / non-existent / non-canonicalisable path, or a path the daemon cannot serve because its file watcher refuses to start on it (e.g. mounting `/` as a non-root user hits a root-only subtree) | No (pass a directory the daemon can watch) |
 | `MOUNT_HAS_SYMLINK` | any path component was a symlink | No (resolve outside, pass canonical) |
 | `WORKSPACE_VANISHED` | `(dev, inode)` mismatch on remount — symlink swap, mount move, or dir replaced under the daemon | No (workspace went away) |
 | `WORKSPACE_MISMATCH` | an `Index.*` call named a `workspace_id` (envelope, §3.4b) that is not mounted — the root was never mounted here, or it was released. `error.data.mounted_roots` lists what the daemon does serve | Yes (mount the root, or name one that is mounted) |

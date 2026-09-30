@@ -286,11 +286,21 @@ pub(super) async fn mount_inner(
     // start consuming from the channel first. See watcher.rs comment on
     // `InitialWalkHandle` for the 256-file plateau bug this restructure
     // fixes.
+    // A root the daemon cannot watch is a root it cannot serve: refuse the
+    // mount with the documented path-rejection code rather than an internal
+    // error. Reachable for any path whose subtree the watcher cannot observe
+    // (a filesystem root containing root-only directories, a bind mount, an
+    // exhausted inotify budget). Since multi-root, *any* new path reaches
+    // this point, so this is the code a client sees for e.g.
+    // `Workspace.Mount { root: "/" }` as a non-root user.
     let (watcher, rx, initial, watch_sink) = Watcher::start(&mounted.canonical.path, state.clone())
         .map_err(|e| {
             ProtocolError::new(
-                ErrorCode::InternalError,
-                format!("could not start file watcher: {e}"),
+                ErrorCode::InvalidWorkspacePath,
+                format!(
+                    "could not start file watcher for {}: {e}",
+                    mounted.canonical.path.display()
+                ),
             )
         })?;
 
