@@ -1,0 +1,10 @@
+2026-10-11T06:19:27.326890Z  INFO rts_daemon::lifecycle: daemon preflight ok euid=65534
+2026-10-11T06:19:27.364735Z  INFO rts_daemon: acquired daemon lock socket=/work/.tsrrun/rt/rts/ws-e312a8d290ceb1cd.sock
+2026-10-11T06:19:27.379623Z  INFO rts_daemon: daemon listening socket=/work/.tsrrun/rt/rts/ws-e312a8d290ceb1cd.sock
+2026-10-11T06:19:27.384101Z  INFO rts_daemon: prewarm: background mount starting workspace=/work/.tsrrun/ws
+2026-10-11T06:19:28.454938Z  INFO rts_daemon::mount: persisted-cold-mount decision mount_source=cold_walk skip_initial_walk=false files_count=0
+2026-10-11T06:19:28.459358Z  INFO rts_daemon::watcher: watcher started root=/work/.tsrrun/ws force_poll=false
+2026-10-11T06:19:28.727441Z  INFO rts_daemon: prewarm: background mount succeeded workspace=/work/.tsrrun/ws elapsed_ms=1343
+2026-10-11T06:19:39.310286Z  INFO rts_daemon: shutdown signal received signal="SIGTERM"
+2026-10-11T06:19:39.310550Z  INFO rts_daemon::socket: accept loop cancelled
+2026-10-11T06:19:39.315605Z  INFO rts_daemon: daemon exited cleanly
