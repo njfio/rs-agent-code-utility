@@ -78,6 +78,9 @@ fn parse_args() -> Result<Args> {
                 eprintln!("  all      every tool, with its full description (default)");
                 eprintln!("  core     the eight lookup tools, one-line descriptions (~120 tokens)");
                 eprintln!("  verify   core plus the five check_*/verify_* gates");
+                eprintln!(
+                    "  tsr      the read-only subset the TSR Decision Engine logs Inspect against"
+                );
                 eprintln!("  <list>   a comma-separated list of tool names");
                 eprintln!();
                 eprintln!("Env:");

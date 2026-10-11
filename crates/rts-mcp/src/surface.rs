@@ -56,6 +56,29 @@ pub const VERIFY: &[&str] = &[
     "verify_edit",
 ];
 
+/// The read-only subset the TSR Decision Engine allowlists when it logs Inspect actions.
+///
+/// Every tool here is a pure read or check against the index: none writes, edits, applies or
+/// mutates anything. `verify_edit` and `verify_impact` are *gates* — they analyse a PROPOSED
+/// edit passed as an argument and return a verdict; they never write to disk or to the index.
+/// `daemon_stats`/`daemon_telemetry` are observability, not retrieval, and are excluded;
+/// `outline_workspace` and `impact_of` are read-only too but are not in the engine's named
+/// subset, so they are excluded as well.
+pub const TSR: &[&str] = &[
+    "find_symbol",
+    "find_callers",
+    "read_symbol",
+    "read_symbol_at",
+    "read_range",
+    "grep",
+    "verify_symbol",
+    "verify_signature",
+    "verify_import",
+    "verify_claims",
+    "verify_impact",
+    "verify_edit",
+];
+
 /// One line per tool, for profiles that are small enough to carry the instruction themselves.
 ///
 /// Each still says *when* to reach for the tool, which is the part that changes behaviour; what
@@ -140,6 +163,7 @@ impl Surface {
             "all" | "*" => return Ok(Self::all()),
             "core" => CORE.iter().map(|name| (*name).to_string()).collect(),
             "verify" => VERIFY.iter().map(|name| (*name).to_string()).collect(),
+            "tsr" => TSR.iter().map(|name| (*name).to_string()).collect(),
             _ => spec
                 .split(',')
                 .map(|name| name.trim().to_string())
@@ -219,7 +243,7 @@ mod tests {
     /// The point of the profiles: a small surface, and every tool in it has a one-liner.
     #[test]
     fn a_profile_is_a_subset_with_a_short_description_for_each_tool() {
-        for (profile, names) in [("core", CORE), ("verify", VERIFY)] {
+        for (profile, names) in [("core", CORE), ("verify", VERIFY), ("tsr", TSR)] {
             let surface = Surface::parse(profile).expect("profile");
             assert!(surface.is_subset(), "{profile} is a subset");
             assert!(!names.is_empty(), "{profile} is not empty");
@@ -233,12 +257,66 @@ mod tests {
         }
         // Every name in a profile exists in the short table or is an observability tool:
         // a profile that lists a tool which cannot be described is a stale profile.
-        for name in CORE.iter().chain(VERIFY.iter()) {
+        for name in CORE.iter().chain(VERIFY.iter()).chain(TSR.iter()) {
             assert!(
                 SHORT.iter().any(|(tool, _)| tool == name),
                 "{name} has no short description"
             );
         }
+    }
+
+    /// No tool in the `tsr` profile writes, edits or applies anything.
+    ///
+    /// The TSR Decision Engine logs Inspect actions against rts, so the surface it is handed
+    /// must be incapable of mutating the workspace or the index. This asserts the property
+    /// directly: the profile is a strict subset of the router's tools, it excludes the
+    /// observability tools, and every name it keeps is a read or a check — the `verify_*`
+    /// entries are gates that analyse a proposed edit passed as an argument, never writers.
+    #[test]
+    fn the_tsr_profile_contains_no_writing_tool() {
+        // The router's tools that mutate state. There are none today; the set is named so a
+        // future writer added to the router cannot quietly join the profile.
+        const WRITING: &[&str] = &["apply_edit", "write_file", "edit_file", "apply_patch"];
+        for name in TSR {
+            assert!(
+                !WRITING.contains(name),
+                "{name} writes, edits or applies — it must not be in the tsr profile"
+            );
+        }
+
+        // Observability is not retrieval: the engine's Inspect log has no use for it.
+        assert!(
+            !TSR.contains(&"daemon_stats"),
+            "daemon_stats is observability"
+        );
+        assert!(
+            !TSR.contains(&"daemon_telemetry"),
+            "daemon_telemetry is observability"
+        );
+
+        // Every kept tool is a read or a check against the index, and the profile is a strict
+        // subset of the sixteen real tools (so it can never be the whole surface by accident).
+        const READS: &[&str] = &[
+            "find_symbol",
+            "find_callers",
+            "read_symbol",
+            "read_symbol_at",
+            "read_range",
+            "grep",
+            "verify_symbol",
+            "verify_signature",
+            "verify_import",
+            "verify_claims",
+            "verify_impact",
+            "verify_edit",
+        ];
+        for name in TSR {
+            assert!(
+                READS.contains(name),
+                "{name} is not a read/check against the index"
+            );
+        }
+        assert!(TSR.len() < 16, "the tsr profile is a strict subset");
     }
 
     /// `all` is the default and leaves the pinned descriptions alone.
