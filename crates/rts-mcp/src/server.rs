@@ -1204,7 +1204,7 @@ fn connection_error_to_call_result(e: &ConnectionError) -> CallToolResult {
 #[cfg(test)]
 mod surface_tests {
     use super::*;
-    use rts_mcp::surface::{CORE, Surface, VERIFY};
+    use rts_mcp::surface::{CORE, Surface, TSR, VERIFY};
 
     /// Every name a profile lists must be a tool that exists. A profile that names a tool the
     /// router does not have would silently advertise a smaller surface — which is exactly how
@@ -1217,7 +1217,7 @@ mod surface_tests {
             .map(|tool| tool.name.to_string())
             .collect::<Vec<_>>();
         assert_eq!(all.len(), 16, "the router's tool count: {all:?}");
-        for name in CORE.iter().chain(VERIFY.iter()) {
+        for name in CORE.iter().chain(VERIFY.iter()).chain(TSR.iter()) {
             assert!(
                 all.contains(&name.to_string()),
                 "{name} is not a tool: {all:?}"

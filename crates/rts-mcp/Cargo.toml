@@ -105,6 +105,11 @@ telemetry = ["dep:ureq"]
 
 [dev-dependencies]
 tempfile = "3"
+# Validates the TSR inspect record against schemas/inspect-record.schema.json
+# (crates/rts-mcp/tests/inspect_record.rs). Same version and feature set as
+# rts-daemon's use, so it adds no new transitive crates — it is already in
+# Cargo.lock via rts-daemon.
+jsonschema = { version = "0.46", default-features = false }
 
 # Public-API drift gate (see docs/public-api-gate.md + crates/rts-mcp/tests/public_api.rs).
 # These deps power a `cargo test`-time check that fails when the crate's

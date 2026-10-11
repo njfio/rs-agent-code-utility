@@ -554,6 +554,7 @@ pub fn rts_mcp::surface::Surface::from(t: T) -> T
 impl<T> tracing::instrument::Instrument for rts_mcp::surface::Surface
 impl<T> tracing::instrument::WithSubscriber for rts_mcp::surface::Surface
 pub const rts_mcp::surface::CORE: &[&str]
+pub const rts_mcp::surface::TSR: &[&str]
 pub const rts_mcp::surface::VERIFY: &[&str]
 pub mod rts_mcp::telemetry
 pub struct rts_mcp::telemetry::LocalConfig
