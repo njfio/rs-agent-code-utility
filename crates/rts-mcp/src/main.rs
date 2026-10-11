@@ -192,6 +192,15 @@ async fn main() -> Result<()> {
     // Daemon prewarm overlaps with the seconds the user spends
     // typing their first question, so Mount is effectively free.
 
+    let surface = match args.tools.or_else(|| std::env::var("RTS_MCP_TOOLS").ok()) {
+        Some(spec) => match Surface::parse(&spec) {
+            Ok(surface) => surface,
+            // A typo in a surface must be loud: a silently smaller surface would look like it
+            // worked, and the agent would spend the session wondering where its tools went.
+            Err(err) => anyhow::bail!("--tools: {err}"),
+        },
+        None => Surface::all(),
+    };
     let instructions = if roots.roots().len() > 1 {
         format!(
             "rts-mcp serves read-only retrieval tools for {} workspace roots out of one daemon \
@@ -206,21 +215,22 @@ async fn main() -> Result<()> {
             workspace.display()
         )
     } else {
+        // The orientation advice must name tools the selected surface actually offers: the
+        // `tsr` profile (and any custom list) may exclude `outline_workspace`, and `call_tool`
+        // refuses anything outside the surface.
+        let orientation = if surface.keeps("outline_workspace") {
+            "Use `outline_workspace` first for orientation, then `find_symbol`/`read_symbol` \
+             for targeted reads."
+        } else {
+            "Use `find_symbol` first to locate a definition, then `read_symbol`/`read_range` \
+             for targeted reads."
+        };
         format!(
             "rts-mcp serves read-only retrieval tools for the workspace at {}. \
-             Tools are deterministic and offline; no LLM in the server. Use `outline_workspace` \
-             first for orientation, then `find_symbol`/`read_symbol` for targeted reads.",
-            workspace.display()
+             Tools are deterministic and offline; no LLM in the server. {}",
+            workspace.display(),
+            orientation
         )
-    };
-    let surface = match args.tools.or_else(|| std::env::var("RTS_MCP_TOOLS").ok()) {
-        Some(spec) => match Surface::parse(&spec) {
-            Ok(surface) => surface,
-            // A typo in a surface must be loud: a silently smaller surface would look like it
-            // worked, and the agent would spend the session wondering where its tools went.
-            Err(err) => anyhow::bail!("--tools: {err}"),
-        },
-        None => Surface::all(),
     };
     let server = RtsServer::new(connection.clone(), instructions, surface, roots);
     // v0.5.8: hold a clone of the connection so we can issue one

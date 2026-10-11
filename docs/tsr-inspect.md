@@ -36,8 +36,10 @@ A minimal stdio client config:
 }
 ```
 
-`rts-mcp` auto-spawns `rts-daemon` on first call (set `RTS_NO_AUTOSPAWN=1` to
-disable). All logs go to stderr; stdout is reserved for JSON-RPC frames.
+`rts-mcp` auto-spawns `rts-daemon` on first call and re-spawns it if the socket dies;
+a daemon already running for the same workspace is reused. (`RTS_NO_AUTOSPAWN` is
+honoured by the human `rts` CLI only, not by `rts-mcp`.) All logs go to stderr; stdout
+is reserved for JSON-RPC frames.
 
 ## What the profile guarantees
 
@@ -135,10 +137,12 @@ extra read-only call, and the `tsr` profile contains the tools that yield it:
 - **Per-file version** — call `read_range { file, start_line, end_line }` (or
   `read_symbol { name }`) on the file the result names and read its
   `content_version`.
-- **Index generation** — call `verify_edit { edits: [] }` and read
-  `content_version_base` (`"@<generation>"`); the generation is the same for
-  every file in one index generation.
-- **Generation from any `content_version`** — the substring after the final `+`.
+- **Index generation** — the substring after the final `+` of any
+  `content_version`; one `read_range` or `verify_symbol` call on any indexed file
+  yields one, and the generation is the same for every file in one index
+  generation. (`verify_edit` rejects an empty `edits` array, so it is not a
+  generation lookup; its `content_version_base` carries the generation only for a
+  real edit.)
 
 ## Validating
 
