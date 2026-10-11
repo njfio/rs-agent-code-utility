@@ -80,12 +80,13 @@ impl From<anyhow::Error> for SessionError {
     }
 }
 
-/// Probes whether the daemon can run at all in this environment.
+/// Why the daemon cannot run in this environment, if it cannot.
 ///
 /// The daemon refuses to run as root (`crates/rts-daemon/src/lifecycle.rs:25-28`,
-/// no env override). When `rts-mcp` auto-spawns it, that refusal is swallowed and
-/// surfaces only as "did not bind ... within 5s", so we probe the daemon directly
-/// to tell an environment limitation from a real defect.
+/// no env override). `std` has no `geteuid`, so the effective uid is read off a
+/// file this process creates. The probe must not *run* the daemon to find out:
+/// when the daemon can run it is a server and never exits, and a blocking
+/// `.output()` on it hung this test for good on any unprivileged machine.
 fn daemon_unavailable_reason() -> Option<String> {
     let daemon_bin = rts_daemon_bin();
     if !daemon_bin.is_file() {
@@ -94,30 +95,13 @@ fn daemon_unavailable_reason() -> Option<String> {
             daemon_bin.display()
         ));
     }
-    let runtime = tempfile::tempdir().ok()?;
-    let state = tempfile::tempdir().ok()?;
-    let home = tempfile::tempdir().ok()?;
-    let workspace = tempfile::tempdir().ok()?;
-    let _ = std::fs::set_permissions(
-        runtime.path(),
-        std::os::unix::fs::PermissionsExt::from_mode(0o700),
-    );
-    let out = std::process::Command::new(&daemon_bin)
-        .arg("--workspace")
-        .arg(workspace.path())
-        .env("XDG_RUNTIME_DIR", runtime.path())
-        .env("XDG_STATE_HOME", state.path())
-        .env("HOME", home.path())
-        .env("RTS_LOG", "warn")
-        .output()
-        .ok()?;
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    if stderr.contains("refuses to run as root") {
-        return Some(format!(
-            "rts-daemon refuses to run as root (euid=0); run this test as an \
-             unprivileged user. daemon stderr: {}",
-            stderr.trim()
-        ));
+    let probe = tempfile::NamedTempFile::new().ok()?;
+    let meta = probe.as_file().metadata().ok()?;
+    if std::os::unix::fs::MetadataExt::uid(&meta) == 0 {
+        return Some(
+            "rts-daemon refuses to run as root (euid=0); run this test as an unprivileged user"
+                .to_string(),
+        );
     }
     None
 }
