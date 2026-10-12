@@ -9,6 +9,407 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.9.0] - 2026-10-12
+
+Three agent-facing capabilities and a README that matches them: **multi-root**
+(one daemon and one `rts-mcp` serve many workspace roots, selected per request
+by `workspace_id`; capability `multi_root`), **selectable tool surfaces**
+(`rts-mcp --tools core|verify|tsr|all`, including the read-only `tsr` profile
+the TSR Decision Engine registers), and the **verify layer** (six `verify_*`
+tools plus `rts verify` / `rts verify-edit` / `rts impact`, which check an
+agent's claims and proposed edits against the index without writing anything).
+**Upgrade notes:** the wire envelope gains an optional `workspace_id`; a request
+without it addresses the default root (the oldest one mounted), so a client that
+only ever mounts one root behaves as before.
+
+### Perf: `outline` no longer re-walks the DEFS multimap per file
+
+`Store::list_files_with_defs` (the enumeration behind `Index.Outline`)
+was O(files × defs-per-name): for every `(file, symbol)` it re-scanned
+the whole `DEFS` multimap for that name to find the matching file. On a
+5000-file workspace this took ~121 s. It now makes a single pass over
+`DEFS`, bucketing each definition into its file by `fid` — O(total
+defs). Same output (one symbol per name per file, all files listed),
+dramatically faster cold `outline`.
+
+### Feat: verification layer — `verify_*` tools + hallucination metrics
+
+rts can now fact-check an agent's claims against the ground-truth AST graph,
+deterministically and with no LLM in the path. New protocol-v0 methods + MCP
+tools:
+
+- `verify_symbol` — does this symbol exist? Returns `exact`/`not_found`/
+  `indeterminate`, and on a miss, ranked near-misses (edit-distance + PageRank)
+  so the agent self-corrects in the same turn.
+- `verify_signature` — does a call match the definition (arity, params, return)?
+- `verify_import` — does an import path resolve? (thin v0: final-segment resolution;
+  full cross-module resolution is deferred.)
+- `verify_claims` — batch grounding check over symbol/signature/import/location
+  claims, reporting a `grounding_rate` that excludes undecidable claims.
+
+Every result carries a `resolution` (`exact` | `not_found` | `indeterminate`);
+`indeterminate` is never upgraded to `not_found`, so a benchmark can't game
+itself. All tools are read-only.
+
+`rts-bench verify` computes the deterministic hallucination metrics — Symbol
+Hallucination Rate (SHR), Import Hallucination Rate (IHR), and (arity-only in v0)
+Signature Mismatch Rate (SMR) — by parsing agent-generated code with rts's own
+tree-sitter pipeline, extracting its references, and checking each against the
+index. Each metric reports its denominator and the count of `indeterminate`
+references excluded, so coverage is visible rather than cherry-picked.
+
+`AGENTS.md` now guides agents to verify before they claim.
+
+### Feat: `verify_impact` pre-edit gate + a verification loop hook
+
+Extends the verification layer (verify-v0 P2) from checking *claims* to gating
+*edits* and wiring verification into the live agent loop.
+
+- **`verify_impact` / `Index.VerifyImpact`** — declare an intended change to a
+  symbol (`signature` | `remove` | `rename`) and get the blast radius as a
+  pass/fail `verdict` (`would_break` | `safe`). Wraps the reverse-call-graph
+  walk: lists `affected_callers[]` with a per-caller `reason`, and for a
+  `signature` change compares the proposed arity to the real one (pass
+  `new_signature`). Conservative — `safe` means no *arity* break (v0 checks
+  arity only). Honors qualified names (`Foo::method`); unknown symbol →
+  `not_found` + ranked candidates. Available as the `rts impact` CLI too.
+
+- **`rts verify <file>`** — check a file's symbol/import references against the
+  index and report hallucinated (not_found) ones as `FILE:LINE  name  (did you
+  mean: …?)`. Exit 0 clean, 1 hallucinations found, 3/4 daemon error.
+
+- **PostToolUse loop hook** (`.claude/hooks/rts-verify.sh`) — after each
+  Write/Edit, runs `rts verify` on the changed file and feeds any hallucinated
+  references back to the agent so it self-corrects next turn. Annotate-only
+  (never blocks), silent when the daemon is down, opt out with
+  `RTS_HOOK_DISABLED=1`.
+
+Deferred: the `uncovered_after_change` coverage field (needs test-reachability
+edges) and a *blocking* pre-edit gate both land with `verify_edit` (P3).
+
+### Feat: EVR/BCIR edit-quality metrics + the `rts verify-edit` CI gate
+
+Completes verify-v0 P3: turns `Index.VerifyEdit` (the scoped pre-edit validator
+landed in P3.U1) into a measurable metric and a build-gating CLI.
+
+- **EVR / BCIR metrics** (`rts-bench verify-edit`) — runs a TOML corpus of
+  proposed edit-sets (`[[edit_set]]`, each a list of `{file, content}` full
+  post-edit contents) through `verify_edit` and reports two deterministic
+  rates: **EVR** (Edit Validity Rate = `pass` verdicts / all edit-sets;
+  `warn`/`fail` count against it) and **BCIR** (Broken-Caller Introduction Rate
+  = edit-sets with a `broken_caller`/`signature_break` finding / all edit-sets).
+  No LLM in the loop. Committed corpora: `corpus/verify-edit-eval-rts-core.toml`
+  and the pinned self-validation fixture `corpus/verify-edit-eval-selftest.toml`
+  (EVR 2/3, BCIR 1/3), asserted by an integration test against a live daemon.
+
+- **`rts verify-edit --edits <path|->`** — the enterprise/CI pre-merge gate.
+  Reads an edits JSON (`[{ "file": "...", "content": "..." }]`, full post-edit
+  content) from a file or stdin (`-`), calls `Index.VerifyEdit`, prints the
+  pass/warn/fail verdict + findings (`--json` passes the daemon response
+  through), and maps the verdict to an exit code via **`--fail-on
+  <none|warn|critical>`** (default `critical`): pass/warn → 0, fail → 2 under
+  `critical`; warn/fail → 2 under `warn`; always 0 under `none` (report-only).
+  Daemon/contact error or malformed edits → 3. CI usage:
+  `rts verify-edit --edits pr-edits.json --fail-on critical` fails the build on
+  a caller-breaking patch.
+
+### Feat: A/B/C benchmark harness extensions (verify-v0 P4, build-only)
+
+Extends `agent-bench` from a 2-arm A/B into a 3-arm **A/B/C** benchmark that
+separates the effect of rts *retrieval* tools from the *verify_\** tools. This
+is BUILD-ONLY — every unit is unit-tested with mocks (`FakeAnthropicClient`,
+`FakeBridge`, `FakeRunner`); ZERO live model/API calls and ZERO real daemon
+dependencies in the suite. The live run is gated on the deferred PR-B infra.
+
+- **Arm tool profiles** (`agent_bench/run.py`) — explicit allowlists
+  `RETRIEVAL_TOOLS` (find_symbol, grep, read_symbol, read_symbol_at, read_range,
+  outline_workspace, find_callers, impact_of) and `VERIFY_TOOLS` (verify_symbol,
+  verify_signature, verify_import, verify_claims, verify_impact, verify_edit).
+  `ArmConfig.tool_profile` ∈ {`baseline`, `retrieval`, `retrieval_verify`} drives
+  `build_tool_list`, which intersects the bridge's live listing with the active
+  allowlist — a future rts tool can never silently leak into an arm. Arm C
+  ("retrieval_verify") appends a one-line `VERIFY_NUDGE` to its system prompt
+  via `effective_system_prompt`. `include_rts_tools` is kept as a back-compat
+  shim derived from the profile.
+
+- **Statistics** (`agent_bench/report.py`) — per-tool breakdown
+  (`tool_calls_by_name`, `verify_tools_total`) on `ArmAggregate`; a hand-rolled
+  `mcnemar()` paired test (NO scipy: exact binomial two-sided for <25 discordant
+  pairs, else continuity-corrected χ²(df=1) via `math.erfc`); and
+  `multi_arm_comparison_json/markdown` rendering per-arm Wilson CIs, tokens,
+  wall-clock, verify metrics, the per-tool breakdown, and the three McNemar
+  deltas (B vs A, C vs B, C vs A). Schema-versioned `agent-bench/multi-arm/v1`.
+
+- **Per-arm verify metrics** (`agent_bench/eval_verify.py`) — offline (no model)
+  `evaluate_arm(trajectories, runner)` computes EVR (pass-verdict rate), BCIR
+  (broken_caller/signature_break introduction rate), and SHR/IHR from the verify
+  CLI hallucination output, mirroring `rts-bench`'s numerator/denominator/rate
+  metric shape (rate `None` on empty denominator). SMR is approximated as `None`
+  (the file-level `rts verify --json` surface lacks call-arity data). The
+  `RtsVerifyRunner` Protocol is the test seam; the real `CliRtsVerifyRunner`
+  shells out to `rts verify-edit` / `rts verify`.
+
+- **CLI `estimate`** (`agent_bench/cli.py`) — `agent-bench estimate --tasks
+  --seeds --arms --model --in-price --out-price` projects token + USD spend
+  (`runs = tasks × seeds × arms`, priced per MTok) with NO API call. Price
+  defaults to Sonnet list ($3 in / $15 out per MTok).
+
+- **Smoke corpus** `agent-bench/corpus/swe-bench-lite-smoke.json` — 4 real
+  SWE-bench_Lite instance ids with clearly-labelled placeholder statements for
+  cheap wiring tests (not the full curated corpus).
+
+### Feat: agent-bench run infrastructure (build-only)
+
+Wires `agent-bench` from a collection of units into an end-to-end harness that
+runs a full A/B/C bench from a single `agent-bench run` command. This is
+BUILD-ONLY — the harness runs **end-to-end with a fake client** (see
+`tests/test_cli_run.py`) and every external boundary is a `Protocol` injected
+with a test fake; there is ZERO real model/API/daemon/Docker/network in the
+suite. A real run is gated on a budget cap (`--max-usd`) plus live infra
+(ANTHROPIC_API_KEY + git + Docker/x86_64).
+
+- **Per-task isolation** (`agent_bench/isolation.py`) — `prepare_task(task,
+  workdir, *, repo_provider, daemon=None)` is a context manager yielding a
+  `TaskWorkspace` (`repo_dir`, plus `socket` when a daemon is started). The repo
+  is materialized at `base_commit` via the `RepoProvider` boundary
+  (`GitRepoProvider` = clone + checkout; tests write a fixture tree). rts arms
+  get a private per-task daemon socket via the `DaemonHandle` boundary
+  (`RtsDaemonHandle` spawns rts-daemon; tests return a fake socket); baseline
+  arms pass `daemon=None` and get `socket=None`. The scratch tempdir is removed
+  and any daemon stopped on exit — **including on exception**.
+
+- **Corpus loading** (`agent_bench/corpus.py`) — `load_corpus(source, *,
+  limit=None, loader=None)` loads `Task` records from a checked-in JSON corpus or
+  from a dataset id behind the `CorpusLoader` boundary (`HuggingFaceLoader` real;
+  tests inject a fake — no network). Required fields are validated with a clear
+  `ValueError`; `limit` truncates deterministically (first N in order); the
+  corpus version rides on the returned list as `.corpus_version`.
+
+- **`run` + `report` CLI** (`agent_bench/cli.py`) — `agent-bench run --corpus
+  --arms --seeds --model --max-usd --out [--resume] [--limit N]`. (1) loads the
+  corpus; (2) **PRE-FLIGHT budget gate**: computes `estimate_cost` and, if the
+  projection exceeds `--max-usd`, prints an `ABORT:` line and exits nonzero
+  **before any client is constructed / any API call is made**; (3) per
+  `(task, arm, seed)`: `prepare_task` → `run_one_arm` → writes the trajectory
+  `to_dict()` JSON to `<out>/runs/<run_id>/raw/<arm>/<instance_id>__seed<seed>.json`;
+  (4) `--resume` skips tuples whose trajectory file already exists; (5)
+  aggregates per arm + `eval_verify.evaluate_arm` + renders
+  `multi_arm_comparison_*` and per-arm summaries. `agent-bench report --runs
+  <dir>` re-renders from existing JSONs with NO client/API. The client, repo
+  provider, daemon, MCP bridge, verify runner, and `run_id` are all injectable
+  for deterministic offline tests.
+
+- **Docker patch eval + success notion** (`agent_bench/eval_docker.py`) —
+  `evaluate_patches(trajectories, runner)` behind the `PatchEvalRunner` Protocol
+  (real = swebench-in-Docker FAIL_TO_PASS; tests inject canned resolutions).
+  `task_success_vector(trajectories, results)` maps real results → success =
+  resolved, or — when `results is None` — falls back to a `halt_reason ==
+  "submit"` **proxy** flagged `proxy=True`. This success notion feeds the
+  success-rate ± Wilson CI and the McNemar vectors (real when present, proxy
+  otherwise, labelled). The real path requires Docker + x86_64 + the `swebench`
+  harness + multi-GB per-repo images.
+
+All boundaries (`AnthropicClient`, `RepoProvider`, `DaemonHandle`,
+`CorpusLoader`, `RtsVerifyRunner`, `PatchEvalRunner`) have a documented real
+implementation and a test fake; the full suite stays offline.
+
+### Feat: `--tools` — selectable tool surfaces
+
+`tools/list` is part of every request's context, and all sixteen tools come to roughly 7,700
+tokens per call once their pinned descriptions and schemas are counted — more than some
+harnesses budget for their entire tool surface, and those harnesses will filter us down
+anyway rather than pay it.
+
+`--tools` (or `RTS_MCP_TOOLS`) now selects the surface: `all` (default, unchanged), `core`
+(the eight lookup tools), `verify` (lookup plus the six `verify_*` gates), or a
+comma-separated list of tool names. Under a profile the descriptions become one line each —
+0.7 KB instead of 11.1 KB — because the pinned comparative paragraphs exist to win the
+tool-selection moment against `Bash(grep)`, and a surface of eight tools each named for its
+job is its own steering. The schemas do not shrink, so the honest effect is roughly halving:
+7,723 tokens for `all`, 3,764 for `core`, 1,374 for a three-tool list, measured by driving
+`tools/list` against this repository.
+
+A tool outside the surface is refused, not merely unlisted. That is enforced in
+`RtsServer::call_tool` rather than left to `ToolRouter::disable_route`, whose documentation
+says `call` rejects a disabled tool while this rmcp version dispatches it anyway — found by
+probing the built server, which is also how two profile names that did not exist
+(`check_call`, `check_patch`) were caught before they shipped. Both are now pinned by tests:
+`tool_surface.rs` drives a real session end to end, and `server.rs` asserts every name in a
+profile is a tool the router actually has.
+
+### Feat: entropy-v0 contract subcommands (experimental)
+
+Three new `rts` CLI subcommands implementing the entropy-v0 §7 contract
+(golden fixtures live in the entropy starter repo, `fixtures/rts/*.json`).
+All three are gated behind `--features experimental` per the experimental
+surface gate, and run **in-process** over rts-core (`rust_tree_sitter`)
+rather than through the daemon — they're whole-workspace batch scans that
+must work headless inside `timeout 2` chat hooks, so no socket/auto-spawn.
+
+- **`rts context --for <text> --k N --token-budget N --format hook-json`** —
+  ranks workspace symbols against a task description (lexical name/doc/path
+  token overlap) and emits `{"offered":[…],"rendered":"…"}`: per-symbol
+  `symbol_id` (stable `crate::qualified@path#Lline`), name, kind, path,
+  line, signature (body stripped via the core `signature::render_*`
+  helpers), `doc_first_line`, rank, score. `rendered` is a markdown block of
+  names + doc first lines — never bodies — hard-capped at the token budget,
+  truncating lowest-ranked first. ~1.3s cold on this repo (120k LOC).
+- **`rts clones [--min-mass-tokens N] --format json|summary`** — Type-1/
+  Type-2 clone detection via post-order normalized AST-subtree hashing
+  (identifier leaves → `ID`, literal leaves → `LIT`, comments dropped;
+  blake3, first 8 bytes as `cluster_id`). Only maximal clusters are kept
+  (sites contained in a larger accepted cluster's sites are dropped).
+  `json` emits clusters sorted by `score = mass_tokens × spread_files`
+  descending; `summary` emits `{"dup_pct", "clusters"}` where `dup_pct` is
+  the % of indexed leaf tokens inside some cluster.
+- **`rts snapshot --format json`** — repo-level entropy stats: `rev`
+  (`git rev-parse --short HEAD`), `loc`, `symbols`, `dup_pct`,
+  `clone_clusters`, plus `mean_fan_in` / `mean_fan_out` / `deps_direct` /
+  `deps_transitive` emitted as `null` (nullable per the contract; rts
+  doesn't compute them yet).
+
+New module `rts_mcp::entropy` (`#[cfg(feature = "experimental")]`, so the
+default-features public API surface is unchanged). Verified against the
+entropy starter's `tests/test_rts_contract.sh` — all four cases green.
+
+### Fix: `tools/list` advertises the one-of rules the daemon already enforces
+
+`find_symbol` and `grep` validate a *one-of* over their arguments — `find_symbol` takes
+exactly one of `name` | `pattern`, `grep` at least one of `text` | `structural_query` — but
+every field on both argument structs is `Option`, so schemars emitted an `inputSchema` with
+no `required` at all. A client could send a call the advertised schema fully permitted and
+have the daemon refuse it with `INVALID_PARAMS` (`NO_SEARCH_SOURCE_PROVIDED` for `grep`;
+`"either \`name\` (exact) or \`pattern\` (glob) is required"` for `find_symbol`). Observed in
+production: the client retried the identical shape four times, because nothing it had been
+given said the shape was wrong. Six such refusals in roughly 13,000 calls.
+
+The constraint is now declared at its source: `#[schemars(extend("oneOf" = …))]` on
+`FindSymbolArgs` and `#[schemars(extend("anyOf" = …))]` on `GrepArgs`, in
+`crates/rts-mcp/src/server.rs`. It rides the same derive that builds the rest of each
+schema, so it cannot drift from the tool it describes, and it is the clause the protocol-v0
+request schemas already carry
+(`schemas/v0/methods/Index.FindSymbol.req.schema.json`,
+`schemas/v0/methods/Index.Grep.req.schema.json`). `grep` is `anyOf`, not `oneOf`: supplying
+both sources is legal and the daemon intersects them.
+
+The other fourteen tools' advertised schemas were inspected against the daemon's 53
+`INVALID_PARAMS` sites. None of them enforces a one-of over top-level arguments — their
+constraints are single-field (length, range, enum), which schemars already emits — so none
+changed. `verify_claims` discriminates each item of `claims` by a `type` tag inside a nested
+object, which the `Vec<Value>` schema cannot express; that is untouched.
+
+`crates/rts-mcp/tests/tool_input_schemas.rs` drives a real JSON-RPC session and asserts the
+`inputSchema` each tool emits over `tools/list` — what a client reads, not the Rust type.
+It fails on the pre-change revision for both tools.
+
+### Multi-root: one daemon (and one `rts-mcp`) serves many workspace roots
+
+A daemon used to be pinned to the first `Workspace.Mount` path — a second
+mount of a different path returned `WORKSPACE_MISMATCH`. A swarm of agents in
+separate git worktrees therefore needed one daemon per worktree, and every
+tool call made against the "wrong" daemon answered from the wrong tree: stale
+code, different line numbers, an index that answers a different question than
+the one asked.
+
+**`DaemonState` now holds a mount table** (`mounts: Mutex<MountTable>`) instead
+of one pinned `workspace` / `store` / `watcher` / `writer_cancel` slot. Each
+mounted root owns its index (`${XDG_STATE_HOME}/rts/<workspace_id>/db.redb`),
+file watcher, writer task, and persisted-cold-mount decision, and is addressed
+by its `workspace_id` (the fingerprint id `Workspace.Mount` already returned).
+The per-root refcount keeps the #150 mount/unmount semantics; a root's watcher,
+writer, index handle, and entry are released when its last reference goes away,
+and the idle-shutdown timer still ends the daemon once nothing is mounted.
+
+**Wire:** the mounted-root selector is `workspace_id` in the request
+**envelope** (capability `multi_root`), alongside `cancel_id` / `deadline_ms` —
+no method's param schema declares it, and no tool asks the model for a root.
+`Workspace.Mount` accepts a second root; `Workspace.Unmount { root }` releases
+one (absent → the default root, i.e. the oldest root mounted);
+`Workspace.Status { root }` reports one. Both responses carry `mounted_roots`,
+so a client can see every root the daemon serves. An `Index.*` call naming an
+unmounted root returns `WORKSPACE_MISMATCH` (with the live `mounted_roots` in
+`error.data`) rather than a silent substitution.
+
+**`rts-mcp` infers the root per call** from the call's own path arguments
+(`file`, `glob`, `file_glob`, `edits[].file`, `claims[].file`): an absolute
+path under a mounted root routes there (longest match wins, so
+`/repo/.wt/alpha/…` routes to the worktree), a relative path routes only when
+exactly one mounted root has it, and a glob routes by its literal prefix. When
+nothing resolves — a bare symbol name, or a relative path present under every
+root — the call is served by the start-up root and the response says so in a
+`_root` block (`path`, `workspace_id`, `resolved_by`, and a `note` on a
+default). Absolute path arguments are handed to the daemon in the chosen
+root's coordinate system, which is what the daemon's `file`/`file_glob` filters
+expect. Extra roots come from repeated `--workspace` flags or `RTS_MCP_ROOTS`
+and mount lazily on first use. No tool gained a root parameter.
+
+**Caches are keyed per root.** The outline and symbol-PageRank caches were
+keyed on `index_generation` alone; with N roots sitting at the same generation
+that would hand one root's answer to another, so both keys now include the
+`workspace_id` (the signature and content-version caches already key on
+absolute paths).
+
+**An unwatchable root is a rejection, not an internal error.** `Workspace.Mount`
+of a path whose file watcher refuses to start (a root-only subtree, an
+exhausted inotify budget) now returns `INVALID_WORKSPACE_PATH` with the cause
+in the message, instead of `INTERNAL_ERROR`. On Linux CI this is what a
+non-root `Workspace.Mount { root: "/" }` produces (the watcher hits
+`/etc/sudoers.d`: EACCES) — a root the daemon cannot watch is a root it cannot
+serve, so it belongs in the documented rejection set rather than reading as a
+daemon bug.
+
+**Verification:** `cargo test -p rts-daemon -p rts-mcp` — new integration tests
+`multi_root_round_trip::one_daemon_serves_two_roots_by_workspace_id` (two roots
+with the same symbol defined differently, per-root answers, join/refcount,
+unmount of one leaving the other serving, `WORKSPACE_MISMATCH` for a released
+root, idle shutdown after the last release) and
+`multi_root_routing::mcp_routes_each_tool_call_to_the_root_its_paths_name`
+(real `rts-mcp` + daemon over stdio), plus `roots` unit tests for the
+resolution rules and path relativisation.
+
+### `tsr` tool-surface profile and the inspect-record schema
+
+`rts-mcp --tools tsr` (or `RTS_MCP_TOOLS=tsr`) serves the read-only subset of
+the tool surface that the TSR Decision Engine uses as its Inspect substrate:
+lookups, reads and the six `verify_*` checks — nothing that writes. The server's
+orientation instructions now depend on the surface, so a client on the `tsr`
+profile is told to start with `find_symbol` rather than a tool it cannot call.
+
+`schemas/inspect-record.schema.json` pins the shape of one inspect record — the
+tool call the engine logs as an Inspect action — and
+`crates/rts-mcp/tests/inspect_record.rs` checks real daemon responses against
+it (the daemon-backed cases skip when the daemon cannot run, e.g. as root).
+`docs/tsr-inspect.md` documents registration and what a record means.
+
+### Docs: README matches v0.9.0; `rts-mcp --help` names the six `verify_*` tools
+
+The README described v0.8.0 while documenting features only main had. It now
+matches what the v0.9.0 binaries ship:
+
+- **Tools.** Sixteen, named by surface — eight lookup, six `verify_*`, two
+  observability — instead of "ten". The surfaces table gains `tsr`; its token
+  counts are cited to the #168 measurement, and the `verify` figure, which had
+  no source, is gone.
+- **Install** points at the `v0.9.0` tarballs (`rts-${VERSION}-${TARGET}.tar.gz`)
+  and lists the four binaries.
+- **New sections:** the `tsr` profile and inspect-record schema (#181), several
+  roots on one daemon (#179: repeated `--workspace` / `RTS_MCP_ROOTS`, routing
+  by path arguments, the `_root` block), `rts impact` / `rts verify` /
+  `rts verify-edit`, and every environment variable the binaries read —
+  including that `RTS_NO_AUTOSPAWN` is honoured by `rts` only, and that
+  `rts-daemon` reads `RUST_LOG`, not `RTS_LOG`.
+- **Corrected claims.** "Workspace-pinned" is gone. "Zero outbound HTTP,
+  asserted in CI" now says what is true: the default builds have no HTTP client,
+  the `telemetry` feature adds `ureq` to `rts-mcp`, and
+  `scripts/check-daemon-http-free.sh` checks it but no workflow runs it.
+  "Sub-millisecond" and "typically 99.9% less context" are replaced by the
+  repository's own measurements, each cited with the version it was taken at.
+- **Example output** is re-run against this repository instead of quoting line
+  numbers from an older tree.
+
+`rts-mcp --help` said the `verify` surface adds "the five check_*/verify_*
+gates"; there are no `check_*` tools, and it adds six `verify_*` tools.
+
 ## [0.8.0] - 2026-06-16
 
 Two agent-facing capabilities: **per-request deadlines** (bound query
