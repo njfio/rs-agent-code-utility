@@ -581,18 +581,23 @@ impl RtsServer {
     ) -> Result<Value, ConnectionError> {
         // The daemon's path arguments are workspace-relative; an absolute path
         // is what routed the call, so hand it over in the chosen root's
-        // coordinate system. Only a path match proves the path belongs to that
+        // coordinate system. Only a path match — a mounted root, or a nested
+        // checkout the call's own path named — proves the path belongs to that
         // root.
         let mut params = params;
-        if route.kind == rts_mcp::roots::RouteKind::PathMatch {
+        if route.kind.names_the_root() {
             rts_mcp::roots::relativize_params(&mut params, &route.root);
         }
-        let (mut value, workspace_id) = self
+        let routed = self
             .connection
             .call_routed(method, params, &route.root)
             .await?;
+        let mut value = routed.value;
         if let Some(obj) = value.as_object_mut() {
-            obj.insert("_root".to_string(), route.to_wire(&workspace_id));
+            obj.insert(
+                "_root".to_string(),
+                route.to_wire(&routed.workspace_id, routed.mounted_now),
+            );
         }
         Ok(value)
     }

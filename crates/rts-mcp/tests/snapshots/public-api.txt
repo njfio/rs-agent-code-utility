@@ -200,7 +200,7 @@ impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ConnectionS
 pub struct rts_mcp::connection::ConnectionManager
 impl rts_mcp::connection::ConnectionManager
 pub async fn rts_mcp::connection::ConnectionManager::call(&self, method: &str, params: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, rts_mcp::connection::ConnectionError>
-pub async fn rts_mcp::connection::ConnectionManager::call_routed(&self, method: &str, params: serde_json::value::Value, root: &std::path::Path) -> core::result::Result<(serde_json::value::Value, alloc::string::String), rts_mcp::connection::ConnectionError>
+pub async fn rts_mcp::connection::ConnectionManager::call_routed(&self, method: &str, params: serde_json::value::Value, root: &std::path::Path) -> core::result::Result<rts_mcp::connection::RoutedCall, rts_mcp::connection::ConnectionError>
 pub async fn rts_mcp::connection::ConnectionManager::is_connected(&self) -> bool
 pub fn rts_mcp::connection::ConnectionManager::new(client: rts_mcp::daemon_client::DaemonClient, daemon_bin: std::path::PathBuf, workspace: std::path::PathBuf, config: rts_mcp::connection::ResilienceConfig, start_background_tasks: bool) -> Self
 pub fn rts_mcp::connection::ConnectionManager::start_background_tasks(&self)
@@ -282,6 +282,34 @@ impl<T> core::convert::From<T> for rts_mcp::connection::ResilienceConfig
 pub fn rts_mcp::connection::ResilienceConfig::from(t: T) -> T
 impl<T> tracing::instrument::Instrument for rts_mcp::connection::ResilienceConfig
 impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::ResilienceConfig
+pub struct rts_mcp::connection::RoutedCall
+pub rts_mcp::connection::RoutedCall::mounted_now: bool
+pub rts_mcp::connection::RoutedCall::value: serde_json::value::Value
+pub rts_mcp::connection::RoutedCall::workspace_id: alloc::string::String
+impl core::marker::Freeze for rts_mcp::connection::RoutedCall
+impl core::marker::Send for rts_mcp::connection::RoutedCall
+impl core::marker::Sync for rts_mcp::connection::RoutedCall
+impl core::marker::Unpin for rts_mcp::connection::RoutedCall
+impl core::panic::unwind_safe::RefUnwindSafe for rts_mcp::connection::RoutedCall
+impl core::panic::unwind_safe::UnwindSafe for rts_mcp::connection::RoutedCall
+impl<T, U> core::convert::Into<U> for rts_mcp::connection::RoutedCall where U: core::convert::From<T>
+pub fn rts_mcp::connection::RoutedCall::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for rts_mcp::connection::RoutedCall where U: core::convert::Into<T>
+pub type rts_mcp::connection::RoutedCall::Error = core::convert::Infallible
+pub fn rts_mcp::connection::RoutedCall::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for rts_mcp::connection::RoutedCall where U: core::convert::TryFrom<T>
+pub type rts_mcp::connection::RoutedCall::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn rts_mcp::connection::RoutedCall::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for rts_mcp::connection::RoutedCall where T: 'static + ?core::marker::Sized
+pub fn rts_mcp::connection::RoutedCall::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for rts_mcp::connection::RoutedCall where T: ?core::marker::Sized
+pub fn rts_mcp::connection::RoutedCall::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for rts_mcp::connection::RoutedCall where T: ?core::marker::Sized
+pub fn rts_mcp::connection::RoutedCall::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for rts_mcp::connection::RoutedCall
+pub fn rts_mcp::connection::RoutedCall::from(t: T) -> T
+impl<T> tracing::instrument::Instrument for rts_mcp::connection::RoutedCall
+impl<T> tracing::instrument::WithSubscriber for rts_mcp::connection::RoutedCall
 pub const rts_mcp::connection::DAEMON_DOWN_CODE: i32
 pub const rts_mcp::connection::DAEMON_DOWN_STRING: &str
 pub const rts_mcp::connection::DAEMON_UNAVAILABLE_CODE: i32
@@ -369,9 +397,11 @@ pub mod rts_mcp::roots
 pub enum rts_mcp::roots::RouteKind
 pub rts_mcp::roots::RouteKind::Ambiguous
 pub rts_mcp::roots::RouteKind::Default
+pub rts_mcp::roots::RouteKind::Mounted
 pub rts_mcp::roots::RouteKind::PathMatch
 impl rts_mcp::roots::RouteKind
 pub fn rts_mcp::roots::RouteKind::as_str(self) -> &'static str
+pub fn rts_mcp::roots::RouteKind::names_the_root(self) -> bool
 impl core::clone::Clone for rts_mcp::roots::RouteKind
 pub fn rts_mcp::roots::RouteKind::clone(&self) -> rts_mcp::roots::RouteKind
 impl core::cmp::Eq for rts_mcp::roots::RouteKind
@@ -460,7 +490,7 @@ pub rts_mcp::roots::Route::evidence: core::option::Option<alloc::string::String>
 pub rts_mcp::roots::Route::kind: rts_mcp::roots::RouteKind
 pub rts_mcp::roots::Route::root: std::path::PathBuf
 impl rts_mcp::roots::Route
-pub fn rts_mcp::roots::Route::to_wire(&self, workspace_id: &str) -> serde_json::value::Value
+pub fn rts_mcp::roots::Route::to_wire(&self, workspace_id: &str, mounted_now: bool) -> serde_json::value::Value
 impl core::clone::Clone for rts_mcp::roots::Route
 pub fn rts_mcp::roots::Route::clone(&self) -> rts_mcp::roots::Route
 impl core::fmt::Debug for rts_mcp::roots::Route

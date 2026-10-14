@@ -11,6 +11,11 @@
 //!   start-up root, `_root.resolved_by == "default"`, and the response says
 //!   so.
 //! - `grep { file_glob: "<absolute glob under B>" }` → served by B.
+//! - A path into a **git worktree nested inside the start-up root** (which is
+//!   not a mounted root and is gitignored by the repo, so the repo's index
+//!   skips it) mounts that checkout for the call:
+//!   `_root.resolved_by == "mounted"`, `mounted_now` distinguishing the call
+//!   that mounted it from the ones that reuse it.
 //!
 //! The two roots define the same symbol differently, so a mis-route shows up
 //! as the wrong body rather than as a plausible-looking answer — the exact
@@ -112,6 +117,29 @@ async fn call_tool_until_indexed(
     }
 }
 
+/// A `grep` whose answer must arrive with `expected` matches: a freshly
+/// mounted root's cold walk lands asynchronously, and until it does the index
+/// legitimately answers with none.
+async fn grep_until_matches(
+    stdin: &mut ChildStdin,
+    reader: &mut BufReader<ChildStdout>,
+    id: &mut u64,
+    arguments: Value,
+    expected: usize,
+) -> Result<Value> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        let body = call_tool(stdin, reader, id, "grep", arguments.clone()).await?;
+        if body["matches"].as_array().map(Vec::len) == Some(expected) {
+            return Ok(body);
+        }
+        if std::time::Instant::now() >= deadline {
+            anyhow::bail!("grep never reached {expected} matches: {body:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
 fn seed_root(path: &Path, marker: &str, answer: u32) -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(path.join("src"))?;
     let file = path.join("src/lib.rs");
@@ -124,6 +152,23 @@ fn seed_root(path: &Path, marker: &str, answer: u32) -> std::io::Result<PathBuf>
         ),
     )?;
     Ok(file)
+}
+
+/// A repo with a **git worktree nested inside it** — `git worktree add` writes
+/// a `.git` *file* there — and `.wt/` gitignored, which is the layout an agent
+/// editing in a worktree produces. The repo's own index skips the worktree's
+/// files, so a path into the worktree can only be answered by the worktree
+/// itself.
+fn seed_worktree(repo: &Path, worktree: &Path, marker: &str, answer: u32) -> std::io::Result<()> {
+    seed_root(repo, "MARKER_REPO", 1)?;
+    std::fs::write(repo.join(".gitignore"), ".wt/\n")?;
+    std::fs::create_dir_all(worktree.join("src"))?;
+    std::fs::write(
+        worktree.join(".git"),
+        format!("gitdir: {}/.git/worktrees/w\n", repo.display()),
+    )?;
+    seed_root(worktree, marker, answer)?;
+    Ok(())
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -284,6 +329,306 @@ async fn mcp_routes_each_tool_call_to_the_root_its_paths_name() -> Result<()> {
         id_a, id_b,
         "the two routes must be distinct mounts of the same daemon"
     );
+
+    Ok(())
+}
+
+/// The probe this change exists for: an absolute path into a git worktree
+/// nested inside the start-up root. The worktree is not a mounted root, and
+/// the repo's index skips it (`.wt/` is gitignored), so before the change the
+/// call was served by the repo and came back empty. The call's own path must
+/// mount the checkout and be answered by it.
+#[tokio::test(flavor = "current_thread")]
+async fn a_path_into_a_nested_worktree_mounts_the_worktree() -> Result<()> {
+    let daemon_bin = rts_daemon_bin();
+    assert!(
+        daemon_bin.is_file(),
+        "rts-daemon must be built before this test; missing at {}",
+        daemon_bin.display()
+    );
+
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let repo_dir = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let repo = repo_dir.path().canonicalize()?;
+    let worktree = repo.join(".wt/w1");
+    seed_worktree(&repo, &worktree, "MARKER_WORKTREE", 7)?;
+    let worktree = worktree.canonicalize()?;
+
+    // ONE root: the repo. The worktree is deliberately not passed to the shim.
+    let mut cmd = tokio::process::Command::new(rts_mcp_bin());
+    cmd.arg("--workspace")
+        .arg(&repo)
+        .env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RTS_LOG", "warn")
+        .env("RTS_DAEMON_BIN", &daemon_bin)
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true);
+
+    let mut child = cmd.spawn().context("spawn rts-mcp")?;
+    let mut stdin = child.stdin.take().expect("piped stdin");
+    let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
+
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": { "name": "rts-mcp-worktree-itest", "version": "0.0.0" }
+            }
+        }),
+    )
+    .await?;
+    let init = read_one_response(&mut reader).await?;
+    assert_eq!(init["id"], 1, "initialize failed: {init:?}");
+    send_request(
+        &mut stdin,
+        &json!({ "jsonrpc": "2.0", "method": "notifications/initialized", "params": {} }),
+    )
+    .await?;
+
+    let mut id: u64 = 100;
+    let glob = format!("{}/src/**", worktree.display());
+
+    // 1. The failing shape: a glob into the worktree. The call mounts the
+    //    checkout the path named, and says so.
+    let first = call_tool(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        "grep",
+        json!({ "text": "MARKER_WORKTREE", "file_glob": glob }),
+    )
+    .await?;
+    assert_eq!(
+        first["_root"]["path"],
+        json!(worktree.to_string_lossy()),
+        "a path into the nested checkout must be served by the checkout: {first:?}"
+    );
+    assert_eq!(first["_root"]["resolved_by"], "mounted");
+    assert_eq!(
+        first["_root"]["mounted_now"],
+        json!(true),
+        "the call that named the checkout mounts it: {first:?}"
+    );
+
+    // The cold walk of a freshly mounted root lands asynchronously, so this
+    // answer may be empty for a moment; retry until the worktree's own file is
+    // there.
+    let body = grep_until_matches(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        json!({ "text": "MARKER_WORKTREE", "file_glob": glob }),
+        1,
+    )
+    .await?;
+    let reused = call_tool(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        "grep",
+        json!({ "text": "MARKER_WORKTREE", "file_glob": glob }),
+    )
+    .await?;
+    assert_eq!(
+        reused["matches"].as_array().map(Vec::len),
+        Some(1),
+        "the worktree's marker must come from the worktree's own index: {reused:?} (was {body:?})"
+    );
+    assert_eq!(reused["_root"]["resolved_by"], "mounted");
+    assert_eq!(
+        reused["_root"]["mounted_now"],
+        json!(false),
+        "a later call to the same checkout reuses its mount: {reused:?}"
+    );
+
+    // 2. A `file` argument inside the checkout routes there too, and answers
+    //    with the worktree's body — the repo defines `answer` differently.
+    let read = call_tool(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        "read_symbol",
+        json!({
+            "name": "answer",
+            "file": worktree.join("src/lib.rs").to_string_lossy(),
+            "shape": "body"
+        }),
+    )
+    .await?;
+    assert_eq!(read["_root"]["path"], json!(worktree.to_string_lossy()));
+    assert_eq!(read["_root"]["resolved_by"], "mounted");
+    let read_body = read["text"].as_str().unwrap_or_default();
+    assert!(
+        read_body.contains("{ 7 }"),
+        "the worktree's body must come from the worktree's index: {read_body:?}"
+    );
+
+    // 3. The inference is narrow: an ordinary subdirectory of the repo, and a
+    //    path that names no directory at all, keep the repo as their root.
+    let plain = grep_until_matches(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        json!({ "text": "MARKER_REPO", "file_glob": format!("{}/src/**", repo.display()) }),
+        1,
+    )
+    .await?;
+    assert_eq!(plain["_root"]["path"], json!(repo.to_string_lossy()));
+    assert_eq!(plain["_root"]["resolved_by"], "path_match");
+
+    let missing = call_tool(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        "grep",
+        json!({ "text": "MARKER", "file_glob": format!("{}/nope/deep/**", repo.display()) }),
+    )
+    .await?;
+    assert_eq!(
+        missing["_root"]["path"],
+        json!(repo.to_string_lossy()),
+        "a path with no directory of its own must stay on the start-up root: {missing:?}"
+    );
+    assert_eq!(missing["_root"]["resolved_by"], "path_match");
+
+    Ok(())
+}
+
+/// The bound on the inference: a checkout is mounted only when it sits under
+/// the shim's **start-up** root. Outside it — even under another configured
+/// root, and certainly under no root at all — the path stays with the root
+/// that matched, so a tool call can never make the shim mount an arbitrary
+/// filesystem directory.
+#[tokio::test(flavor = "current_thread")]
+async fn a_nested_worktree_outside_the_start_up_root_is_not_mounted() -> Result<()> {
+    let daemon_bin = rts_daemon_bin();
+    assert!(
+        daemon_bin.is_file(),
+        "rts-daemon must be built before this test; missing at {}",
+        daemon_bin.display()
+    );
+
+    let runtime_dir = tempfile::tempdir()?;
+    let state_dir = tempfile::tempdir()?;
+    let home_dir = tempfile::tempdir()?;
+    let start_up_dir = tempfile::tempdir()?;
+    let other_dir = tempfile::tempdir()?;
+    let stray_dir = tempfile::tempdir()?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(runtime_dir.path(), std::fs::Permissions::from_mode(0o700));
+
+    let start_up = start_up_dir.path().canonicalize()?;
+    seed_root(&start_up, "MARKER_START_UP", 1)?;
+    let other = other_dir.path().canonicalize()?;
+    let other_worktree = other.join(".wt/w2");
+    seed_worktree(&other, &other_worktree, "MARKER_OTHER_WORKTREE", 9)?;
+    let other_worktree = other_worktree.canonicalize()?;
+    // A checkout under no configured root at all.
+    let stray = stray_dir.path().canonicalize()?;
+    seed_worktree(&stray, &stray.join(".wt/w3"), "MARKER_STRAY_WORKTREE", 11)?;
+
+    let mut cmd = tokio::process::Command::new(rts_mcp_bin());
+    cmd.arg("--workspace")
+        .arg(&start_up)
+        .arg("--workspace")
+        .arg(&other)
+        .env("XDG_RUNTIME_DIR", runtime_dir.path())
+        .env("XDG_STATE_HOME", state_dir.path())
+        .env("HOME", home_dir.path())
+        .env("RTS_LOG", "warn")
+        .env("RTS_DAEMON_BIN", &daemon_bin)
+        .env("RTS_IDLE_SHUTDOWN_SECS", "60")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true);
+
+    let mut child = cmd.spawn().context("spawn rts-mcp")?;
+    let mut stdin = child.stdin.take().expect("piped stdin");
+    let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
+
+    send_request(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": { "name": "rts-mcp-worktree-bound-itest", "version": "0.0.0" }
+            }
+        }),
+    )
+    .await?;
+    let init = read_one_response(&mut reader).await?;
+    assert_eq!(init["id"], 1, "initialize failed: {init:?}");
+    send_request(
+        &mut stdin,
+        &json!({ "jsonrpc": "2.0", "method": "notifications/initialized", "params": {} }),
+    )
+    .await?;
+
+    let mut id: u64 = 100;
+
+    // 1. A checkout under the *other* root: the path is served by that root,
+    //    and the checkout is not mounted (its files are gitignored by that
+    //    root, so the call legitimately comes back empty — the cost of the
+    //    bound, paid deliberately).
+    let routed = grep_until_matches(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        json!({
+            "text": "MARKER_OTHER_WORKTREE",
+            "file_glob": format!("{}/src/**", other_worktree.display())
+        }),
+        0,
+    )
+    .await?;
+    assert_eq!(
+        routed["_root"]["path"],
+        json!(other.to_string_lossy()),
+        "a checkout outside the start-up root must not become a root: {routed:?}"
+    );
+    assert_eq!(routed["_root"]["resolved_by"], "path_match");
+
+    // 2. A path under no configured root at all stays a visible default — and
+    //    nothing is mounted for it. (`grep` rather than `read_symbol`: a daemon
+    //    *error* is reported without a `_root` block, and this call is about
+    //    where the path routed.)
+    let stray_glob = format!("{}/.wt/w3/src/**", stray.display());
+    let outside = grep_until_matches(
+        &mut stdin,
+        &mut reader,
+        &mut id,
+        json!({ "text": "answer", "file_glob": stray_glob }),
+        0,
+    )
+    .await?;
+    assert_eq!(
+        outside["_root"]["path"],
+        json!(start_up.to_string_lossy()),
+        "a path outside every root must stay a visible default: {outside:?}"
+    );
+    assert_eq!(outside["_root"]["resolved_by"], "default");
 
     Ok(())
 }
