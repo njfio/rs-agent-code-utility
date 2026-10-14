@@ -373,15 +373,49 @@ pub fn render_grep_lines<W: Write>(
                 highlight_match(line_text, pattern, style),
             )
         };
+        // Prepend the enclosing qualified name when present (non-null string).
+        let enclosing = m
+            .get("enclosing_qualified_name")
+            .and_then(|v| v.as_str());
+        let line_content = match enclosing {
+            Some(name) => format!("{name}(): {content}"),
+            None => content,
+        };
         writeln!(
             w,
             "{}:{}:{}:{}",
             style.magenta(file),
             style.green(&line.to_string()),
             col,
-            content
+            line_content
         )?;
     }
+
+    // Truncation summary footer: only when truncated == true.
+    let truncated = body
+        .get("truncated")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if truncated {
+        let shown = body
+            .get("shown")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let total_matches = body
+            .get("total_matches")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let files_with_matches = body
+            .get("files_with_matches")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        writeln!(
+            w,
+            "… showing {shown} of {total_matches} matches across {files_with_matches} files. \
+             Narrow with --glob, or --limit N / --all for more."
+        )?;
+    }
+
     Ok(matches.len())
 }
 
@@ -1061,6 +1095,75 @@ mod tests {
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("PASS"), "{s:?}");
         assert!(!s.contains('\x1b'), "no_color must suppress ANSI: {s:?}");
+    }
+
+    #[test]
+    fn formats_hit_with_enclosing_symbol() {
+        // When enclosing_qualified_name is a non-null string, the rendered
+        // line must embed "<name>(): " between the col and the line text.
+        let body = json!({
+            "matches": [{
+                "file": "a.py",
+                "range": { "start_line": 12 },
+                "line_text": "    raise ProtocolError()",
+                "enclosing_qualified_name": "send",
+                "rank_score": 0.1,
+            }],
+            "shown": 1,
+            "total_matches": 1,
+            "truncated": false,
+            "files_with_matches": 1,
+        });
+        let mut buf = Vec::new();
+        let n = render_grep_lines(&body, "ProtocolError", &mut buf, &Style::new(false)).unwrap();
+        assert_eq!(n, 1);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(
+            s.contains("a.py:12:"),
+            "should contain file:line prefix; got {s:?}"
+        );
+        assert!(
+            s.contains("send(): "),
+            "should contain enclosing_qualified_name(); got {s:?}"
+        );
+        assert!(
+            !s.contains("showing"),
+            "no truncation footer when truncated=false; got {s:?}"
+        );
+    }
+
+    #[test]
+    fn formats_hit_without_enclosing_symbol_and_footer_when_truncated() {
+        // When enclosing_qualified_name is null, no "(): " segment.
+        // When truncated=true, a summary footer is emitted.
+        let body = json!({
+            "matches": [{
+                "file": "a.py",
+                "range": { "start_line": 1 },
+                "line_text": "x",
+                "enclosing_qualified_name": null,
+                "rank_score": 0.0,
+            }],
+            "shown": 40,
+            "total_matches": 918,
+            "truncated": true,
+            "files_with_matches": 6,
+        });
+        let mut buf = Vec::new();
+        let n = render_grep_lines(&body, "x", &mut buf, &Style::new(false)).unwrap();
+        assert_eq!(n, 1);
+        let s = String::from_utf8(buf).unwrap();
+        // The match line for the hit must NOT contain "(): "
+        let hit_line = s.lines().next().unwrap_or("");
+        assert!(
+            !hit_line.contains("(): "),
+            "null enclosing must emit no '(): ' segment; hit line: {hit_line:?}"
+        );
+        // The footer must be present with real field values
+        assert!(
+            s.contains("showing 40 of 918 matches across 6 files"),
+            "truncation footer missing; got {s:?}"
+        );
     }
 
     #[test]
